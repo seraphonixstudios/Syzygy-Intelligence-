@@ -1,0 +1,47 @@
+# Core
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+
+# LLM
+litellm
+ollama
+openai
+
+# Database
+sqlalchemy[asyncio]
+asyncpg
+alembic
+redis
+neo4j
+chromadb
+pgvector
+
+# Embeddings
+sentence-transformers
+numpy
+
+# Tools
+playwright
+httpx
+aiofiles
+pyyaml
+
+# Security
+pyjwt
+passlib[bcrypt]
+python-multipart
+
+# Observability
+structlog
+
+# Utilities
+networkx
+matplotlib
+Pillow
+
+# LangGraph - install last to avoid backtracking (pinned compatible set)
+langgraph
+langgraph-checkpoint

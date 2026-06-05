@@ -1,0 +1,361 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Cinzel:wght@400;500;600;700&display=swap');
+
+:root {
+  --radius: 0.75rem;
+}
+
+* {
+  border-color: #2a2a2a;
+}
+
+body {
+  background-color: #000000;
+  color: #c8c0b8;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, #0d0d0d 0%, transparent 70%),
+    radial-gradient(ellipse at 80% 20%, #0a0a0a 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, #0a0a0a 0%, transparent 50%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* ─── Page Entrance Animations ────────────────────── */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes brand-glow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px #d4a84340); }
+  50% { filter: brightness(1.15) drop-shadow(0 0 20px #d4a84380) drop-shadow(0 0 40px #b8860b40); }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out both;
+}
+
+.animate-brand-glow {
+  animation: brand-glow 3s ease-in-out infinite;
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, #d4a84320, transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ─── Staggered Entrance Delays ────────────────────── */
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ─── Occult Text Styles ──────────────────────────── */
+
+.syzygy-title {
+  font-family: 'Cinzel', serif;
+  background: linear-gradient(135deg, #d4a843, #e8c35a, #d4a843);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.syzygy-glow {
+  text-shadow: 0 0 20px #d4a84340, 0 0 40px #b8860b20;
+}
+
+.syzygy-gold-text {
+  background: linear-gradient(135deg, #d4a843, #e8c35a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.syzygy-grey-text {
+  color: #a8a098;
+}
+
+/* ─── Glow Effects ────────────────────────────────── */
+
+.syzygy-glow-border {
+  box-shadow: 0 0 15px #d4a84320, inset 0 0 15px #d4a84310;
+}
+
+.syzygy-glow-gold {
+  box-shadow: 0 0 20px #d4a84340, 0 0 40px #d4a84320;
+}
+
+/* ─── Card Styles ─────────────────────────────────── */
+
+.syzygy-card {
+  background: linear-gradient(135deg, #111111 0%, #0d0d0d 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: var(--radius);
+  transition: all 0.3s ease;
+}
+
+.syzygy-card:hover {
+  border-color: #d4a84340;
+  box-shadow: 0 0 20px #d4a84320;
+}
+
+.syzygy-card-glass {
+  background: linear-gradient(135deg, #111111cc 0%, #0d0d0dcc 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid #2a2a2a80;
+  border-radius: var(--radius);
+}
+
+/* ─── Squared Circle (Quadrature) ─────────────────── */
+
+.squared-circle {
+  position: relative;
+  border: 2px solid #d4a843;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.squared-circle::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border: 1px solid #d4a84340;
+  border-radius: 4px;
+}
+
+/* ─── Vesica Piscis ──────────────────────────────── */
+
+.vesica-piscis {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.vesica-piscis::before,
+.vesica-piscis::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #d4a84340;
+  border-radius: 50%;
+}
+
+.vesica-piscis::before {
+  left: -30%;
+}
+
+.vesica-piscis::after {
+  right: -30%;
+}
+
+/* ─── Sidebar ─────────────────────────────────────── */
+
+.syzygy-sidebar {
+  background: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
+  border-right: 1px solid #2a2a2a;
+}
+
+.syzygy-sidebar:hover {
+  border-right-color: #d4a84320;
+}
+
+/* ─── Polarity Merge Animation ────────────────────── */
+
+@keyframes merge-sun-moon {
+  0% {
+    transform: translateX(-30px) translateY(-50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(0) translateY(-50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(30px) translateY(-50%) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.polarity-sun {
+  animation: merge-sun-moon 3s ease-in-out infinite;
+}
+
+.polarity-moon {
+  animation: merge-sun-moon 3s ease-in-out infinite reverse;
+}
+
+/* ─── Aether Particles ────────────────────────────── */
+
+.aether-particle {
+  position: fixed;
+  pointer-events: none;
+  background: radial-gradient(circle, #d4a84340 0%, transparent 70%);
+  border-radius: 50%;
+  animation: particle-drift 15s linear infinite;
+}
+
+/* ─── Solve et Coagula ────────────────────────────── */
+
+.solve-et-coagula {
+  animation: solve-coagula 3s ease-in-out infinite;
+}
+
+/* ─── Rebis Fusion ────────────────────────────────── */
+
+.rebis-container {
+  perspective: 1000px;
+}
+
+.rebis-fusion {
+  animation: rebis-fusion 8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* ─── Scrollbar ───────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4a843;
+}
+
+/* ─── Selection ───────────────────────────────────── */
+
+::selection {
+  background: #d4a84340;
+  color: #c8c0b8;
+}
+
+/* ─── Focus ───────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid #d4a843;
+  outline-offset: 2px;
+}
+
+/* ─── Utility Classes ─────────────────────────────── */
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* ─── Rune Decoration ─────────────────────────────── */
+
+.rune-decoration {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.2em;
+  opacity: 0.15;
+  user-select: none;
+}
+
+/* ─── Ouroboros ───────────────────────────────────── */
+
+.ouroboros-ring {
+  border: 2px solid transparent;
+  border-top-color: #d4a843;
+  border-right-color: #8a7f7a;
+  border-radius: 50%;
+  animation: ouroboros 3s linear infinite;
+}
+
+/* ─── Sigil Divider ───────────────────────────────── */
+
+.sigil-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4a84340, #d4a843, #d4a84340, transparent);
+}
+
+/* ─── Code Output Typing Animation ────────────────── */
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typing-cursor::after {
+  content: '|';
+  animation: blink-cursor 1s step-end infinite;
+  color: #d4a843;
+}
+
+/* ─── Loading Progress Bar ────────────────────────── */
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.progress-bar-indeterminate {
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}

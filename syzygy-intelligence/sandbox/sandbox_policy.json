@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "name": "syzygy-sandbox-policy",
+  "restrictions": {
+    "network_access": "none",
+    "write_paths": ["/sandbox/output", "/tmp"],
+    "read_paths": ["/sandbox"],
+    "max_cpu_cores": 2,
+    "max_memory_mb": 512,
+    "max_processes": 10,
+    "allowed_libraries": ["stdlib", "numpy", "pandas", "json", "math", "random", "datetime", "collections", "itertools", "functools", "typing", "re", "hashlib", "uuid"],
+    "blocked_modules": ["os", "subprocess", "sys", "shutil", "socket", "ctypes", "multiprocessing", "threading", "signal", "fcntl", "ptrace", "bdb"],
+    "timeout_seconds": 120,
+    "allow_write_to_stdout": true,
+    "allow_write_to_stderr": true,
+    "require_serialization": true
+  }
+}

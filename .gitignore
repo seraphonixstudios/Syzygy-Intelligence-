@@ -1,0 +1,56 @@
+# ─── Environment ──────────────────────────────
+.env
+.env.local
+.env.production
+.env.development
+
+# ─── Python ───────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+*.whl
+
+# ─── Node ─────────────────────────────────────
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+
+# ─── Docker ───────────────────────────────────
+.docker/
+docker-compose.override.yml
+
+# ─── IDE ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── Data / Volumes ──────────────────────────
+data/
+chroma_data/
+sandbox_data/
+pgdata/
+neo4jdata/
+ollama_models/
+
+# ─── Logs ─────────────────────────────────────
+logs/
+*.log
+
+# ─── System ───────────────────────────────────
+Thumbs.db
+*.bak
+*.orig

@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+*.pyc
+__pycache__/
+*.pyo
+.pytest_cache/
+.vscode/
+.idea/
+*.egg-info/
+data/
+chroma_data/
+.DS_Store
+*.log
