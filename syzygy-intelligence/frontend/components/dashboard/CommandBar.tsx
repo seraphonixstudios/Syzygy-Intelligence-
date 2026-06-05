@@ -1,7 +1,9 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { Send, Sparkles, Code2, Search, FileText, Brain, Zap, ArrowRight } from "lucide-react";
 
 interface CommandBarProps {
@@ -77,6 +79,7 @@ export function CommandBar({ onSubmit, placeholder, compact }: CommandBarProps) 
           <kbd className="hidden shrink-0 rounded border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-0.5 text-[10px] text-syzygy-grey/40 md:inline-block">
             ⌘K
           </kbd>
+          <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
           <Button
             type="submit"
             variant="gold"
@@ -116,8 +119,4 @@ export function CommandBar({ onSubmit, placeholder, compact }: CommandBarProps) 
       )}
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined | null)[]): string {
-  return classes.filter(Boolean).join(" ");
 }

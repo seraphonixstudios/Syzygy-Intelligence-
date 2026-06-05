@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { Loader2, Zap, Brain, TrendingUp, CheckCircle2, XCircle, ArrowRight, RefreshCw, Sparkles } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
@@ -135,6 +136,7 @@ export default function ImprovePage() {
             placeholder="Paste an output to evaluate for self-improvement..."
             className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           />
+          <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
           <Button type="submit" disabled={!input.trim() || running} variant="gold" size="sm" className="shrink-0 gap-1">
             {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
             {running ? "Evaluating..." : "Evaluate"}

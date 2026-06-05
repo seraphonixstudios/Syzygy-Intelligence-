@@ -127,13 +127,14 @@ Structured multi-agent debate protocol:
 
 ### Modules
 
-- **Chat** — Conversational interface with polarity-aware agents
+- **Chat** — Conversational interface with polarity-aware agents (text or voice)
 - **Code Generation** — Multi-language code execution with sandbox isolation
 - **Research** — Multi-source synthesis with validation
 - **Content** — Full pipeline: Research → Outline → Draft → Edit → Polish
 - **Memory** — Browse short-term, long-term, vector, graph, and team memory stores
 - **Self-Improvement** — Recursive meta-cognition: evaluate → propose → apply improvements
 - **Workflows** — Composable automation pipelines
+- **Voice Input** — Push-to-talk on every input surface (browser SpeechRecognition API)
 
 ---
 
@@ -167,8 +168,10 @@ Obsidian #1a1a1a — structure, form
 - **Rebis Fusion** — 3D Y-axis rotation of the unified symbol (8s cycle)
 - **Solve et Coagula** — Dissolve/appear scale-and-rotate entrance (3s cycle)
 - **Ouroboros** — Infinite spinning ring loader (3s cycle)
-- **Aether Particles** — Drifting golden particles across the screen (15s drift)
+- **Aether Particles** — Canvas-based particle system with drifting golden embers across the screen
+- **Alchemical Sigils** — Floating ☉ ☽ ☿ ♄ ♃ ♂ ♀ ☊ ☋ symbols with slow rotation
 - **Fade-in-up / Slide-in** — Page entrance animations (0.3–0.5s)
+- **Voice Button** — Push-to-talk Mic button with hover transcript tooltip and radial burst animation
 
 ---
 
@@ -193,7 +196,7 @@ syzygy-intelligence/
 │   │   ├── consensus/          # PolarityMeter, ConsensusView
 │   │   ├── dashboard/          # Sidebar, CommandBar, Dashboard
 │   │   └── ui/                 # shadcn/ui primitives
-│   ├── hooks/                  # useApi, useWebSocket
+│   ├── hooks/                  # useApi, useWebSocket, useVoiceRecorder
 │   ├── lib/                    # Utilities, theme config
 │   └── public/branding/        # PNG assets
 │       ├── pagetop.logo.png    # Page header logo

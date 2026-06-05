@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { CodeXml, Play, Loader2, Copy, CheckCircle2, Terminal, Sparkles } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
@@ -79,6 +80,7 @@ export default function CodePage() {
             placeholder="What code would you like me to write?"
             className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           />
+          <VoiceButton onTranscript={(t) => setPrompt((prev) => prev + t)} compact />
           <div className="relative">
             <button
               type="button"

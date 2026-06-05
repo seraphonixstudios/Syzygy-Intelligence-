@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { Send, MessageSquare, Loader2, Bot, User } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
@@ -113,6 +114,7 @@ export default function ChatPage() {
           className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           disabled={sending}
         />
+        <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
         <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
           <Send className="h-3.5 w-3.5" />
           Send

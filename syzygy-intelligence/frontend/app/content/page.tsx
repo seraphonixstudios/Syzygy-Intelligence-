@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { FileText, Send, Loader2, Eye, Edit3 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
@@ -55,6 +56,7 @@ export default function ContentPage() {
           placeholder="Enter a topic for content generation..."
           className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
         />
+        <VoiceButton onTranscript={(t) => setTopic((prev) => prev + t)} compact />
         <Button type="submit" disabled={!topic.trim() || generating} variant="gold" size="sm" className="shrink-0 gap-1">
           {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           {generating ? "Generating..." : "Generate"}
