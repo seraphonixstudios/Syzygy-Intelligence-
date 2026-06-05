@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, Square, Loader2 } from "lucide-react";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 
 interface VoiceButtonProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
-  compact?: boolean;
 }
 
-export function VoiceButton({ onTranscript, disabled, compact }: VoiceButtonProps) {
+export function VoiceButton({ onTranscript, disabled }: VoiceButtonProps) {
   const voice = useVoiceRecorder();
   const [showTooltip, setShowTooltip] = useState(false);
   const animFrameRef = useRef<number>(0);
@@ -34,32 +33,32 @@ export function VoiceButton({ onTranscript, disabled, compact }: VoiceButtonProp
 
   if (!voice.isSupported) return null;
 
+  const isActive = voice.isListening || voice.isProcessing;
+
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={voice.toggleListening}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        disabled={disabled}
-        className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
-          compact ? "h-8 w-8" : "h-9 w-9"
-        } ${
-          voice.isListening
-            ? "bg-syzygy-gold/20 text-syzygy-gold shadow-lg shadow-syzygy-gold/20 animate-radiant-burst"
-            : "text-syzygy-grey/50 hover:text-syzygy-gold hover:bg-syzygy-gold/10"
+        disabled={disabled || voice.isProcessing}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 ${
+          isActive
+            ? "bg-red-500/20 text-red-400 shadow-lg shadow-red-500/20 animate-radiant-burst border border-red-400/30"
+            : "text-syzygy-grey/60 hover:text-syzygy-gold hover:bg-syzygy-gold/10 border border-syzygy-surface-border/50 hover:border-syzygy-gold/30"
         } disabled:opacity-30 disabled:cursor-not-allowed`}
       >
         {voice.isProcessing ? (
-          <Loader2 className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} animate-spin`} />
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : voice.isListening ? (
-          <Mic className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} animate-pulse`} />
+          <Mic className="h-3.5 w-3.5 animate-pulse" />
         ) : (
-          <MicOff className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
+          <Mic className="h-3.5 w-3.5" />
         )}
-        {voice.isListening && (
-          <span className="absolute inset-0 animate-ring-expand rounded-full border border-syzygy-gold/40" />
-        )}
+        <span>
+          {voice.isProcessing ? "Processing" : voice.isListening ? "Stop" : "Voice"}
+        </span>
       </button>
 
       {voice.isListening && fullText && (
@@ -68,9 +67,9 @@ export function VoiceButton({ onTranscript, disabled, compact }: VoiceButtonProp
         </div>
       )}
 
-      {showTooltip && !voice.isListening && !voice.error && (
+      {showTooltip && !isActive && !voice.error && (
         <div className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-syzygy-surface-border bg-syzygy-deep/95 px-3 py-1.5 text-[10px] text-syzygy-grey/60 backdrop-blur-xl shadow-2xl">
-          Push to talk
+          Click to start speaking
         </div>
       )}
 

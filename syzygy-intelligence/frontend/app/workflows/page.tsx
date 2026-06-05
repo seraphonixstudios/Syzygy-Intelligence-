@@ -102,7 +102,7 @@ export default function WorkflowsPage() {
               placeholder={`Enter task for ${selected.replace(/_/g, " ")}...`}
               className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
             />
-            <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
+            <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
             <Button type="submit" disabled={!input.trim() || executing} variant="gold" size="sm" className="shrink-0 gap-1">
               {executing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
               Execute

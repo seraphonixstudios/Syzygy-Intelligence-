@@ -79,7 +79,7 @@ export function CommandBar({ onSubmit, placeholder, compact }: CommandBarProps) 
           <kbd className="hidden shrink-0 rounded border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-0.5 text-[10px] text-syzygy-grey/40 md:inline-block">
             ⌘K
           </kbd>
-          <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
+          <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
           <Button
             type="submit"
             variant="gold"

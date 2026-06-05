@@ -80,7 +80,7 @@ export default function CodePage() {
             placeholder="What code would you like me to write?"
             className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           />
-          <VoiceButton onTranscript={(t) => setPrompt((prev) => prev + t)} compact />
+          <VoiceButton onTranscript={(t) => setPrompt((prev) => prev + t)} />
           <div className="relative">
             <button
               type="button"

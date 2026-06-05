@@ -61,7 +61,7 @@ export default function ConsensusPage() {
             placeholder="Enter a topic for consensus debate..."
             className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           />
-          <VoiceButton onTranscript={(t) => setTask((prev) => prev + t)} compact />
+          <VoiceButton onTranscript={(t) => setTask((prev) => prev + t)} />
           <Button type="submit" disabled={!task.trim() || running} variant="gold" size="sm" className="shrink-0 gap-1.5">
             {running ? (
               <div className="ouroboros-ring h-4 w-4" />

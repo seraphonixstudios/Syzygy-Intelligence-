@@ -114,7 +114,7 @@ export default function ChatPage() {
           className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           disabled={sending}
         />
-        <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} compact />
+        <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
         <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
           <Send className="h-3.5 w-3.5" />
           Send

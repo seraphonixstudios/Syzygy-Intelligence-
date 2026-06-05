@@ -60,7 +60,7 @@ export default function ResearchPage() {
             placeholder="Research query..."
             className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
           />
-          <VoiceButton onTranscript={(t) => setQuery((prev) => prev + t)} compact />
+          <VoiceButton onTranscript={(t) => setQuery((prev) => prev + t)} />
           <Button type="submit" disabled={!query.trim() || searching} variant="gold" size="sm" className="shrink-0 gap-1">
             {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
             {searching ? "Searching..." : "Research"}
