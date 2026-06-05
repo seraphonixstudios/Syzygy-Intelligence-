@@ -3,6 +3,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Toaster } from "sonner";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { AetherBackground } from "@/components/AetherBackground";
 
 export const metadata: Metadata = {
   title: "Syzygy Intelligence",
@@ -20,7 +21,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
-        <div className="flex h-dvh overflow-hidden">
+        <div className="relative flex h-dvh overflow-hidden">
+          <AetherBackground />
           <Sidebar />
           <ScrollToTop>{children}</ScrollToTop>
         </div>

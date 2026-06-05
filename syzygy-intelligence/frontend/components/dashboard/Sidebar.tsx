@@ -13,6 +13,7 @@ import {
   Library,
   MessageSquare,
   TrendingUp,
+  Palette,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -28,6 +29,7 @@ const navItems = [
   { icon: FileText, label: "Content", href: "/content" },
   { icon: Library, label: "Memory", href: "/memory" },
   { icon: TrendingUp, label: "Improve", href: "/improve" },
+  { icon: Palette, label: "Brand", href: "/brand" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
