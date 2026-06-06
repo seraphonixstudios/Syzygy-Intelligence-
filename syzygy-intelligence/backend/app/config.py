@@ -54,8 +54,12 @@ class SyzygyConfig(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        """Parse CORS origins from comma-separated string."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        """Parse CORS origins from comma-separated string. Warns if empty in production."""
+        origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        if not origins and self.env == "production":
+            from app.logging_setup import logger
+            logger.warning("CORS origins list is empty in production. No cross-origin requests will be allowed.")
+        return origins
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

@@ -9,6 +9,7 @@ Provides:
 
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
 import os
@@ -31,7 +32,11 @@ class StructuredMessage:
 
 
 class SyzygyLogger:
-    """Structured logger with file rotation, console output, and context injection."""
+    """Structured logger with file rotation, console output, and context injection.
+    
+    Uses contextvars for request-scoped logging context to prevent context bleed
+    in async code with concurrent requests.
+    """
 
     def __init__(
         self,
@@ -49,7 +54,9 @@ class SyzygyLogger:
         self._logger.handlers.clear()
 
         self._setup_handlers()
-        self._context: dict[str, Any] = {}
+        self._context: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
+            "syzygy_log_context", default={}
+        )
 
     def _setup_handlers(self):
         formatter = logging.Formatter(
@@ -97,11 +104,14 @@ class SyzygyLogger:
         self._logger.addHandler(audit_handler)
 
     def with_context(self, **kwargs) -> SyzygyLogger:
-        self._context.update(kwargs)
+        """Set context variables for the current async task (thread-safe)."""
+        current_context = self._context.get().copy()
+        current_context.update(kwargs)
+        self._context.set(current_context)
         return self
 
     def _log(self, level: int, msg: str, **kwargs):
-        extra = {**self._context, **kwargs}
+        extra = {**self._context.get(), **kwargs}
         structured = StructuredMessage(msg, **extra)
         self._logger.log(level, str(structured), extra=extra)
 

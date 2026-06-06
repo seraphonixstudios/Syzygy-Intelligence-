@@ -10,23 +10,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Create virtual environment for cleaner dependency isolation
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install dependencies in a single optimized pass
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+RUN python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    /opt/venv/bin/pip install --quiet --no-cache-dir -r requirements.txt
 
 # ─── Runtime Stage ────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install minimal runtime dependencies
+# Install minimal runtime dependencies and create non-root user in one layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r syzygy && useradd -r -g syzygy syzygy
 
 # Copy pre-built virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
@@ -35,9 +33,6 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONHASHSEED=random
-
-# Create non-root user for security
-RUN groupadd -r syzygy && useradd -r -g syzygy syzygy
 
 # Copy application code
 COPY --chown=syzygy:syzygy . .

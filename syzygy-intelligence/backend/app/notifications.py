@@ -14,9 +14,11 @@ import json
 import uuid
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Optional
+
+from app.audit import audit_service
+from app.logging_setup import logger
 
 
 class NotificationSeverity(str, Enum):
@@ -112,7 +114,6 @@ class MessageBus:
                 else:
                     callback(notification)
             except Exception as e:
-                from app.logging_setup import logger
                 logger.error(f"Notification callback failed: {e}", notification_type=notification.type.value)
 
     def get_history(self, limit: int = 50) -> list[Notification]:
@@ -160,7 +161,6 @@ class NotificationManager:
         await self.bus.publish(notification)
 
         # Log to audit
-        from app.audit import audit_service
         await audit_service.log(
             event_type=type.value,
             action=title,
@@ -175,7 +175,12 @@ class NotificationManager:
         for cid, send in self._ws_connections.items():
             try:
                 await send(payload)
-            except Exception:
+            except Exception as e:
+                logger.error(
+                    f"Failed to send notification to client {cid}: {e}",
+                    client_id=cid,
+                    notification_id=notification.id,
+                )
                 disconnected.append(cid)
         for cid in disconnected:
             self.unregister_ws(cid)

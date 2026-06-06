@@ -22,6 +22,13 @@ const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   compliance: "Regulatory compliance checks — GDPR, SOC2, HIPAA, PCI-DSS, CCPA",
   qa_bot: "Knowledge-base Q&A — ingest docs, retrieve context, generate answers",
   translate: "Multi-language translation with cultural adaptation and quality review",
+  interview_coach: "Role-specific interview questions, answer evaluation, and scoring feedback",
+  data_analyzer: "Statistical analysis, anomaly detection, correlation discovery, and visualization recommendations",
+  api_designer: "API design with OpenAPI spec generation, endpoint stubs, and validation tests",
+  agentic_rag: "Query decomposition, multi-hop retrieval, source-grounded synthesis beyond simple Q&A",
+  report_gen: "Multi-format structured reports with charts, tables, and executive summaries",
+  data_pipeline: "ETL pipeline — ingest, clean, transform, validate schema, and load data",
+  ci_piper: "CI/CD pipeline configs — GitHub Actions, GitLab CI, Jenkins with matrix builds and deploy stages",
 };
 
 export default function WorkflowsPage() {

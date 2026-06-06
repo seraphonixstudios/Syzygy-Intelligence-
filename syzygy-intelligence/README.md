@@ -193,9 +193,9 @@ Syzygy will:
 
 ## Workflows
 
-Syzygy ships with **11 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
+Syzygy ships with **18 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
 
-**Available workflows (11 total):**
+**Available workflows (18 total):**
 
 | Workflow | Description | Agent Team |
 |----------|-------------|------------|
@@ -210,6 +210,13 @@ Syzygy ships with **11 workflow engines**, each designed for a specific task dom
 | **Compliance** | Regulatory checks — GDPR, SOC2, HIPAA, PCI-DSS, CCPA | Ruler (governance) + Sage (analysis) |
 | **QA Bot** | Knowledge-base Q&A — ingest docs, retrieve context, answer questions | Sage (retrieval) + Rebis (synthesis) |
 | **Translate** | Multi-language translation with cultural adaptation | Weaver (pattern) + Hermes (linguistic) |
+| **Interview Coach** | Role-specific questions, answer scoring, feedback coaching | Sage (evaluator) + Weaver (communication) |
+| **Data Analyzer** | Statistical analysis, anomaly detection, correlation discovery, viz | Sage (analyst) + Magician (patterns) |
+| **API Designer** | REST/GraphQL API design, OpenAPI specs, stubs, validation tests | Ruler (structure) + Hero (implementation) |
+| **Agentic RAG** | Query decomposition, multi-hop retrieval, source-grounded synthesis | Explorer (retrieval) + Rebis (synthesis) |
+| **Report Gen** | Multi-format structured reports with charts, tables, exec summaries | Creator (writing) + Sage (analysis) |
+| **Data Pipeline** | ETL — ingest, clean, transform, validate schema, load to target | Magician (transformation) + Ruler (governance) |
+| **CI Piper** | CI/CD configs — GitHub Actions, GitLab CI, Jenkins with matrix builds | Hero (automation) + Sage (quality) |
 
 ### API
 
@@ -242,7 +249,7 @@ syzygy-intelligence/
 │   │   ├── agents/              # Agent definitions & archetypes
 │   │   ├── consensus/           # Multi-round consensus engine
 │   │   ├── memory/              # Multi-layer memory system
-│   │   ├── workflows/           # 11 workflow definitions
+│   │   ├── workflows/           # 18 workflow definitions
 │   │   │   ├── coding.py
 │   │   │   ├── research.py
 │   │   │   ├── content.py
@@ -253,7 +260,14 @@ syzygy-intelligence/
 │   │   │   ├── summary.py
 │   │   │   ├── compliance.py
 │   │   │   ├── qa_bot.py
-│   │   │   └── translate.py
+│   │   │   ├── translate.py
+│   │   │   ├── interview_coach.py
+│   │   │   ├── data_analyzer.py
+│   │   │   ├── api_designer.py
+│   │   │   ├── agentic_rag.py
+│   │   │   ├── report_gen.py
+│   │   │   ├── data_pipeline.py
+│   │   │   └── ci_piper.py
 │   │   ├── api/                 # REST + WebSocket endpoints
 │   │   ├── tools/               # Tool implementations
 │   │   ├── llm/                 # LLM abstraction layer

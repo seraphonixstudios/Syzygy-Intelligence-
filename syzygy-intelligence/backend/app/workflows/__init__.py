@@ -15,6 +15,13 @@ from app.workflows.summary import SummaryWorkflow, SUMMARY_WORKFLOW
 from app.workflows.compliance import ComplianceWorkflow, COMPLIANCE_WORKFLOW
 from app.workflows.qa_bot import QABotWorkflow, QA_BOT_WORKFLOW
 from app.workflows.translate import TranslateWorkflow, TRANSLATE_WORKFLOW
+from app.workflows.interview_coach import InterviewCoachWorkflow, INTERVIEW_COACH_WORKFLOW
+from app.workflows.data_analyzer import DataAnalyzerWorkflow, DATA_ANALYZER_WORKFLOW
+from app.workflows.api_designer import ApiDesignerWorkflow, API_DESIGNER_WORKFLOW
+from app.workflows.agentic_rag import AgenticRagWorkflow, AGENTIC_RAG_WORKFLOW
+from app.workflows.report_gen import ReportGenWorkflow, REPORT_GEN_WORKFLOW
+from app.workflows.data_pipeline import DataPipelineWorkflow, DATA_PIPELINE_WORKFLOW
+from app.workflows.ci_piper import CiPiperWorkflow, CI_PIPER_WORKFLOW
 
 
 WORKFLOW_REGISTRY: dict[str, Any] = {
@@ -29,6 +36,13 @@ WORKFLOW_REGISTRY: dict[str, Any] = {
     "compliance": COMPLIANCE_WORKFLOW,
     "qa_bot": QA_BOT_WORKFLOW,
     "translate": TRANSLATE_WORKFLOW,
+    "interview_coach": INTERVIEW_COACH_WORKFLOW,
+    "data_analyzer": DATA_ANALYZER_WORKFLOW,
+    "api_designer": API_DESIGNER_WORKFLOW,
+    "agentic_rag": AGENTIC_RAG_WORKFLOW,
+    "report_gen": REPORT_GEN_WORKFLOW,
+    "data_pipeline": DATA_PIPELINE_WORKFLOW,
+    "ci_piper": CI_PIPER_WORKFLOW,
 }
 
 
@@ -43,5 +57,12 @@ __all__ = [
     "TaskDecompositionWorkflow",
     "AuditWorkflow", "TestGenWorkflow",
     "SummaryWorkflow", "ComplianceWorkflow",
-    "QABotWorkflow", "TranslateWorkflow",
+    "QABotWorkflow",     "TranslateWorkflow",
+    "InterviewCoachWorkflow",
+    "DataAnalyzerWorkflow",
+    "ApiDesignerWorkflow",
+    "AgenticRagWorkflow",
+    "ReportGenWorkflow",
+    "DataPipelineWorkflow",
+    "CiPiperWorkflow",
 ]
