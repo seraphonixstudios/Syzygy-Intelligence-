@@ -31,4 +31,12 @@ test.describe("Chat page", () => {
     await input.fill("Hello Syzygy");
     await expect(input).toHaveValue("Hello Syzygy");
   });
+
+  test("can clear input", async ({ page }) => {
+    await page.goto("/chat");
+    const input = page.locator("input[placeholder*='message' i]");
+    await input.fill("test");
+    await input.clear();
+    await expect(input).toHaveValue("");
+  });
 });

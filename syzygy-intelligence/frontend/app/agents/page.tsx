@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, Plus, Trash2, Zap, Sparkles } from "lucide-react";
+import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -19,7 +21,8 @@ export default function AgentsPage() {
       const res = await fetch(`${API}/api/agents/`);
       const data = await res.json();
       setAgents(data.agents || []);
-    } catch {
+    } catch (err) {
+      logger.error("Failed to fetch agents", err, "Agents");
       setError("Backend unreachable");
     } finally {
       setLoading(false);
@@ -35,7 +38,8 @@ export default function AgentsPage() {
       const res = await fetch(`${API}/api/agents/compose`, { method: "POST" });
       const data = await res.json();
       setAgents(data.agents || []);
-    } catch {
+    } catch (err) {
+      logger.error("Failed to compose team", err, "Agents");
       setError("Failed to compose team");
     } finally {
       setComposing(false);
@@ -47,7 +51,8 @@ export default function AgentsPage() {
     try {
       await fetch(`${API}/api/agents/${id}`, { method: "DELETE" });
       setAgents((prev) => prev.filter((a) => a.id !== id));
-    } catch {
+    } catch (err) {
+      logger.error("Failed to delete agent", err, "Agents");
       setError("Failed to delete agent");
     } finally {
       setDeleting(null);
@@ -59,7 +64,8 @@ export default function AgentsPage() {
       const res = await fetch(`${API}/api/agents/${id}/shadow/toggle`, { method: "POST" });
       const data = await res.json();
       setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, shadow_active: data.shadow_active } : a)));
-    } catch {
+    } catch (err) {
+      logger.error("Failed to toggle shadow", err, "Agents");
       setError("Failed to toggle shadow");
     }
   };

@@ -12,4 +12,17 @@ test.describe("Content page", () => {
     const voiceBtn = page.locator("button:has-text('Voice')");
     await expect(voiceBtn).toBeVisible();
   });
+
+  test("can type a content topic", async ({ page }) => {
+    await page.goto("/content");
+    const input = page.locator("input[placeholder*='topic' i]");
+    await input.fill("AI ethics");
+    await expect(input).toHaveValue("AI ethics");
+  });
+
+  test("has generate button", async ({ page }) => {
+    await page.goto("/content");
+    const button = page.locator("button[type='submit']");
+    await expect(button).toBeVisible();
+  });
 });

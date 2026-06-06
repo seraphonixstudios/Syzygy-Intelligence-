@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Library, Search, Clock, Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -27,7 +29,9 @@ export default function MemoryPage() {
       const res = await fetch(`${API}/api/memory/recent?limit=20`);
       const data = await res.json();
       setMemories(data.memories || data.results || []);
-    } catch {
+    } catch (err) {
+      logger.error("Failed to fetch recent memories", err, "Memory");
+      toast.error("Could not load memories");
       setMemories([]);
     } finally {
       setLoading(false);
@@ -44,7 +48,9 @@ export default function MemoryPage() {
       const res = await fetch(`${API}/api/memory/recall?query=${encodeURIComponent(query.trim())}&limit=20`);
       const data = await res.json();
       setMemories(data.memories || data.results || []);
-    } catch {
+    } catch (err) {
+      logger.error("Memory search failed", err, "Memory");
+      toast.error("Search failed");
       setMemories([]);
     } finally {
       setSearching(false);

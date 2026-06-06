@@ -21,7 +21,7 @@ test.describe("Workflows page", () => {
       "report gen", "data pipeline", "ci piper",
     ];
     for (const name of workflowNames) {
-      await expect(page.locator("text=" + name)).toBeVisible();
+      await expect(page.locator("button:has-text('" + name + "')").first()).toBeVisible();
     }
   });
 
@@ -39,8 +39,8 @@ test.describe("Workflows page", () => {
 
   test("compliance workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('compliance')").click();
-    await expect(page.locator("input[placeholder*='compliance']")).toBeVisible();
+    await page.locator("button:has-text('compliance')").first().click();
+    await expect(page.locator("input[placeholder*='Enter task']")).toBeVisible();
   });
 
   test("summary workflow card is clickable and shows input form", async ({ page }) => {

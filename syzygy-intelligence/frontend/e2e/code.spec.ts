@@ -18,4 +18,11 @@ test.describe("Code page", () => {
     const voiceBtn = page.locator("button:has-text('Voice')");
     await expect(voiceBtn).toBeVisible();
   });
+
+  test("can type a code request", async ({ page }) => {
+    await page.goto("/code");
+    const input = page.locator("input[placeholder*='code' i]");
+    await input.fill("Write a Python function");
+    await expect(input).toHaveValue("Write a Python function");
+  });
 });

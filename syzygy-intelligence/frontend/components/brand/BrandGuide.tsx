@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 
 const BRAND_ASSETS = [
   { file: "pagetop.logo.png", label: "Page Top Logo", w: 1024, h: 1536 },

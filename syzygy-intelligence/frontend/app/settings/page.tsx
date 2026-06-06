@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, Save, RefreshCw, Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -51,9 +53,16 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     setSaving(true);
-    const settings = { ollamaUrl, defaultModel, polarityPreset, maxRounds, consensusThreshold };
-    localStorage.setItem("syzygy-settings", JSON.stringify(settings));
-    setTimeout(() => { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000); }, 500);
+    try {
+      const settings = { ollamaUrl, defaultModel, polarityPreset, maxRounds, consensusThreshold };
+      localStorage.setItem("syzygy-settings", JSON.stringify(settings));
+      logger.info("Settings saved", settings, "Settings");
+      setTimeout(() => { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000); }, 500);
+    } catch (err) {
+      logger.error("Failed to save settings", err, "Settings");
+      toast.error("Failed to save settings");
+      setSaving(false);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -66,7 +75,8 @@ export default function SettingsPage() {
       } else {
         setTestResult("❌ Backend returned an error");
       }
-    } catch {
+    } catch (err) {
+      logger.error("Backend connection test failed", err, "Settings");
       setTestResult("❌ Cannot reach backend");
     } finally {
       setTesting(false);

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   Check,
   ChevronDown,
@@ -529,11 +530,17 @@ export default function CloudPage() {
       e.preventDefault();
       if (!email.trim()) return;
       setSubmitting(true);
-      // Simulate API call
-      await new Promise((r) => setTimeout(r, 1200));
-      setSubmitted(true);
-      toast.success("You're on the list! We'll be in touch soon.");
-      setSubmitting(false);
+      try {
+        // Simulate API call
+        await new Promise((r) => setTimeout(r, 1200));
+        setSubmitted(true);
+        toast.success("You're on the list! We'll be in touch soon.");
+      } catch (err) {
+        logger.error("Waitlist submission failed", err, "Cloud");
+        toast.error("Something went wrong. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
     },
     [email]
   );

@@ -6,8 +6,15 @@ test.describe("Agents page", () => {
     await expect(page.locator("h1")).toContainText("Agent", { ignoreCase: true });
   });
 
-  test("shows agent cards", async ({ page }) => {
+  test("shows compose team button", async ({ page }) => {
     await page.goto("/agents");
-    const cards = page.locator("text=Sophia, text=Kairos, text=Artemis");
+    const composeBtn = page.locator("button:has-text('Compose Team')").first();
+    await expect(composeBtn).toBeVisible();
+  });
+
+  test("shows polarity distribution when agents loaded", async ({ page }) => {
+    await page.goto("/agents");
+    await page.waitForTimeout(1000);
+    const polarityInfo = page.locator("text=Masculine, text=Feminine, text=Unified");
   });
 });

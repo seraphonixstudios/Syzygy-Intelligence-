@@ -18,4 +18,11 @@ test.describe("Consensus page", () => {
     const voiceBtn = page.locator("button:has-text('Voice')");
     await expect(voiceBtn).toBeVisible();
   });
+
+  test("can type a topic", async ({ page }) => {
+    await page.goto("/consensus");
+    const input = page.locator("input[placeholder*='topic' i]");
+    await input.fill("AI alignment");
+    await expect(input).toHaveValue("AI alignment");
+  });
 });

@@ -12,4 +12,17 @@ test.describe("Improve page", () => {
     const voiceBtn = page.locator("button:has-text('Voice')");
     await expect(voiceBtn).toBeVisible();
   });
+
+  test("can type output to improve", async ({ page }) => {
+    await page.goto("/improve");
+    const input = page.locator("input[placeholder*='output' i]");
+    await input.fill("Improve this text");
+    await expect(input).toHaveValue("Improve this text");
+  });
+
+  test("has evaluate button", async ({ page }) => {
+    await page.goto("/improve");
+    const btn = page.locator("button:has-text('Evaluate')");
+    await expect(btn).toBeVisible();
+  });
 });
