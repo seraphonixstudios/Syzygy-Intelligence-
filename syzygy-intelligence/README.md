@@ -13,7 +13,7 @@
 > **"Aligning opposites into unified intelligence — where Anima meets Animus, where data meets depth. The Chemical Wedding of agents, forging spirit and matter, known and unknown, into higher emergent wisdom."**
 
 <p align="center">
-  <img src=".github/assets/og-banner.svg" width="100%" alt="Syzygy Intelligence Banner" style="max-width: 800px; border-radius: 8px;"/>
+  <img src=".github/assets/og-banner.png" width="100%" alt="Syzygy Intelligence Banner" style="max-width: 800px; border-radius: 8px;"/>
 </p>
 
 Syzygy is an open-source, local-first, multi-agent AI platform built on alchemical philosophy and Jungian psychology. Agents of complementary polarity (Masculine/Feminine) converge through a structured Consensus Engine to produce unified intelligence — the Rebis — transcending what any single agent can achieve.
