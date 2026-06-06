@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
-import { Send, MessageSquare, Loader2, Bot, User } from "lucide-react";
+import { Send, Loader2, Bot, User } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -44,7 +46,9 @@ export default function ChatPage() {
       const data = await res.json();
       const reply = data.response || "No response.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch {
+    } catch (err) {
+      logger.error("Chat send failed", err, "Chat");
+      toast.error("Backend unavailable — running in demo mode");
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Consensus engine ready. (Ollama must be running for live responses.)" },

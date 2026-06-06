@@ -14,10 +14,25 @@ from app.db.session import init_db, close_db
 from app.errors import setup_error_handlers
 from app.logging_setup import logger
 
+# Validate configuration on module load
+if settings.env == "production" and settings.secret_key == "change-me-to-a-random-secret":
+    raise RuntimeError(
+        "Production environment detected but secret key not configured. "
+        "Set SYZYGY_SECRET_KEY to a random value: openssl rand -hex 32"
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Syzygy Intelligence starting", env=settings.env, version="0.1.0")
+    
+    # Validate configuration in production
+    if settings.env == "production":
+        if settings.secret_key == "change-me-to-a-random-secret":
+            logger.critical("PRODUCTION MODE: secret_key not configured. Exiting.")
+            raise RuntimeError("SYZYGY_SECRET_KEY must be configured in production")
+        logger.info("Production mode: configuration validated")
+    
     try:
         await init_db()
         logger.info("Database initialized successfully")
@@ -37,10 +52,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=600,
 )
 
 setup_error_handlers(app)

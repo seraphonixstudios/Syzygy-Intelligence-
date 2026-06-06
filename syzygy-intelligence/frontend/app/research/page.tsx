@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { Search, Globe, Loader2, BookOpen } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -28,7 +30,9 @@ export default function ResearchPage() {
       const text = data.synthesis || data.result || JSON.stringify(data, null, 2);
       setResults(text);
       setHistory((prev) => [query.trim(), ...prev]);
-    } catch {
+    } catch (err) {
+      logger.error("Research search failed", err, "Research");
+      toast.error("Backend unavailable — running in demo mode");
       setResults("Research engine ready. (Backend and Ollama must be running for live results.)");
       setHistory((prev) => [query.trim(), ...prev]);
     } finally {

@@ -1,26 +1,52 @@
+# ─── Builder Stage ───────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Create virtual environment for cleaner dependency isolation
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install dependencies in a single optimized pass
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ─── Runtime Stage ────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-# Install in stages to avoid dependency backtracking
-RUN pip install --no-cache-dir fastapi uvicorn[standard] pydantic pydantic-settings python-dotenv && \
-    pip install --no-cache-dir sqlalchemy[asyncio] asyncpg alembic redis neo4j chromadb pgvector && \
-    pip install --no-cache-dir sentence-transformers numpy playwright httpx aiofiles pyyaml && \
-    pip install --no-cache-dir pyjwt passlib[bcrypt] python-multipart structlog networkx matplotlib Pillow && \
-    pip install --no-cache-dir ollama openai && \
-    pip install --no-cache-dir langgraph langgraph-checkpoint && \
-    pip install --no-cache-dir litellm
+# Copy pre-built virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
 
-RUN pip install --no-cache-dir psycopg2-binary
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=random
 
-COPY . .
+# Create non-root user for security
+RUN groupadd -r syzygy && useradd -r -g syzygy syzygy
+
+# Copy application code
+COPY --chown=syzygy:syzygy . .
+
+USER syzygy
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

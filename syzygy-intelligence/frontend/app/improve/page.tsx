@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { Loader2, Zap, Brain, TrendingUp, CheckCircle2, XCircle, ArrowRight, RefreshCw, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -34,7 +36,9 @@ export default function ImprovePage() {
     fetch(`${API}/api/meta/summary`)
       .then((r) => r.json())
       .then(setSummary)
-      .catch(() => {});
+      .catch(() => {
+        logger.warn("Could not fetch improvement summary", undefined, "Improve");
+      });
   }, []);
 
   const handleEvaluate = async (e: React.FormEvent) => {
@@ -52,7 +56,9 @@ export default function ImprovePage() {
       setProposals(data.proposals);
       const sumRes = await fetch(`${API}/api/meta/summary`);
       setSummary(await sumRes.json());
-    } catch {
+    } catch (err) {
+      logger.error("Evaluation failed", err, "Improve");
+      toast.error("Backend unavailable — running in demo mode");
       setEvaluation({
         score: 0.85,
         dimensions: { completeness: 0.8, coherence: 0.9, specificity: 0.85, actionability: 0.7, structure: 0.95 },
@@ -72,7 +78,10 @@ export default function ImprovePage() {
     try {
       await fetch(`${API}/api/meta/proposals/${proposalId}/apply`, { method: "POST" });
       setProposals((prev) => prev.filter((p) => p.id !== proposalId));
-    } catch {}
+    } catch (err) {
+      logger.error("Apply proposal failed", err, "Improve");
+      toast.error("Failed to apply proposal");
+    }
     setApplying(null);
   };
 
@@ -89,7 +98,10 @@ export default function ImprovePage() {
       setProposals(data.proposals.filter((p: any) => !data.auto_applied.includes(p.id)));
       const sumRes = await fetch(`${API}/api/meta/summary`);
       setSummary(await sumRes.json());
-    } catch {}
+    } catch (err) {
+      logger.error("Auto-improve cycle failed", err, "Improve");
+      toast.error("Auto-improve cycle failed");
+    }
     setRunning(false);
   };
 

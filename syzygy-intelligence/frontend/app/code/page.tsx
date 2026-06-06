@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { CodeXml, Play, Loader2, Copy, CheckCircle2, Terminal, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -42,7 +44,9 @@ export default function CodePage() {
       });
       const data = await res.json();
       setCode(data.code || data.result || JSON.stringify(data, null, 2));
-    } catch {
+    } catch (err) {
+      logger.error("Code generation failed", err, "Code");
+      toast.error("Backend unavailable — running in demo mode");
       setCode(`// ${language.toUpperCase()} — Generation Ready\n// Backend must be running for live results.\n// Your code will appear here.`);
     } finally {
       setGenerating(false);

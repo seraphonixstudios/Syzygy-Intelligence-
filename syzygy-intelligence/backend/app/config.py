@@ -21,6 +21,7 @@ class SyzygyConfig(BaseSettings):
     env: Literal["development", "production", "testing"] = "development"
     log_level: str = "INFO"
     secret_key: str = "change-me-to-a-random-secret"
+    cors_origins: str = "http://localhost:3000,http://localhost:8000"
 
     # Database
     db_host: str = "localhost"
@@ -28,6 +29,14 @@ class SyzygyConfig(BaseSettings):
     db_name: str = "syzygy"
     db_user: str = "syzygy"
     db_password: str = "syzygy_secret"
+
+    def model_post_init(self, __context):
+        """Validate configuration after initialization."""
+        if self.env == "production" and self.secret_key == "change-me-to-a-random-secret":
+            raise ValueError(
+                "SYZYGY_SECRET_KEY must be set to a secure random value in production. "
+                "Generate one with: openssl rand -hex 32"
+            )
 
     @property
     def database_url(self) -> str:
@@ -42,6 +51,11 @@ class SyzygyConfig(BaseSettings):
             f"postgresql://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        """Parse CORS origins from comma-separated string."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { Workflow, Play, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -31,7 +33,10 @@ export default function WorkflowsPage() {
         const list = data.workflows || [];
         setWorkflows(list.map((w: any) => (typeof w === "string" ? w : w.name)));
       })
-      .catch(() => setWorkflows(Object.keys(WORKFLOW_DESCRIPTIONS)))
+      .catch(() => {
+        logger.warn("Could not fetch workflows from backend, using defaults", undefined, "Workflows");
+        setWorkflows(Object.keys(WORKFLOW_DESCRIPTIONS));
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -49,7 +54,9 @@ export default function WorkflowsPage() {
       });
       const data = await res.json();
       setOutput(JSON.stringify(data, null, 2));
-    } catch {
+    } catch (err) {
+      logger.error("Workflow execution failed", err, "Workflows");
+      toast.error("Backend unavailable — running in demo mode");
       setError("Workflow execution requires the backend to be running.");
     } finally {
       setExecuting(false);

@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { logger } from "@/lib/logger";
 
 const API_URL = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 export function useApi() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchApi = useCallback(async (path: string, options?: RequestInit) => {
     setLoading(true);
+    setError(null);
+    logger.debug(`API ${options?.method || "GET"} ${path}`, undefined, "API");
     try {
       const res = await fetch(`${API_URL}${path}`, {
         headers: {
@@ -17,8 +21,23 @@ export function useApi() {
         },
         ...options,
       });
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      return await res.json();
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        const msg = `API error: ${res.status} ${res.statusText} — ${body.slice(0, 200)}`;
+        logger.error(msg, { path, status: res.status }, "API");
+        setError(msg);
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      logger.debug(`API ${path} succeeded`, undefined, "API");
+      return data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown API error";
+      if (!(err instanceof Error && err.message.startsWith("API error:"))) {
+        logger.error(`Fetch failed: ${msg}`, { path }, "API");
+        setError(msg);
+      }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -38,5 +57,5 @@ export function useApi() {
     [fetchApi]
   );
 
-  return { get, post, loading };
+  return { get, post, loading, error, clearError: () => setError(null) };
 }

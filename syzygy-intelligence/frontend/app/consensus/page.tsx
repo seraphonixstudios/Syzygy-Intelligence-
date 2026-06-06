@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ConsensusView } from "@/components/consensus/ConsensusView";
 import { Brain, Send, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -29,7 +31,9 @@ export default function ConsensusPage() {
       const synthesis = data.synthesis || "Consensus completed.";
       setResult(synthesis);
       setHistory((prev) => [{ task: task.trim(), result: synthesis, time: new Date().toISOString() }, ...prev]);
-    } catch {
+    } catch (err) {
+      logger.error("Consensus run failed", err, "Consensus");
+      toast.error("Backend unavailable — running in demo mode");
       const fallback = "Consensus engine ready. (Backend must have Ollama running for live execution.)";
       setResult(fallback);
     } finally {

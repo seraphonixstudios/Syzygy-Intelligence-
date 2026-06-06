@@ -197,7 +197,9 @@ syzygy-intelligence/
 │   │   ├── dashboard/          # Sidebar, CommandBar, Dashboard
 │   │   └── ui/                 # shadcn/ui primitives
 │   ├── hooks/                  # useApi, useWebSocket, useVoiceRecorder
-│   ├── lib/                    # Utilities, theme config
+│   ├── lib/                    # Utilities, theme config, structured logger
+│   ├── e2e/                    # Playwright end-to-end test suite (38 tests)
+│   ├── playwright.config.ts    # E2E test configuration
 │   └── public/branding/        # PNG assets
 │       ├── pagetop.logo.png    # Page header logo
 │       ├── syzygy.logo.png     # Wordmark
@@ -260,6 +262,33 @@ cd backend
 alembic upgrade head
 alembic revision --autogenerate -m "description"
 ```
+
+### Testing
+
+```bash
+# Frontend E2E tests (Playwright, 38 tests across all pages)
+cd frontend
+npm install          # includes @playwright/test
+npx playwright install chromium
+npm run test         # headless CI mode
+npm run test:headed  # visible browser mode
+npm run test:ui      # Playwright UI mode
+
+# Backend tests (pytest, 12 test files)
+cd backend
+pip install -r requirements.txt
+pytest              # auto-discovers tests/
+pytest -v           # verbose output
+pytest --cov        # coverage report
+```
+
+### Logging
+
+The frontend includes a structured logger (`lib/logger.ts`) with levels:
+- `logger.debug` / `logger.info` / `logger.warn` / `logger.error`
+- Timestamps, source tags, browser console grouping
+- Set `NEXT_PUBLIC_LOG_LEVEL=debug|info|warn|error` to control verbosity
+- API errors, WebSocket events, and page-level errors are logged automatically
 
 ---
 

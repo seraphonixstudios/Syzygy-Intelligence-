@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { FileText, Send, Loader2, Eye, Edit3 } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -26,7 +28,9 @@ export default function ContentPage() {
       });
       const data = await res.json();
       setContent(data.content || data.result || JSON.stringify(data, null, 2));
-    } catch {
+    } catch (err) {
+      logger.error("Content generation failed", err, "Content");
+      toast.error("Backend unavailable — running in demo mode");
       setContent(`# ${topic.trim()}\n\nContent pipeline ready. Connect backend and Ollama for live generation.\n\nThis would contain a full research → outline → draft → edit → polish pipeline output.`);
     } finally {
       setGenerating(false);
