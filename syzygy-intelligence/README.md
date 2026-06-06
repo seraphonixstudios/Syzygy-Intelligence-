@@ -167,6 +167,22 @@ Syzygy will:
 
 Use the visual node-based editor to design custom workflows with drag-and-drop agent assignments, polarity requirements, and consensus rules.
 
+**Available workflows (11 total):**
+
+| Workflow | Description | Agent Team |
+|----------|-------------|------------|
+| **Code** | Scaffold, edit, test, debug with polarity-aware pair programming | Hero + Sage |
+| **Research** | Parallel search with multi-source validation and synthesis | Explorer + Sage |
+| **Content** | Research → Outline → Draft → Edit → Polish pipeline | Creator + Weaver |
+| **Debate** | Multi-round structured debate between agents | Sage + Trickster |
+| **Task Decomposition** | Break complex tasks into dependency-tracked subtasks | Ruler + Explorer |
+| **Audit** | Security scanning, code review, anti-pattern detection, compliance | Sage (critic) + Magician (tester) |
+| **Test Gen** | Automated unit, integration, and edge-case test generation | Trickster (edge cases) + Sage (validation) |
+| **Summary** | Multi-document summarization with key insight extraction | Rebis (synthesis) + Sage (extraction) |
+| **Compliance** | Regulatory checks — GDPR, SOC2, HIPAA, PCI-DSS, CCPA | Ruler (governance) + Sage (analysis) |
+| **QA Bot** | Knowledge-base Q&A — ingest docs, retrieve context, answer questions | Sage (retrieval) + Rebis (synthesis) |
+| **Translate** | Multi-language translation with cultural adaptation | Weaver (pattern) + Hermes (linguistic) |
+
 ### API
 
 Syzygy exposes OpenAI-compatible endpoints:
@@ -198,7 +214,18 @@ syzygy-intelligence/
 │   │   ├── agents/              # Agent definitions & archetypes
 │   │   ├── consensus/           # Multi-round consensus engine
 │   │   ├── memory/              # Multi-layer memory system
-│   │   ├── workflows/           # Workflow definitions
+│   │   ├── workflows/           # 11 workflow definitions
+│   │   │   ├── coding.py
+│   │   │   ├── research.py
+│   │   │   ├── content.py
+│   │   │   ├── debate.py
+│   │   │   ├── task_decomposition.py
+│   │   │   ├── audit.py
+│   │   │   ├── test_gen.py
+│   │   │   ├── summary.py
+│   │   │   ├── compliance.py
+│   │   │   ├── qa_bot.py
+│   │   │   └── translate.py
 │   │   ├── api/                 # REST + WebSocket endpoints
 │   │   ├── tools/               # Tool implementations
 │   │   ├── llm/                 # LLM abstraction layer
