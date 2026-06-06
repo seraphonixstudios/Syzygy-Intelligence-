@@ -99,9 +99,10 @@ services:
       neo4j:
         condition: service_started
     volumes:
+      - ./backend:/app
       - sandbox_data:/app/data/sandbox
       - chroma_data:/app/data/chroma
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     <<: *shared
 
   # ─── Frontend ──────────────────────────────────────────────
