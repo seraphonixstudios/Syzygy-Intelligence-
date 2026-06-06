@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
-import { Send, Loader2, Bot, User } from "lucide-react";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { Send, Loader2, Bot, User, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -20,6 +21,7 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +47,11 @@ export default function ChatPage() {
       });
       const data = await res.json();
       const reply = data.response || "No response.";
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([{ agent: "Syzygy", thought: "Processing complete. Response generated.", model: "syzygy" }]);
+      }
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
       logger.error("Chat send failed", err, "Chat");
@@ -108,6 +115,10 @@ export default function ChatPage() {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={sending} title="Agent Reasoning" />
+      )}
 
       <form onSubmit={handleSend} className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
         <input

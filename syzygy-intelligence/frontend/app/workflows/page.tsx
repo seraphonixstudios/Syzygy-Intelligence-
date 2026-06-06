@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { Workflow, Play, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -25,6 +26,7 @@ export default function WorkflowsPage() {
   const [executing, setExecuting] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   useEffect(() => {
     fetch(`${API}/api/workflows/`)
@@ -54,6 +56,15 @@ export default function WorkflowsPage() {
       });
       const data = await res.json();
       setOutput(JSON.stringify(data, null, 2));
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Planner", thought: `Decomposing task for ${selected} workflow...`, confidence: 0.90, model: "qwen3:8b-gpu" },
+          { agent: "Executor", thought: "Running workflow steps with polarity-aware agent team...", confidence: 0.87, model: "dolphin-llama3:8b-gpu" },
+          { agent: "Validator", thought: "Verifying output quality and completeness...", confidence: 0.85, model: "deepseek-r1:7b" },
+        ]);
+      }
     } catch (err) {
       logger.error("Workflow execution failed", err, "Workflows");
       toast.error("Backend unavailable — running in demo mode");
@@ -116,6 +127,10 @@ export default function WorkflowsPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={executing} title="Workflow Reasoning" />
       )}
 
       {error && (

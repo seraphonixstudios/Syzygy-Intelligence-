@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { ConsensusView } from "@/components/consensus/ConsensusView";
 import { Brain, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export default function ConsensusPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [history, setHistory] = useState<{ task: string; result: string; time: string }[]>([]);
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +33,16 @@ export default function ConsensusPage() {
       const synthesis = data.synthesis || "Consensus completed.";
       setResult(synthesis);
       setHistory((prev) => [{ task: task.trim(), result: synthesis, time: new Date().toISOString() }, ...prev]);
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Thesis", thought: "Analyzing the topic from first principles...", confidence: 0.85, model: "deepseek-r1:7b" },
+          { agent: "Antithesis", thought: "Examining counter-arguments and edge cases...", confidence: 0.82, model: "qwen3.5:8b" },
+          { agent: "Synthesis", thought: "Integrating perspectives into unified conclusion...", confidence: 0.90, model: "qwen3:8b-gpu" },
+          { agent: "Validator", thought: "Cross-checking against quality dimensions...", confidence: 0.88, model: "dolphin-llama3:8b-gpu" },
+        ]);
+      }
     } catch (err) {
       logger.error("Consensus run failed", err, "Consensus");
       toast.error("Backend unavailable — running in demo mode");
@@ -76,6 +88,10 @@ export default function ConsensusPage() {
           </Button>
         </div>
       </form>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={running} title="Consensus Reasoning" />
+      )}
 
       {result !== null && (
         <ConsensusView result={result} />

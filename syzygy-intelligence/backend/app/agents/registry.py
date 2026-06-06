@@ -11,17 +11,17 @@ from app.agents.personas import PERSONA_REGISTRY
 
 # Default models for each archetype (can be overridden)
 DEFAULT_AGENT_MODELS: dict[str, str] = {
-    "hero": "qwen3.5:8b",
+    "hero": "qwen3:8b-gpu",
     "sage": "deepseek-r1:7b",
     "ruler": "qwen3.5:8b",
     "magician": "qwen-coder:7b",
     "explorer": "qwen3.5:8b",
-    "great_mother": "dolphin-llama3:8b",
+    "great_mother": "dolphin-llama3:8b-gpu",
     "lover": "dolphin-llama3:8b",
     "innocent": "dolphin-llama3:8b",
     "creator": "qwen-coder:7b",
     "anima": "deepseek-r1:7b",
-    "self": "qwen3.5:8b",
+    "self": "qwen3:8b-gpu",
     "hermes": "qwen3.5:8b",
     "trickster": "qwen3.5:8b",
 }

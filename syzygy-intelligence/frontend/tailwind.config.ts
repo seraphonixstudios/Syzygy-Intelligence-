@@ -104,6 +104,12 @@ const config: Config = {
         "brand-glow": "brand-glow 3s ease-in-out infinite",
         "skeleton": "skeleton-pulse 1.5s ease-in-out infinite",
         "shimmer": "shimmer 2s linear infinite",
+        "thought-appear": "thought-appear 0.4s ease-out both",
+        "pulse-ring": "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "glow-drift": "glow-drift 4s ease-in-out infinite",
+        "slide-up": "slide-up 0.3s ease-out both",
+        "breathe": "breathe 3s ease-in-out infinite",
+        "spin-slow": "spin-slow 8s linear infinite",
       },
       keyframes: {
         "pulse-glow": {
@@ -169,6 +175,30 @@ const config: Config = {
         shimmer: {
           "0%": { backgroundPosition: "-200% center" },
           "100%": { backgroundPosition: "200% center" },
+        },
+        "thought-appear": {
+          "0%": { opacity: "0", transform: "translateY(8px) scale(0.97)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        "pulse-ring": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "1" },
+        },
+        "glow-drift": {
+          "0%, 100%": { filter: "brightness(1) drop-shadow(0 0 4px #d4a84320)" },
+          "50%": { filter: "brightness(1.1) drop-shadow(0 0 12px #d4a84350) drop-shadow(0 0 24px #b8860b20)" },
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        breathe: {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.03)" },
+        },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
         },
       },
       borderRadius: {

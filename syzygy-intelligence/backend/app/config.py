@@ -72,9 +72,12 @@ class SyzygyConfig(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     default_model: str = "qwen3.5:8b"
     critic_model: str = "deepseek-r1:7b"
-    synthesis_model: str = "qwen3.5:8b"
+    synthesis_model: str = "qwen3:8b-gpu"
     coding_model: str = "qwen-coder:7b"
     creative_model: str = "dolphin-llama3:8b"
+    vision_model: str = "llava:13b-gpu"
+    gpu_model: str = "qwen3:8b-gpu"
+    fast_model: str = "dolphin-llama3:8b-gpu"
 
     # LiteLLM Fallback
     litellm_enabled: bool = False

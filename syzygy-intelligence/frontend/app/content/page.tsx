@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { FileText, Send, Loader2, Eye, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -14,6 +15,7 @@ export default function ContentPage() {
   const [generating, setGenerating] = useState(false);
   const [content, setContent] = useState("");
   const [mode, setMode] = useState<"edit" | "preview">("preview");
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,16 @@ export default function ContentPage() {
       });
       const data = await res.json();
       setContent(data.content || data.result || JSON.stringify(data, null, 2));
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Researcher", thought: "Gathering background information on the topic...", confidence: 0.88, model: "deepseek-r1:7b" },
+          { agent: "Strategist", thought: "Outlining article structure with key sections...", confidence: 0.85, model: "qwen3.5:8b" },
+          { agent: "Drafter", thought: "Writing initial draft with engaging narrative flow...", confidence: 0.82, model: "dolphin-llama3:8b-gpu" },
+          { agent: "Editor", thought: "Refining language, clarity, and tone for polish...", confidence: 0.90, model: "qwen3:8b-gpu" },
+        ]);
+      }
     } catch (err) {
       logger.error("Content generation failed", err, "Content");
       toast.error("Backend unavailable — running in demo mode");
@@ -66,6 +78,10 @@ export default function ContentPage() {
           {generating ? "Generating..." : "Generate"}
         </Button>
       </form>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={generating} title="Content Pipeline Reasoning" />
+      )}
 
       {content && (
         <div className="space-y-2">

@@ -1,5 +1,17 @@
 # Syzygy Intelligence
 
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=flat&logo=tailwindcss)](https://tailwindcss.com/)
+[![Playwright](https://img.shields.io/badge/Playwright-1.60-45ba4b?style=flat&logo=playwright)](https://playwright.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)](https://www.docker.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-GPU-000000?style=flat&logo=llama)](https://ollama.ai/)
+[![License](https://img.shields.io/badge/License-MIT-d4a843?style=flat)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-38%20passing-4ade80?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions)
+[![PRs](https://img.shields.io/badge/PRs-Welcome-8b6914?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/pulls)
+
 > *"The union of opposites is the eternal cosmic pattern."* — Heraclitus
 
 **Syzygy** (pronounced *siz-uh-jee*) is an alchemically-themed multi-agent AI orchestration platform. It manages a team of AI agents with distinct polarities (masculine, feminine, unified) and facilitates structured consensus debates, code generation, research synthesis, content pipelines, and recursive self-improvement — all wrapped in an occult/alchemical UI inspired by Hermetic principles.
@@ -135,6 +147,21 @@ Structured multi-agent debate protocol:
 - **Self-Improvement** — Recursive meta-cognition: evaluate → propose → apply improvements
 - **Workflows** — Composable automation pipelines
 - **Voice Input** — Push-to-talk on every input surface (browser SpeechRecognition API)
+- **Reasoning Trace** — Collapsible agent thought-process panel showing per-step confidence, model used, and reasoning chains across all modules
+- **Intelligent Model Routing** — Task-aware model selection: vision → LLaVA 13B, coding → Qwen Coder, creative → Dolphin Llama3, analysis → DeepSeek R1, default → Qwen3 8B
+
+### Supported Models
+
+| Model | Size | Use Case |
+|-------|------|----------|
+| **Qwen3.5 8B** | 8B | Default general-purpose |
+| **Qwen3 8B (GPU)** | 8B | Accelerated general-purpose |
+| **DeepSeek R1 7B** | 7B | Critical analysis, reasoning |
+| **Dolphin Llama3 8B** | 8B | Creative, uncensored |
+| **Dolphin Llama3 8B (GPU)** | 8B | Accelerated creative |
+| **LLaVA 13B (GPU)** | 13B | Vision/image understanding |
+| **Qwen Coder 7B** | 7B | Code generation |
+| **Llama 3.2 3B** | 3B | Lightweight fallback |
 
 ---
 
@@ -171,6 +198,11 @@ Obsidian #1a1a1a — structure, form
 - **Aether Particles** — Canvas-based particle system with drifting golden embers across the screen
 - **Alchemical Sigils** — Floating ☉ ☽ ☿ ♄ ♃ ♂ ♀ ☊ ☋ symbols with slow rotation
 - **Fade-in-up / Slide-in** — Page entrance animations (0.3–0.5s)
+- **Thought Appear** — Reasoning step reveal animation (0.4s ease-out)
+- **Pulse Ring** — Repeating ring pulse for active states
+- **Glow Drift** — Subtle brightness oscillation on gold elements
+- **Breathe** — Gentle scale oscillation for interactive elements
+- **Staggered Entrance** — 8-step cascade delays for grid items
 - **Voice Button** — Push-to-talk Mic button with hover transcript tooltip and radial burst animation
 
 ---
@@ -195,7 +227,11 @@ syzygy-intelligence/
 │   │   ├── agents/             # Agent cards
 │   │   ├── consensus/          # PolarityMeter, ConsensusView
 │   │   ├── dashboard/          # Sidebar, CommandBar, Dashboard
-│   │   └── ui/                 # shadcn/ui primitives
+│   │   ├── ui/                 # shadcn/ui primitives
+│   │   ├── ReasoningPanel.tsx  # Agent thought-trace display
+│   │   ├── VoiceButton.tsx     # Push-to-talk toggle
+│   │   ├── AetherBackground.tsx# Canvas particle system
+│   │   └── ScrollToTop.tsx     # Route-change scroll reset
 │   ├── hooks/                  # useApi, useWebSocket, useVoiceRecorder
 │   ├── lib/                    # Utilities, theme config, structured logger
 │   ├── e2e/                    # Playwright end-to-end test suite (38 tests)

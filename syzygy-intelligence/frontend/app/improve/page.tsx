@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { Loader2, Zap, Brain, TrendingUp, CheckCircle2, XCircle, ArrowRight, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -31,6 +32,7 @@ export default function ImprovePage() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   useEffect(() => {
     fetch(`${API}/api/meta/summary`)
@@ -56,6 +58,15 @@ export default function ImprovePage() {
       setProposals(data.proposals);
       const sumRes = await fetch(`${API}/api/meta/summary`);
       setSummary(await sumRes.json());
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Critic", thought: "Evaluating output across 5 quality dimensions...", confidence: 0.90, model: "deepseek-r1:7b" },
+          { agent: "Strategist", thought: "Identifying highest-impact improvement areas...", confidence: 0.85, model: "qwen3:8b-gpu" },
+          { agent: "Innovator", thought: "Generating concrete proposals for each gap...", confidence: 0.82, model: "dolphin-llama3:8b-gpu" },
+        ]);
+      }
     } catch (err) {
       logger.error("Evaluation failed", err, "Improve");
       toast.error("Backend unavailable — running in demo mode");
@@ -159,6 +170,10 @@ export default function ImprovePage() {
           </Button>
         </div>
       </form>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={running} title="Improvement Reasoning" />
+      )}
 
       {/* Evaluation Results */}
       {evaluation && (

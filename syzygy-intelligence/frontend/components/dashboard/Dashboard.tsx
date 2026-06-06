@@ -14,11 +14,11 @@ const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 const defaultAgents = [
   { id: "1", name: "Sage", archetype: "sage", polarity: "masculine", model: "deepseek-r1:7b", shadow: false },
-  { id: "2", name: "Nurtura", archetype: "great_mother", polarity: "feminine", model: "dolphin-llama3:8b", shadow: false },
-  { id: "3", name: "Rebis", archetype: "self", polarity: "unified", model: "qwen3.5:8b", shadow: false },
+  { id: "2", name: "Nurtura", archetype: "great_mother", polarity: "feminine", model: "dolphin-llama3:8b-gpu", shadow: false },
+  { id: "3", name: "Rebis", archetype: "self", polarity: "unified", model: "qwen3:8b-gpu", shadow: false },
   { id: "4", name: "Merlin", archetype: "magician", polarity: "masculine", model: "qwen-coder:7b", shadow: false },
-  { id: "5", name: "Astra", archetype: "creator", polarity: "feminine", model: "dolphin-llama3:8b", shadow: false },
-  { id: "6", name: "Heracles", archetype: "hero", polarity: "masculine", model: "qwen3.5:8b", shadow: false },
+  { id: "5", name: "Astra", archetype: "creator", polarity: "feminine", model: "dolphin-llama3:8b-gpu", shadow: false },
+  { id: "6", name: "Heracles", archetype: "hero", polarity: "masculine", model: "qwen3:8b-gpu", shadow: false },
   { id: "7", name: "Aphrodite", archetype: "lover", polarity: "feminine", model: "dolphin-llama3:8b", shadow: false },
   { id: "8", name: "Loki", archetype: "trickster", polarity: "unified", model: "qwen3.5:8b", shadow: false },
 ];

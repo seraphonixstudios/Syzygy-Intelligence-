@@ -8,8 +8,11 @@ const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 const MODEL_OPTIONS = [
   { value: "qwen3.5:8b", label: "Qwen3.5 8B" },
+  { value: "qwen3:8b-gpu", label: "Qwen3 8B (GPU)" },
   { value: "deepseek-r1:7b", label: "DeepSeek R1 7B" },
   { value: "dolphin-llama3:8b", label: "Dolphin Llama3 8B" },
+  { value: "dolphin-llama3:8b-gpu", label: "Dolphin Llama3 8B (GPU)" },
+  { value: "llava:13b-gpu", label: "LLaVA 13B Vision (GPU)" },
   { value: "qwen-coder:7b", label: "Qwen Coder 7B" },
   { value: "llama3.2:3b", label: "Llama 3.2 3B" },
 ];

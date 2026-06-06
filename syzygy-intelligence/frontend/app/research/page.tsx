@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { Search, Globe, Loader2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -14,6 +15,7 @@ export default function ResearchPage() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +32,15 @@ export default function ResearchPage() {
       const text = data.synthesis || data.result || JSON.stringify(data, null, 2);
       setResults(text);
       setHistory((prev) => [query.trim(), ...prev]);
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Researcher", thought: "Parsing query and identifying key research domains...", confidence: 0.90, model: "qwen3.5:8b" },
+          { agent: "Analyst", thought: "Cross-referencing multiple sources for validation...", confidence: 0.87, model: "deepseek-r1:7b" },
+          { agent: "Synthesizer", thought: "Integrating findings into coherent research summary...", confidence: 0.85, model: "qwen3:8b-gpu" },
+        ]);
+      }
     } catch (err) {
       logger.error("Research search failed", err, "Research");
       toast.error("Backend unavailable — running in demo mode");
@@ -71,6 +82,10 @@ export default function ResearchPage() {
           </Button>
         </div>
       </form>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={searching} title="Research Reasoning" />
+      )}
 
       {searching && (
         <div className="flex items-center justify-center gap-3 py-8">

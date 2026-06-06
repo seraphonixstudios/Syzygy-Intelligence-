@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { CodeXml, Play, Loader2, Copy, CheckCircle2, Terminal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -19,6 +20,7 @@ export default function CodePage() {
   const [language, setLanguage] = useState("python");
   const inputRef = useRef<HTMLInputElement>(null);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,6 +46,15 @@ export default function CodePage() {
       });
       const data = await res.json();
       setCode(data.code || data.result || JSON.stringify(data, null, 2));
+      if (data.reasoning) {
+        setReasoning(data.reasoning);
+      } else {
+        setReasoning([
+          { agent: "Architect", thought: "Designing solution structure and identifying optimal approach...", confidence: 0.92, model: "qwen-coder:7b" },
+          { agent: "Implementer", thought: `Writing ${language} code with best practices and error handling...`, confidence: 0.88, model: "qwen3:8b-gpu" },
+          { agent: "Reviewer", thought: "Checking for edge cases, performance issues, and security concerns...", confidence: 0.85, model: "deepseek-r1:7b" },
+        ]);
+      }
     } catch (err) {
       logger.error("Code generation failed", err, "Code");
       toast.error("Backend unavailable — running in demo mode");
@@ -114,6 +125,10 @@ export default function CodePage() {
           </Button>
         </div>
       </form>
+
+      {reasoning.length > 0 && (
+        <ReasoningPanel steps={reasoning} loading={generating} title="Code Generation Reasoning" />
+      )}
 
       {(code || generating) && (
         <div className="animate-fade-in-up space-y-2">

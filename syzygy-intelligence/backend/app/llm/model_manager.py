@@ -18,6 +18,24 @@ class ModelManager:
         "synthesis": "synthesis_model",
         "coding": "coding_model",
         "creative": "creative_model",
+        "vision": "vision_model",
+        "gpu": "gpu_model",
+        "fast": "fast_model",
+    }
+
+    TASK_MODEL_MAP: dict[str, str] = {
+        "vision": "vision_model",
+        "image": "vision_model",
+        "analyze": "critic_model",
+        "reason": "critic_model",
+        "code": "coding_model",
+        "programming": "coding_model",
+        "write": "creative_model",
+        "creative": "creative_model",
+        "synthesize": "synthesis_model",
+        "summarize": "synthesis_model",
+        "fast": "fast_model",
+        "quick": "fast_model",
     }
 
     def __init__(self):
@@ -30,6 +48,14 @@ class ModelManager:
         config_key = self.MODEL_ROLES.get(role, "default_model")
         return getattr(settings, config_key, settings.default_model)
 
+    def get_model_for_task(self, task: str) -> str:
+        """Route to best model based on task description keywords."""
+        task_lower = task.lower()
+        for keyword, role in self.TASK_MODEL_MAP.items():
+            if keyword in task_lower:
+                return self.get_model_for_role(role)
+        return self.get_model_for_role("default")
+
     async def generate(
         self,
         prompt: str,
@@ -37,9 +63,13 @@ class ModelManager:
         role: str = "default",
         temperature: float = 0.7,
         max_tokens: int = 2048,
+        task_hint: str = "",
     ) -> str:
         """Generate text using best available model for the role."""
-        model = self.get_model_for_role(role)
+        if task_hint:
+            model = self.get_model_for_task(task_hint)
+        else:
+            model = self.get_model_for_role(role)
 
         # Try Ollama first
         result = await self.ollama.generate(
