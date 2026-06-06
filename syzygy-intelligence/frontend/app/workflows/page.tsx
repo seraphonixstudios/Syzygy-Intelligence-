@@ -16,6 +16,12 @@ const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   content: "Research → Outline → Draft → Edit → Polish pipeline",
   debate: "Multi-round structured debate between agents",
   task_decomposition: "Break complex tasks into dependency-tracked subtasks",
+  audit: "Security scanning, code review, anti-pattern detection, and compliance checks",
+  test_gen: "Automated unit, integration, and edge-case test generation with validation",
+  summary: "Multi-document summarization with key insight extraction and synthesis",
+  compliance: "Regulatory compliance checks — GDPR, SOC2, HIPAA, PCI-DSS, CCPA",
+  qa_bot: "Knowledge-base Q&A — ingest docs, retrieve context, generate answers",
+  translate: "Multi-language translation with cultural adaptation and quality review",
 };
 
 export default function WorkflowsPage() {
