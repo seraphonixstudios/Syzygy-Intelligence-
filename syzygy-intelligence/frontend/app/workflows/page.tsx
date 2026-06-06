@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
-import { Workflow, Play, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -154,8 +154,42 @@ export default function WorkflowsPage() {
 
       {output && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-syzygy-gold">
-            <CheckCircle2 className="h-4 w-4" /> Result
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-syzygy-gold">
+              <CheckCircle2 className="h-4 w-4" /> Result
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(output);
+                  toast.success("Copied to clipboard");
+                }}
+                className="gap-1"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const blob = new Blob([output], { type: "text/markdown" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${selected}-result.md`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Downloaded as markdown");
+                }}
+                className="gap-1"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </Button>
+            </div>
           </div>
           <pre className="overflow-auto rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/50 p-4 text-xs text-syzygy-grey/80 max-h-96">
             {output}
