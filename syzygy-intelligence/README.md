@@ -1,8 +1,36 @@
 # ⚛ Syzygy Intelligence
 
+<p align="center">
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="MIT License"/></a>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions"><img src="https://img.shields.io/github/actions/workflow/status/seraphonixstudios/Syzygy-Intelligence-/.github/workflows/ci.yml?branch=main&style=flat-square&label=CI&color=success" alt="CI"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/node-22+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 22+"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"/></a>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"/></a>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-"><img src="https://img.shields.io/github/stars/seraphonixstudios/Syzygy-Intelligence-?style=flat-square&label=stars&color=yellow" alt="GitHub Stars"/></a>
+</p>
+
 > **"Aligning opposites into unified intelligence — where Anima meets Animus, where data meets depth. The Chemical Wedding of agents, forging spirit and matter, known and unknown, into higher emergent wisdom."**
 
+<p align="center">
+  <img src=".github/assets/og-banner.svg" width="100%" alt="Syzygy Intelligence Banner" style="max-width: 800px; border-radius: 8px;"/>
+</p>
+
 Syzygy is an open-source, local-first, multi-agent AI platform built on alchemical philosophy and Jungian psychology. Agents of complementary polarity (Masculine/Feminine) converge through a structured Consensus Engine to produce unified intelligence — the Rebis — transcending what any single agent can achieve.
+
+---
+
+## Table of Contents
+
+- [Vision](#vision)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Workflows](#workflows)
+- [Getting Started](#getting-started)
+- [API](#api)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -163,9 +191,9 @@ Syzygy will:
 4. Run consensus rounds to synthesize findings
 5. Produce a polished, balanced output
 
-### Workflow Builder
+## Workflows
 
-Use the visual node-based editor to design custom workflows with drag-and-drop agent assignments, polarity requirements, and consensus rules.
+Syzygy ships with **11 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
 
 **Available workflows (11 total):**
 
@@ -250,16 +278,27 @@ syzygy-intelligence/
 
 ---
 
-## Screenshots
+## Contributing
 
-> *Dashboard with polarity balance meter, agent cards with sun/moon glyphs, consensus viewport in vesica piscis, and Rebis fusion animation.*
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+- [Bug Reports](.github/ISSUE_TEMPLATE/bug_report.yml) — use our template
+- [Feature Requests](.github/ISSUE_TEMPLATE/feature_request.yml) — suggest improvements
+- [Pull Requests](.github/PULL_REQUEST_TEMPLATE.md) — follow the checklist
+
+All contributors must adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-*"Solve et Coagula — Dissolve and Coalesce. The Great Work continues."*
+<p align="center">
+  <i>"Solve et Coagula — Dissolve and Coalesce. The Great Work continues."</i>
+  <br/><br/>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-"><img src="https://img.shields.io/github/stars/seraphonixstudios/Syzygy-Intelligence-?style=social" alt="Stars"/></a>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/fork"><img src="https://img.shields.io/github/forks/seraphonixstudios/Syzygy-Intelligence-?style=social" alt="Forks"/></a>
+</p>
