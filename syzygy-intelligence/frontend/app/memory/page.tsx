@@ -64,6 +64,7 @@ export default function MemoryPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Memory</h1>

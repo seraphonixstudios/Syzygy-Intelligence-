@@ -80,11 +80,11 @@ class TestSyzygyLogger:
 
     def test_context_injection(self, logger):
         logger.with_context(component="test")
-        assert logger._context["component"] == "test"
+        assert logger._context.get()["component"] == "test"
 
     def test_context_merging(self, logger):
         logger.with_context(app="syzygy")
-        assert logger._context["app"] == "syzygy"
+        assert logger._context.get()["app"] == "syzygy"
 
     def test_info_logs_with_context(self, logger):
         logger.with_context(env="test")

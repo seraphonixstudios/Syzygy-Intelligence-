@@ -23,10 +23,9 @@ This starts:
 ### Pull Models
 
 ```bash
-docker exec syzygy-ollama ollama pull qwen3.5:8b
-docker exec syzygy-ollama ollama pull deepseek-r1:7b
-docker exec syzygy-ollama ollama pull qwen-coder:7b
+docker exec syzygy-ollama ollama pull qwen3:8b
 docker exec syzygy-ollama ollama pull dolphin-llama3:8b
+docker exec syzygy-ollama ollama pull llava:13b
 ```
 
 ### Manual Development
@@ -55,9 +54,14 @@ All configuration via environment variables (`.env` file):
 |----------|---------|-------------|
 | `SYZYGY_ENV` | `development` | Runtime environment |
 | `SYZYGY_LOG_LEVEL` | `INFO` | Logging verbosity |
-| `SYZYGY_DEFAULT_MODEL` | `qwen3.5:8b` | Primary LLM model |
-| `SYZYGY_CRITIC_MODEL` | `deepseek-r1:7b` | Critique phase model |
-| `SYZYGY_SYNTHESIS_MODEL` | `qwen3.5:8b` | Synthesis model |
+| `SYZYGY_DEFAULT_MODEL` | `qwen3:8b-gpu` | Primary LLM model |
+| `SYZYGY_CRITIC_MODEL` | `qwen3:8b-gpu` | Critique phase model |
+| `SYZYGY_SYNTHESIS_MODEL` | `qwen3:8b-gpu` | Synthesis model |
+| `SYZYGY_CODING_MODEL` | `qwen3:8b-gpu` | Code generation model |
+| `SYZYGY_CREATIVE_MODEL` | `dolphin-llama3:8b-gpu` | Creative/writing model |
+| `SYZYGY_VISION_MODEL` | `llava:13b-gpu` | Vision/image analysis model |
+| `SYZYGY_GPU_MODEL` | `qwen3:8b-gpu` | Primary GPU model |
+| `SYZYGY_FAST_MODEL` | `dolphin-llama3:8b-gpu` | Fast/quick response model |
 | `SYZYGY_MAX_CONSENSUS_ROUNDS` | `6` | Max debate rounds |
 | `SYZYGY_CONVERGENCE_THRESHOLD` | `0.85` | Early stop threshold |
 | `SYZYGY_VARIANCE_THRESHOLD` | `0.1` | Score variance threshold |

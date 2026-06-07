@@ -47,11 +47,13 @@ export function Sidebar() {
             src="/branding/pagetop.logo.png"
             alt="Syzygy"
             className="h-12 w-auto brightness-110"
+            width={48} height={48}
           />
           <img
             src="/branding/syzygy.logo.png"
             alt="SYZYGY"
             className="hidden h-8 w-auto brightness-110 md:block"
+            width={32} height={32}
           />
         </div>
         <span className="hidden text-[7px] uppercase tracking-[0.2em] text-syzygy-grey/40 md:block">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -40,6 +41,8 @@ export default function WorkflowsPage() {
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   useEffect(() => {
     fetch(`${API}/api/workflows/`)
@@ -65,7 +68,7 @@ export default function WorkflowsPage() {
       const res = await fetch(`${API}/api/workflows/${selected}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: input.trim(), context: {} }),
+        body: JSON.stringify({ task: input.trim(), context: {}, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
       setOutput(JSON.stringify(data, null, 2));
@@ -75,7 +78,7 @@ export default function WorkflowsPage() {
         setReasoning([
           { agent: "Planner", thought: `Decomposing task for ${selected} workflow...`, confidence: 0.90, model: "qwen3:8b-gpu" },
           { agent: "Executor", thought: "Running workflow steps with polarity-aware agent team...", confidence: 0.87, model: "dolphin-llama3:8b-gpu" },
-          { agent: "Validator", thought: "Verifying output quality and completeness...", confidence: 0.85, model: "deepseek-r1:7b" },
+          { agent: "Validator", thought: "Verifying output quality and completeness...", confidence: 0.85, model: "qwen3:8b-gpu" },
         ]);
       }
     } catch (err) {
@@ -94,6 +97,7 @@ export default function WorkflowsPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Workflows</h1>
@@ -105,11 +109,11 @@ export default function WorkflowsPage() {
         {loading ? (
           <div className="col-span-3 flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-syzygy-gold" /></div>
         ) : (
-          workflows.map((w) => (
+          workflows.map((w, i) => (
             <button
               key={w}
               onClick={() => setSelected(w)}
-              className={`syzygy-card-glass rounded-xl p-4 text-left transition-all hover:border-syzygy-gold/30 ${
+              className={`stagger-${(i % 8) + 1} animate-fade-in-up syzygy-card-glass rounded-xl p-4 text-left transition-all hover:border-syzygy-gold/30 hover:scale-[1.02] hover:border-syzygy-gold/50 duration-300 ${
                 selected === w ? "border-syzygy-gold/50 shadow-lg shadow-syzygy-gold/10" : ""
               }`}
             >
@@ -124,22 +128,26 @@ export default function WorkflowsPage() {
       </div>
 
       {selected && (
-        <form onSubmit={handleExecute} className="space-y-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={`Enter task for ${selected.replace(/_/g, " ")}...`}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
-            />
-            <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
-            <Button type="submit" disabled={!input.trim() || executing} variant="gold" size="sm" className="shrink-0 gap-1">
-              {executing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-              Execute
-            </Button>
-          </div>
-        </form>
+        <div className="animate-fade-in-up stagger-1 space-y-3">
+          <form onSubmit={handleExecute}>
+            <div className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`Enter task for ${selected.replace(/_/g, " ")}...`}
+                className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
+              />
+              <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
+              <Button type="submit" disabled={!input.trim() || executing} variant="gold" size="sm" className="shrink-0 gap-1">
+                {executing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                Execute
+              </Button>
+            </div>
+          </form>
+
+          <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={executing} />
+        </div>
       )}
 
       {reasoning.length > 0 && (

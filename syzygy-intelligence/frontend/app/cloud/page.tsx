@@ -559,7 +559,7 @@ export default function CloudPage() {
         >
           <div className="mx-auto flex max-w-6xl items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/branding/pagetop.logo.png" alt="Syzygy" className="h-7 w-auto brightness-110" />
+              <img src="/branding/pagetop.logo.png" alt="Syzygy" className="h-7 w-auto brightness-110" width={28} height={28} />
               <span className="hidden text-xs font-semibold uppercase tracking-[0.25em] text-syzygy-gold md:block">
                 Cloud
               </span>

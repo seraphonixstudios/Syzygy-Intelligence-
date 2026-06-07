@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { FileText, Send, Loader2, Eye, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -16,6 +17,8 @@ export default function ContentPage() {
   const [content, setContent] = useState("");
   const [mode, setMode] = useState<"edit" | "preview">("preview");
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +29,7 @@ export default function ContentPage() {
       const res = await fetch(`${API}/api/workflows/content/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: topic.trim(), context: {} }),
+        body: JSON.stringify({ task: topic.trim(), context: {}, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
       setContent(data.content || data.result || JSON.stringify(data, null, 2));
@@ -34,8 +37,8 @@ export default function ContentPage() {
         setReasoning(data.reasoning);
       } else {
         setReasoning([
-          { agent: "Researcher", thought: "Gathering background information on the topic...", confidence: 0.88, model: "deepseek-r1:7b" },
-          { agent: "Strategist", thought: "Outlining article structure with key sections...", confidence: 0.85, model: "qwen3.5:8b" },
+          { agent: "Researcher", thought: "Gathering background information on the topic...", confidence: 0.88, model: "qwen3:8b-gpu" },
+          { agent: "Strategist", thought: "Outlining article structure with key sections...", confidence: 0.85, model: "dolphin-llama3:8b-gpu" },
           { agent: "Drafter", thought: "Writing initial draft with engaging narrative flow...", confidence: 0.82, model: "dolphin-llama3:8b-gpu" },
           { agent: "Editor", thought: "Refining language, clarity, and tone for polish...", confidence: 0.90, model: "qwen3:8b-gpu" },
         ]);
@@ -56,6 +59,7 @@ export default function ContentPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Content</h1>
@@ -78,6 +82,8 @@ export default function ContentPage() {
           {generating ? "Generating..." : "Generate"}
         </Button>
       </form>
+
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={generating} />
 
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={generating} title="Content Pipeline Reasoning" />

@@ -144,8 +144,9 @@ cp .env.example .env
 docker compose up -d
 
 # Pull recommended models
-docker exec -it syzygy-ollama ollama pull qwen3.5:8b
-docker exec -it syzygy-ollama ollama pull deepseek-r1:7b
+docker exec -it syzygy-ollama ollama pull qwen3:8b
+docker exec -it syzygy-ollama ollama pull dolphin-llama3:8b
+docker exec -it syzygy-ollama ollama pull llava:13b
 ```
 
 ### Development Setup
@@ -169,9 +170,14 @@ npm run dev
 Edit `backend/app/config/settings.yaml` or set via `.env`:
 
 ```env
-SYZYGY_DEFAULT_MODEL=qwen3.5:8b
-SYZYGY_CRITIC_MODEL=deepseek-r1:7b
-SYZYGY_SYNTHESIS_MODEL=qwen3.5:8b
+SYZYGY_DEFAULT_MODEL=qwen3:8b-gpu
+SYZYGY_CRITIC_MODEL=qwen3:8b-gpu
+SYZYGY_SYNTHESIS_MODEL=qwen3:8b-gpu
+SYZYGY_CODING_MODEL=qwen3:8b-gpu
+SYZYGY_CREATIVE_MODEL=dolphin-llama3:8b-gpu
+SYZYGY_VISION_MODEL=llava:13b-gpu
+SYZYGY_GPU_MODEL=qwen3:8b-gpu
+SYZYGY_FAST_MODEL=dolphin-llama3:8b-gpu
 ```
 
 ---

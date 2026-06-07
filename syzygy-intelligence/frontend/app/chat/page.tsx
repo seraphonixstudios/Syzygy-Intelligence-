@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
-import { Send, Loader2, Bot, User, Brain } from "lucide-react";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
+import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -13,7 +14,82 @@ const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  multiModel?: Record<string, string>;
+  modelName?: string;
 }
+
+interface ModelInfo {
+  configured: Record<string, string>;
+  available: string[];
+  all_models: string[];
+}
+
+function MultiModelDisplay({ responses }: { responses: Record<string, string> }) {
+  const modelKeys = Object.keys(responses);
+  const [activeModel, setActiveModel] = useState(modelKeys[0] || "");
+  const [expanded, setExpanded] = useState(false);
+
+  if (modelKeys.length === 0) return <span>No responses</span>;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {modelKeys.map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setActiveModel(m)}
+            className={`rounded px-2 py-0.5 text-[10px] font-mono transition-colors ${
+              activeModel === m
+                ? "bg-syzygy-gold/30 text-syzygy-gold-light"
+                : "bg-syzygy-surface-border/20 text-syzygy-grey/50 hover:text-syzygy-grey"
+            }`}
+          >
+            {m.includes(":") ? m.split(":")[0] : m.slice(0, 12)}
+          </button>
+        ))}
+      </div>
+      <div className="text-xs leading-relaxed text-syzygy-grey whitespace-pre-wrap">
+        {responses[activeModel]?.startsWith("[Error") ? (
+          <span className="text-red-400/70 italic">{responses[activeModel]}</span>
+        ) : (
+          responses[activeModel]
+        )}
+      </div>
+      {modelKeys.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 text-[10px] text-syzygy-gold/50 hover:text-syzygy-gold transition-colors"
+        >
+          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          {expanded ? "Hide all" : `Show all ${modelKeys.length} responses`}
+        </button>
+      )}
+      {expanded && (
+        <div className="space-y-3 border-t border-syzygy-surface-border/30 pt-2 mt-1">
+          {modelKeys.map((m) => (
+            <div key={m} className="space-y-0.5">
+              <div className="text-[10px] font-mono text-syzygy-gold/60">{m}</div>
+              <div className="text-xs text-syzygy-grey/80 whitespace-pre-wrap pl-2 border-l border-syzygy-surface-border/30">
+                {responses[m]?.startsWith("[Error") ? (
+                  <span className="text-red-400/70 italic">{responses[m]}</span>
+                ) : (
+                  responses[m]
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const MODEL_OPTIONS = [
+  { value: "syzygy", label: "Auto (Syzygy Consensus)" },
+  { value: "__all__", label: "All Models" },
+];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -22,11 +98,30 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
+  const [selectedModel, setSelectedModel] = useState("syzygy");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Fetch available models on mount
+  useEffect(() => {
+    fetch(`${API}/api/chat/models`)
+      .then((r) => r.json())
+      .then((data: ModelInfo) => {
+        setAvailableModels(data.available);
+        logger.info("Loaded available models", data.available, "Chat");
+      })
+      .catch(() => {
+        logger.warn("Could not fetch model list — using defaults", undefined, "Chat");
+        setAvailableModels(["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"]);
+      });
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,28 +132,58 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      const res = await fetch(`${API}/api/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          model: "syzygy",
-        }),
-      });
-      const data = await res.json();
-      const reply = data.response || "No response.";
-      if (data.reasoning) {
-        setReasoning(data.reasoning);
+      if (selectedModel === "__all__") {
+        // Multi-model query
+        const models = availableModels.length > 0 ? availableModels : ["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"];
+        const res = await fetch(`${API}/api/chat/multi-model`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMsg, models }),
+        });
+        const data = await res.json();
+        const responses: Record<string, string> = data.responses || {};
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: Object.values(responses).find((v) => v && !v.startsWith("[Error")) || "No valid response.",
+            multiModel: responses,
+            modelName: "All Models",
+          },
+        ]);
+        setReasoning([{ agent: "Multi-Model", thought: `Queried ${models.length} models in parallel.`, model: models.join(", ") }]);
       } else {
-        setReasoning([{ agent: "Syzygy", thought: "Processing complete. Response generated.", model: "syzygy" }]);
+        // Single model or syzygy consensus
+        const res = await fetch(`${API}/api/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMsg,
+            model: selectedModel,
+            files: uploadedFiles,
+            links: attachedLinks,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const detail = errData.detail || {};
+          throw new Error(detail.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const reply = data.response || "No response.";
+        if (data.reasoning) {
+          setReasoning(data.reasoning);
+        } else {
+          setReasoning([{ agent: selectedModel === "syzygy" ? "Syzygy" : selectedModel, thought: "Processing complete. Response generated.", model: selectedModel }]);
+        }
+        setMessages((prev) => [...prev, { role: "assistant", content: reply, modelName: selectedModel }]);
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
       logger.error("Chat send failed", err, "Chat");
-      toast.error("Backend unavailable — running in demo mode");
+      toast.error("Backend unavailable — check that Ollama and the backend are running");
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Consensus engine ready. (Ollama must be running for live responses.)" },
+        { role: "assistant", content: "Error: Could not reach the backend. Ensure Docker containers are running." },
       ]);
     } finally {
       setSending(false);
@@ -72,6 +197,7 @@ export default function ChatPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Chat</h1>
@@ -87,14 +213,23 @@ export default function ChatPage() {
                 <Bot className="h-4 w-4 text-syzygy-gold" />
               </div>
             )}
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
-                msg.role === "user"
-                  ? "bg-syzygy-gold/20 text-syzygy-gold-light"
-                  : "bg-syzygy-obsidian/50 text-syzygy-grey"
-              }`}
-            >
-              {msg.content}
+            <div className="max-w-[80%] space-y-1">
+              {msg.modelName && msg.modelName !== "All Models" && (
+                <div className="text-xs text-syzygy-gold/60 font-mono">{msg.modelName}</div>
+              )}
+              <div
+                className={`rounded-2xl px-4 py-2 text-sm ${
+                  msg.role === "user"
+                    ? "bg-syzygy-gold/20 text-syzygy-gold-light"
+                    : "bg-syzygy-obsidian/50 text-syzygy-grey"
+                }`}
+              >
+                {msg.multiModel ? (
+                  <MultiModelDisplay responses={msg.multiModel} />
+                ) : (
+                  msg.content
+                )}
+              </div>
             </div>
             {msg.role === "user" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-syzygy-gold/20">
@@ -120,20 +255,69 @@ export default function ChatPage() {
         <ReasoningPanel steps={reasoning} loading={sending} title="Agent Reasoning" />
       )}
 
-      <form onSubmit={handleSend} className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
-          disabled={sending}
-        />
-        <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
-        <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
-          <Send className="h-3.5 w-3.5" />
-          Send
-        </Button>
+      <form onSubmit={handleSend} className="space-y-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
+          {/* Model selector */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowModelPicker(!showModelPicker)}
+              className="flex items-center gap-1 rounded-lg border border-syzygy-surface-border px-2 py-1.5 text-xs text-syzygy-grey/70 hover:border-syzygy-gold/40 hover:text-syzygy-gold transition-colors"
+            >
+              <Layers className="h-3 w-3" />
+              {selectedModel === "syzygy" ? "Auto" : selectedModel === "__all__" ? "All Models" : selectedModel}
+            </button>
+            {showModelPicker && (
+              <div className="absolute bottom-full left-0 mb-2 z-50 w-56 rounded-xl border border-syzygy-surface-border bg-syzygy-obsidian p-2 shadow-2xl">
+                {MODEL_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => { setSelectedModel(opt.value); setShowModelPicker(false); }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                      selectedModel === opt.value
+                        ? "bg-syzygy-gold/20 text-syzygy-gold"
+                        : "text-syzygy-grey/70 hover:bg-syzygy-surface-border/30 hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-syzygy-surface-border" />
+                <div className="px-3 py-1 text-[10px] text-syzygy-grey/50 uppercase tracking-wider">Models</div>
+                {availableModels.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setSelectedModel(m); setShowModelPicker(false); }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                      selectedModel === m
+                        ? "bg-syzygy-gold/20 text-syzygy-gold"
+                        : "text-syzygy-grey/70 hover:bg-syzygy-surface-border/30 hover:text-foreground"
+                    }`}
+                  >
+                    <span className="font-mono">{m}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
+            disabled={sending}
+          />
+          <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
+          <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
+            <Send className="h-3.5 w-3.5" />
+            Send
+          </Button>
+        </div>
+        <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={sending} />
       </form>
     </div>
   );

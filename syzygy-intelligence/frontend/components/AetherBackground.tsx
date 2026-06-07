@@ -28,6 +28,10 @@ export function AetherBackground() {
 
     let animId: number;
     let particles: Particle[] = [];
+    let running = true;
+
+    const onVisibility = () => { running = !document.hidden; if (running) animId = requestAnimationFrame(animate); };
+    document.addEventListener("visibilitychange", onVisibility);
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -52,6 +56,7 @@ export function AetherBackground() {
     };
 
     const animate = () => {
+      if (!running) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (Math.random() < 0.15) spawnParticle();
@@ -88,6 +93,7 @@ export function AetherBackground() {
 
     return () => {
       cancelAnimationFrame(animId);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", resize);
     };
   }, []);

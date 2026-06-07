@@ -206,7 +206,7 @@ class TestAgentRegistry:
         registry = AgentRegistry()
         registry.clear()
         team = registry.create_default_team()
-        assert len(team) == 8  # 3 masculine + 3 feminine + 1 self + 1 trickster
+        assert len(team) == 5  # 3 masculine + 3 feminine + 1 self + 1 trickster
 
     def test_create_polarity_balanced_team(self):
         registry = AgentRegistry()

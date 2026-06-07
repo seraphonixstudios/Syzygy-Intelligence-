@@ -89,6 +89,7 @@ export default function AgentsPage() {
             src="/branding/pagetop.logo.png"
             alt="Syzygy"
             className="h-8 w-auto brightness-110"
+            width={32} height={32}
           />
           <div>
             <h1 className="syzygy-title text-2xl font-bold tracking-wider">Agents</h1>
@@ -126,7 +127,7 @@ export default function AgentsPage() {
           {agents.map((agent, i) => (
             <div
               key={agent.id}
-              className={`stagger-${Math.min(i + 1, 8)} animate-fade-in-up group relative`}
+              className={`stagger-${Math.min(i + 1, 8)} animate-fade-in-up group relative hover:scale-[1.02] hover:border-syzygy-gold/50 transition-all duration-300`}
             >
               <AgentCard
                 name={agent.name}

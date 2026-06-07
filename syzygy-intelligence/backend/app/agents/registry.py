@@ -12,18 +12,18 @@ from app.agents.personas import PERSONA_REGISTRY
 # Default models for each archetype (can be overridden)
 DEFAULT_AGENT_MODELS: dict[str, str] = {
     "hero": "qwen3:8b-gpu",
-    "sage": "deepseek-r1:7b",
-    "ruler": "qwen3.5:8b",
-    "magician": "qwen-coder:7b",
-    "explorer": "qwen3.5:8b",
+    "sage": "qwen3:8b-gpu",
+    "ruler": "qwen3:8b-gpu",
+    "magician": "qwen3:8b-gpu",
+    "explorer": "qwen3:8b-gpu",
     "great_mother": "dolphin-llama3:8b-gpu",
-    "lover": "dolphin-llama3:8b",
-    "innocent": "dolphin-llama3:8b",
-    "creator": "qwen-coder:7b",
-    "anima": "deepseek-r1:7b",
+    "lover": "dolphin-llama3:8b-gpu",
+    "innocent": "dolphin-llama3:8b-gpu",
+    "creator": "qwen3:8b-gpu",
+    "anima": "qwen3:8b-gpu",
     "self": "qwen3:8b-gpu",
-    "hermes": "qwen3.5:8b",
-    "trickster": "qwen3.5:8b",
+    "hermes": "qwen3:8b-gpu",
+    "trickster": "dolphin-llama3:8b-gpu",
 }
 
 
@@ -69,7 +69,7 @@ class AgentRegistry:
         agent = SyzygyAgent.create(
             archetype_key=archetype_key,
             name=name or archetype_key.title(),
-            model=model or DEFAULT_AGENT_MODELS.get(archetype_key, "qwen3.5:8b"),
+            model=model or DEFAULT_AGENT_MODELS.get(archetype_key, "qwen3:8b-gpu"),
             shadow_active=shadow_active,
             **kwargs,
         )
@@ -83,16 +83,13 @@ class AgentRegistry:
         # Masculine agents
         team.append(self.create_agent("sage", name="Sage"))
         team.append(self.create_agent("hero", name="Heracles"))
-        team.append(self.create_agent("magician", name="Merlin"))
 
         # Feminine agents
         team.append(self.create_agent("great_mother", name="Nurtura"))
         team.append(self.create_agent("lover", name="Aphrodite"))
-        team.append(self.create_agent("creator", name="Astra"))
 
-        # Unified agents
+        # Unified agent
         team.append(self.create_agent("self", name="Rebis"))
-        team.append(self.create_agent("trickster", name="Loki"))
 
         return team
 

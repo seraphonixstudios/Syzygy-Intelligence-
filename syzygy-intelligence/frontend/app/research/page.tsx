@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { Search, Globe, Loader2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -16,6 +17,8 @@ export default function ResearchPage() {
   const [results, setResults] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +29,7 @@ export default function ResearchPage() {
       const res = await fetch(`${API}/api/workflows/research/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: query.trim(), context: {} }),
+        body: JSON.stringify({ task: query.trim(), context: {}, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
       const text = data.synthesis || data.result || JSON.stringify(data, null, 2);
@@ -36,8 +39,8 @@ export default function ResearchPage() {
         setReasoning(data.reasoning);
       } else {
         setReasoning([
-          { agent: "Researcher", thought: "Parsing query and identifying key research domains...", confidence: 0.90, model: "qwen3.5:8b" },
-          { agent: "Analyst", thought: "Cross-referencing multiple sources for validation...", confidence: 0.87, model: "deepseek-r1:7b" },
+          { agent: "Researcher", thought: "Parsing query and identifying key research domains...", confidence: 0.90, model: "qwen3:8b-gpu" },
+          { agent: "Analyst", thought: "Cross-referencing multiple sources for validation...", confidence: 0.87, model: "qwen3:8b-gpu" },
           { agent: "Synthesizer", thought: "Integrating findings into coherent research summary...", confidence: 0.85, model: "qwen3:8b-gpu" },
         ]);
       }
@@ -58,6 +61,7 @@ export default function ResearchPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Research</h1>
@@ -82,6 +86,8 @@ export default function ResearchPage() {
           </Button>
         </div>
       </form>
+
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={searching} />
 
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={searching} title="Research Reasoning" />

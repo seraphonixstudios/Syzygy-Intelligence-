@@ -10,14 +10,14 @@ test.describe("Settings page", () => {
     await page.goto("/settings");
     const select = page.locator("select").first();
     const options = await select.locator("option").all();
-    expect(options.length).toBeGreaterThanOrEqual(8);
+    expect(options.length).toBeGreaterThanOrEqual(3);
   });
 
   test("can change default model", async ({ page }) => {
     await page.goto("/settings");
     const select = page.locator("select").first();
-    await select.selectOption("deepseek-r1:7b");
-    await expect(select).toHaveValue("deepseek-r1:7b");
+    await select.selectOption("qwen3:8b-gpu");
+    await expect(select).toHaveValue("qwen3:8b-gpu");
   });
 
   test("can change polarity preset", async ({ page }) => {

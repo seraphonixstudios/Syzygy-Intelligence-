@@ -29,7 +29,7 @@ List all registered agents.
       "glyph": "☉",
       "shadow_active": false,
       "persona": "Sage",
-      "model": "deepseek-r1:7b"
+      "model": "qwen3:8b-gpu"
     }
   ]
 }
@@ -43,7 +43,7 @@ Create a new agent.
 {
   "archetype": "sage",
   "name": "MySage",
-  "model": "qwen3.5:8b",
+  "model": "qwen3:8b-gpu",
   "shadow_active": false
 }
 ```
@@ -183,14 +183,57 @@ Execute a workflow.
 ## Chat
 
 ### `POST /api/chat/completions`
-Chat completion with optional consensus.
+Chat completion with optional consensus or direct model query.
 
 **Request:**
 ```json
 {
   "message": "Analyze AI safety",
-  "use_consensus": true,
-  "consensus_rounds": 4
+  "model": "syzygy",
+  "consensus_rounds": 2
+}
+```
+
+- `model: "syzygy"` — runs consensus engine (5 agents, 2 rounds default)
+- `model: "qwen3:8b-gpu"` — direct query to a specific model
+- Returns `{ "response": "…", "session_id": "…", "rounds": N, "fusion_report": {…} }`
+
+### `POST /api/chat/multi-model`
+Query multiple models in parallel. Returns responses from all.
+
+**Request:**
+```json
+{
+  "message": "Explain quantum computing",
+  "models": ["qwen3:8b-gpu", "dolphin-llama3:8b-gpu"]
+}
+```
+
+**Response:**
+```json
+{
+  "responses": {
+    "qwen3:8b-gpu": "Quantum computing uses qubits…",
+    "dolphin-llama3:8b-gpu": "It's a computing paradigm…"
+  }
+}
+```
+
+If `models` is empty, all configured models are queried.
+
+### `GET /api/chat/models`
+List configured model roles and available Ollama models.
+
+**Response:**
+```json
+{
+  "configured": {
+    "default": "qwen3:8b-gpu",
+    "creative": "dolphin-llama3:8b-gpu",
+    "vision": "llava:13b-gpu"
+  },
+  "available": ["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"],
+  "all_models": ["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"]
 }
 ```
 
@@ -199,12 +242,12 @@ Chat completion with optional consensus.
 ## OpenAI-Compatible API
 
 ### `POST /v1/chat/completions`
-OpenAI-compatible chat endpoint with Syzygy extensions.
+OpenAI-compatible chat endpoint with Syzygy extensions. Routes `syzygy` model through consensus engine.
 
 **Request:**
 ```json
 {
-  "model": "syzygy-consensus",
+  "model": "syzygy",
   "messages": [{"role": "user", "content": "Hello"}],
   "syzygy_polarity_balance": 0.7,
   "syzygy_consensus_rounds": 4

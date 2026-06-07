@@ -94,7 +94,7 @@ class Agent(Base):
     primary_archetype = Column(SAEnum(ArchetypeType), nullable=False)
     shadow_archetype = Column(SAEnum(ArchetypeType), nullable=True)
     persona_instructions = Column(Text, nullable=True)
-    model = Column(String(255), nullable=False, default="qwen3.5:8b")
+    model = Column(String(255), nullable=False, default="qwen3:8b-gpu")
     system_prompt = Column(Text, nullable=True)
     capabilities = Column(ARRAY(String), default=[])
     metadata_ = Column("metadata", JSON, default=dict)

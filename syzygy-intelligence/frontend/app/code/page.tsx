@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { CodeXml, Play, Loader2, Copy, CheckCircle2, Terminal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -21,6 +22,8 @@ export default function CodePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,7 +45,7 @@ export default function CodePage() {
       const res = await fetch(`${API}/api/workflows/code/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: prompt.trim(), context: { language } }),
+        body: JSON.stringify({ task: prompt.trim(), context: { language }, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
       setCode(data.code || data.result || JSON.stringify(data, null, 2));
@@ -50,9 +53,9 @@ export default function CodePage() {
         setReasoning(data.reasoning);
       } else {
         setReasoning([
-          { agent: "Architect", thought: "Designing solution structure and identifying optimal approach...", confidence: 0.92, model: "qwen-coder:7b" },
+          { agent: "Architect", thought: "Designing solution structure and identifying optimal approach...", confidence: 0.92, model: "qwen3:8b-gpu" },
           { agent: "Implementer", thought: `Writing ${language} code with best practices and error handling...`, confidence: 0.88, model: "qwen3:8b-gpu" },
-          { agent: "Reviewer", thought: "Checking for edge cases, performance issues, and security concerns...", confidence: 0.85, model: "deepseek-r1:7b" },
+          { agent: "Reviewer", thought: "Checking for edge cases, performance issues, and security concerns...", confidence: 0.85, model: "qwen3:8b-gpu" },
         ]);
       }
     } catch (err) {
@@ -77,6 +80,7 @@ export default function CodePage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Code</h1>
@@ -106,12 +110,12 @@ export default function CodePage() {
             </button>
             {showLangPicker && (
               <div className="absolute right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-syzygy-surface-border bg-syzygy-deep/95 backdrop-blur-xl shadow-xl animate-scale-in">
-                {languageOptions.map((lang) => (
+                {languageOptions.map((lang, i) => (
                   <button
                     key={lang}
                     type="button"
                     onClick={() => { setLanguage(lang); setShowLangPicker(false); }}
-                    className="block w-full px-4 py-2 text-left text-xs text-syzygy-grey-light hover:bg-syzygy-gold/10 hover:text-syzygy-gold-light transition-colors"
+                    className={`stagger-${(i % 8) + 1} animate-fade-in-up block w-full px-4 py-2 text-left text-xs text-syzygy-grey-light hover:bg-syzygy-gold/10 hover:text-syzygy-gold-light hover:scale-[1.02] transition-all duration-300`}
                   >
                     {lang}
                   </button>
@@ -125,6 +129,8 @@ export default function CodePage() {
           </Button>
         </div>
       </form>
+
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={generating} />
 
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={generating} title="Code Generation Reasoning" />

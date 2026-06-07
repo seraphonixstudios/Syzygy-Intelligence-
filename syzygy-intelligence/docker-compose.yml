@@ -57,7 +57,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama
+      - C:/Users/User/.ollama:/root/.ollama
     deploy:
       resources:
         reservations:
@@ -139,7 +139,6 @@ services:
 volumes:
   pgdata:
   neo4jdata:
-  ollama_models:
   sandbox_data:
   chroma_data:
 

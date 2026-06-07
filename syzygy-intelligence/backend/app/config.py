@@ -74,11 +74,11 @@ class SyzygyConfig(BaseSettings):
 
     # Ollama
     ollama_base_url: str = "http://localhost:11434"
-    default_model: str = "qwen3.5:8b"
-    critic_model: str = "deepseek-r1:7b"
+    default_model: str = "qwen3:8b-gpu"
+    critic_model: str = "qwen3:8b-gpu"
     synthesis_model: str = "qwen3:8b-gpu"
-    coding_model: str = "qwen-coder:7b"
-    creative_model: str = "dolphin-llama3:8b"
+    coding_model: str = "qwen3:8b-gpu"
+    creative_model: str = "dolphin-llama3:8b-gpu"
     vision_model: str = "llava:13b-gpu"
     gpu_model: str = "qwen3:8b-gpu"
     fast_model: str = "dolphin-llama3:8b-gpu"
@@ -99,6 +99,10 @@ class SyzygyConfig(BaseSettings):
     sandbox_docker_image: str = "syzygy-sandbox:latest"
     sandbox_timeout: int = 120
     sandbox_memory_limit: str = "512m"
+
+    # Uploads
+    upload_dir: str = str(Path("./data/uploads").absolute())
+    max_upload_size_mb: int = 10
 
     # Paths
     data_dir: str = str(Path("./data").absolute())

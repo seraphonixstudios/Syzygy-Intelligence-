@@ -34,13 +34,19 @@ const ANIMATIONS = [
   { name: "border-rotate", dur: "3s", desc: "Animated gradient border sweep" },
 ];
 
+const ANIM_CLASS_MAP: Record<string, string> = {
+  "portal-glow": "portal-glow",
+  "merge-sun-moon": "polarity-sun",
+  "ember-drift": "animate-ember",
+};
+
 export function BrandGuide() {
   const [tab, setTab] = useState<"assets" | "polarity" | "animations">("assets");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <img src="/branding/pagetop.logo.png" alt="" className="h-10 w-auto brightness-110" />
+        <img src="/branding/pagetop.logo.png" alt="" className="h-10 w-auto brightness-110" width={40} height={40} />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Brand Guide</h1>
           <p className="mt-0.5 text-xs text-syzygy-grey/60">Visual identity, polarity system, and animation reference</p>
@@ -114,7 +120,7 @@ export function BrandGuide() {
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`h-8 w-8 shrink-0 rounded-full bg-syzygy-gold/10 ${anim.name.startsWith("animate-") ? anim.name : "animate-" + anim.name}`}
+                  className={`h-8 w-8 shrink-0 rounded-full bg-syzygy-gold/10 ${ANIM_CLASS_MAP[anim.name] ?? (anim.name.startsWith("animate-") ? anim.name : "animate-" + anim.name)}`}
                   style={
                     anim.name === "ring-expand"
                       ? { border: "1px solid #d4a843", borderRadius: "50%" }

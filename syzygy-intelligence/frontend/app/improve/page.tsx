@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { Loader2, Zap, Brain, TrendingUp, CheckCircle2, XCircle, ArrowRight, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -33,6 +34,8 @@ export default function ImprovePage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   useEffect(() => {
     fetch(`${API}/api/meta/summary`)
@@ -51,7 +54,7 @@ export default function ImprovePage() {
       const res = await fetch(`${API}/api/meta/evaluate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ output: input.trim(), context: { source: "manual" } }),
+        body: JSON.stringify({ output: input.trim(), context: { source: "manual", files: uploadedFiles, links: attachedLinks } }),
       });
       const data = await res.json();
       setEvaluation(data.evaluation);
@@ -62,7 +65,7 @@ export default function ImprovePage() {
         setReasoning(data.reasoning);
       } else {
         setReasoning([
-          { agent: "Critic", thought: "Evaluating output across 5 quality dimensions...", confidence: 0.90, model: "deepseek-r1:7b" },
+          { agent: "Critic", thought: "Evaluating output across 5 quality dimensions...", confidence: 0.90, model: "qwen3:8b-gpu" },
           { agent: "Strategist", thought: "Identifying highest-impact improvement areas...", confidence: 0.85, model: "qwen3:8b-gpu" },
           { agent: "Innovator", thought: "Generating concrete proposals for each gap...", confidence: 0.82, model: "dolphin-llama3:8b-gpu" },
         ]);
@@ -119,7 +122,7 @@ export default function ImprovePage() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center gap-3">
-        <img src="/branding/pagetop.logo.png" alt="Syzygy" className="h-8 w-auto brightness-110" />
+        <img src="/branding/pagetop.logo.png" alt="Syzygy" className="h-8 w-auto brightness-110" width={32} height={32} />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Self-Improvement</h1>
           <p className="mt-0.5 text-xs text-syzygy-grey/60">Recursive meta-cognition engine — evaluate, propose, improve</p>
@@ -171,6 +174,8 @@ export default function ImprovePage() {
         </div>
       </form>
 
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={running} />
+
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={running} title="Improvement Reasoning" />
       )}
@@ -197,8 +202,8 @@ export default function ImprovePage() {
 
             {/* Dimension Bars */}
             <div className="grid gap-2 sm:grid-cols-2">
-              {Object.entries(evaluation.dimensions).map(([key, val]) => (
-                <div key={key} className="space-y-1">
+              {Object.entries(evaluation.dimensions).map(([key, val], i) => (
+                <div key={key} className={`stagger-${(i % 8) + 1} animate-fade-in-up space-y-1`}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="capitalize text-syzygy-grey/60">{key}</span>
                     <span className="text-syzygy-grey/40">{(val * 100).toFixed(0)}%</span>
@@ -223,7 +228,7 @@ export default function ImprovePage() {
               <div className="mt-4 space-y-1">
                 <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Feedback</p>
                 {evaluation.feedback.map((f, i) => (
-                  <p key={i} className="flex items-start gap-2 text-xs text-syzygy-grey/60">
+                  <p key={i} className={`stagger-${(i % 8) + 1} animate-fade-in-up flex items-start gap-2 text-xs text-syzygy-grey/60`}>
                     <span className="mt-0.5 text-syzygy-gold">•</span>
                     {f}
                   </p>
@@ -236,8 +241,8 @@ export default function ImprovePage() {
           {proposals.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-syzygy-bone">Improvement Proposals</h3>
-              {proposals.map((p) => (
-                <div key={p.id} className={`stagger-1 animate-fade-in-up flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-deep/50 p-3`}>
+              {proposals.map((p, i) => (
+                <div key={p.id} className={`stagger-${(i % 8) + 1} animate-fade-in-up flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-deep/50 p-3 hover:scale-[1.02] hover:border-syzygy-gold/50 transition-all duration-300`}>
                   <div className="flex-1">
                     <p className="text-sm text-syzygy-grey-light">{p.change}</p>
                     <p className="mt-0.5 text-xs text-syzygy-grey/40">{p.rationale}</p>

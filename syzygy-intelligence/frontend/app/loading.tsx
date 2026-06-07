@@ -3,17 +3,13 @@ export default function Loading() {
     <div className="flex h-[60vh] items-center justify-center">
       <div className="flex flex-col items-center gap-6">
         <div className="animate-brand-glow">
-          <img
-            src="/branding/pagetop.logo.png"
-            alt="Syzygy"
-            className="h-32 w-auto brightness-110"
-          />
+          <span className="font-cinzel text-5xl font-bold tracking-[0.3em] text-syzygy-gold">
+            SYZYGY
+          </span>
         </div>
-        <img
-          src="/branding/syzygy.logo.png"
-          alt="SYZYGY"
-          className="h-18 w-auto brightness-110 opacity-80"
-        />
+        <span className="font-cinzel text-sm tracking-[0.5em] text-syzygy-grey/40">
+          INTELLIGENCE
+        </span>
         <div className="flex flex-col items-center gap-3">
           <div className="ouroboros-ring h-10 w-10" />
           <p className="text-xs text-syzygy-grey/60 animate-pulse">

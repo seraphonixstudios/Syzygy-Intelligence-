@@ -89,6 +89,7 @@ class ConsensusEngine:
         max_rounds: int = 6,
         min_rounds: int = 2,
         convergence_threshold: float = 0.85,
+        timeout: float = 0,
     ) -> ConsensusSession:
         """Run the full consensus process with all phases."""
 

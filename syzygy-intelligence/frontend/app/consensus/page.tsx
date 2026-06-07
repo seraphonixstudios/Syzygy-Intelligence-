@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { ConsensusView } from "@/components/consensus/ConsensusView";
 import { Brain, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,8 @@ export default function ConsensusPage() {
   const [result, setResult] = useState<string | null>(null);
   const [history, setHistory] = useState<{ task: string; result: string; time: string }[]>([]);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function ConsensusPage() {
       const res = await fetch(`${API}/api/consensus/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: task.trim(), max_rounds: 4, threshold: 0.85 }),
+        body: JSON.stringify({ task: task.trim(), max_rounds: 4, threshold: 0.85, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
       const synthesis = data.synthesis || "Consensus completed.";
@@ -37,8 +40,8 @@ export default function ConsensusPage() {
         setReasoning(data.reasoning);
       } else {
         setReasoning([
-          { agent: "Thesis", thought: "Analyzing the topic from first principles...", confidence: 0.85, model: "deepseek-r1:7b" },
-          { agent: "Antithesis", thought: "Examining counter-arguments and edge cases...", confidence: 0.82, model: "qwen3.5:8b" },
+          { agent: "Thesis", thought: "Analyzing the topic from first principles...", confidence: 0.85, model: "qwen3:8b-gpu" },
+          { agent: "Antithesis", thought: "Examining counter-arguments and edge cases...", confidence: 0.82, model: "qwen3:8b-gpu" },
           { agent: "Synthesis", thought: "Integrating perspectives into unified conclusion...", confidence: 0.90, model: "qwen3:8b-gpu" },
           { agent: "Validator", thought: "Cross-checking against quality dimensions...", confidence: 0.88, model: "dolphin-llama3:8b-gpu" },
         ]);
@@ -60,6 +63,7 @@ export default function ConsensusPage() {
           src="/branding/pagetop.logo.png"
           alt="Syzygy"
           className="h-8 w-auto brightness-110"
+          width={32} height={32}
         />
         <div>
           <h1 className="syzygy-title text-2xl font-bold tracking-wider">Consensus</h1>
@@ -88,6 +92,8 @@ export default function ConsensusPage() {
           </Button>
         </div>
       </form>
+
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={running} />
 
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={running} title="Consensus Reasoning" />
