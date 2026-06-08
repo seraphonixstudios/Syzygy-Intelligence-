@@ -97,6 +97,8 @@ async def ws_handler(websocket: WebSocket):
                     await manager.send_to(client_id, {"type": "error", "message": "Task is required"})
                     continue
 
+                await manager.send_to(client_id, {"type": "consensus_started", "task": task})
+
                 await notification_manager.notify(
                     type=NotificationType.CONSENSUS_STARTED,
                     title="Consensus process started",
@@ -106,30 +108,13 @@ async def ws_handler(websocket: WebSocket):
                     data={"task": task},
                 )
 
-                session = await engine.run_consensus(task)
+                async def on_event(event_type: str, payload: dict):
+                    await manager.send_to(client_id, {
+                        "type": f"consensus_{event_type}",
+                        **payload,
+                    })
 
-                for i, round_data in enumerate(session.rounds):
-                    round_msg = {
-                        "type": "consensus_round",
-                        "round": round_data.round_number,
-                        "proposals": list(round_data.proposals.values()),
-                        "critiques": list(round_data.critiques.values()),
-                        "refinements": list(round_data.refinements.values()),
-                        "scores": round_data.scores,
-                        "convergence_score": round_data.convergence_score,
-                        "polarity_balance": round_data.polarity_balance,
-                    }
-                    await manager.send_to(client_id, round_msg)
-
-                    await notification_manager.notify(
-                        type=NotificationType.CONSENSUS_ROUND,
-                        title=f"Round {round_data.round_number} completed",
-                        body=f"Convergence: {round_data.convergence_score:.2f}",
-                        severity=NotificationSeverity.INFO,
-                        source="consensus_engine",
-                        session_id=session.id,
-                        data={"round": round_data.round_number, "convergence": round_data.convergence_score},
-                    )
+                session = await engine.run_consensus(task, on_event=on_event)
 
                 await manager.send_to(client_id, {
                     "type": "consensus_complete",

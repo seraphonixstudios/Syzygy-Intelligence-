@@ -15,7 +15,9 @@ import asyncio
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
+
+ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
 
 from app.agents.archetypes import get_shadow
 from app.agents.base import SyzygyAgent
@@ -90,6 +92,7 @@ class ConsensusEngine:
         min_rounds: int = 2,
         convergence_threshold: float = 0.85,
         timeout: float = 0,
+        on_event: Optional[ConsensusEventCallback] = None,
     ) -> ConsensusSession:
         """Run the full consensus process with all phases."""
 
@@ -106,6 +109,7 @@ class ConsensusEngine:
         )
         self.active_sessions[session.id] = session
         session.status = "running"
+        self._on_event = on_event
 
         for round_num in range(1, max_rounds + 1):
             round_data = ConsensusRound(round_number=round_num)
@@ -114,17 +118,47 @@ class ConsensusEngine:
 
             # Phase 1: Proposals
             await self._proposal_phase(session, round_data)
+            if self._on_event:
+                for agent in session.agents:
+                    await self._on_event("proposal", {
+                        "agent": agent.name,
+                        "archetype": agent.archetype.name,
+                        "polarity": agent.polarity.value,
+                        "content": round_data.proposals.get(agent.id, ""),
+                    })
 
             # Phase 2: Critique with Shadow activation
             if round_num >= 2 or len(agents) >= 3:
                 await self._critique_phase(session, round_data)
+                if self._on_event:
+                    for agent in session.agents:
+                        await self._on_event("critique", {
+                            "agent": agent.name,
+                            "archetype": agent.archetype.name,
+                            "polarity": agent.polarity.value,
+                            "content": round_data.critiques.get(agent.id, ""),
+                        })
 
             # Phase 3: Refinement
             if round_num >= 2:
                 await self._refinement_phase(session, round_data)
+                if self._on_event:
+                    for agent in session.agents:
+                        await self._on_event("refinement", {
+                            "agent": agent.name,
+                            "archetype": agent.archetype.name,
+                            "polarity": agent.polarity.value,
+                            "content": round_data.refinements.get(agent.id, ""),
+                        })
 
             # Phase 4: Evaluation
             await self._evaluation_phase(session, round_data)
+            if self._on_event:
+                await self._on_event("evaluation", {
+                    "scores": round_data.scores,
+                    "convergence": round_data.convergence_score,
+                    "polarity_balance": round_data.polarity_balance,
+                })
 
             # Phase 5: Convergence check
             converged = await self._convergence_check(session, round_data)
@@ -145,6 +179,11 @@ class ConsensusEngine:
             evaluations=final_round.evaluations,
             agents=agents,
         )
+
+        if self._on_event:
+            await self._on_event("synthesis", {
+                "content": session.final_synthesis,
+            })
 
         # Polarity Fusion Report
         session.polarity_fusion_report = self._generate_fusion_report(session)

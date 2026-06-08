@@ -1,5 +1,7 @@
 """Unit tests for Syzygy Workflow System."""
 
+import asyncio
+
 import pytest
 from app.workflows.coding import CodingWorkflow
 from app.workflows.research import ResearchWorkflow
@@ -7,12 +9,17 @@ from app.workflows.content import ContentWorkflow
 from app.workflows.debate import DebateWorkflow
 from app.workflows.task_decomposition import TaskDecompositionWorkflow, Subtask
 
+EXECUTE_TIMEOUT = 300.0
+
 
 class TestCodingWorkflow:
     @pytest.mark.asyncio
     async def test_execute(self):
         wf = CodingWorkflow()
-        result = await wf.execute("Build a hello world app", {"language": "python"})
+        result = await asyncio.wait_for(
+            wf.execute("Build a hello world app", {"language": "python"}),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
         assert "steps" in result
         assert "scaffold" in result["steps"]
@@ -29,7 +36,10 @@ class TestResearchWorkflow:
     @pytest.mark.asyncio
     async def test_execute(self):
         wf = ResearchWorkflow()
-        result = await wf.execute("Test research query")
+        result = await asyncio.wait_for(
+            wf.execute("Test research query"),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
         assert "synthesis" in result
         assert "findings" in result
@@ -42,20 +52,29 @@ class TestContentWorkflow:
     @pytest.mark.asyncio
     async def test_execute(self):
         wf = ContentWorkflow()
-        result = await wf.execute("Write about AI", {"polarity": "balanced"})
+        result = await asyncio.wait_for(
+            wf.execute("Write about AI", {"polarity": "balanced"}),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
         assert "final" in result
 
     @pytest.mark.asyncio
     async def test_execute_masculine(self):
         wf = ContentWorkflow()
-        result = await wf.execute("Technical topic", {"polarity": "masculine"})
+        result = await asyncio.wait_for(
+            wf.execute("Technical topic", {"polarity": "masculine"}),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
 
     @pytest.mark.asyncio
     async def test_execute_feminine(self):
         wf = ContentWorkflow()
-        result = await wf.execute("Creative topic", {"polarity": "feminine"})
+        result = await asyncio.wait_for(
+            wf.execute("Creative topic", {"polarity": "feminine"}),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
 
 
@@ -63,7 +82,10 @@ class TestDebateWorkflow:
     @pytest.mark.asyncio
     async def test_execute(self):
         wf = DebateWorkflow()
-        result = await wf.execute("AI safety debate")
+        result = await asyncio.wait_for(
+            wf.execute("AI safety debate"),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert result["status"] == "completed"
         assert "openings" in result
         assert "synthesis" in result
@@ -87,7 +109,10 @@ class TestTaskDecomposition:
     @pytest.mark.asyncio
     async def test_decompose(self):
         wf = TaskDecompositionWorkflow()
-        subtasks = await wf.decompose("Build a web application")
+        subtasks = await asyncio.wait_for(
+            wf.decompose("Build a web application"),
+            timeout=EXECUTE_TIMEOUT,
+        )
         assert len(subtasks) >= 3
         assert all(isinstance(s, Subtask) for s in subtasks)
         assert all(s.id for s in subtasks)

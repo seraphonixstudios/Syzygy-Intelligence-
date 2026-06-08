@@ -17,6 +17,7 @@ alembic
 redis
 neo4j
 chromadb
+PyMuPDF
 pgvector
 
 # Embeddings

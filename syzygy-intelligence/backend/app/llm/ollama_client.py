@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional
 
 import httpx
 
@@ -97,6 +97,48 @@ class OllamaClient:
                 model=model,
                 original_error=str(e),
             )
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system: str = "",
+        model: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> AsyncGenerator[str, None]:
+        """Stream tokens from Ollama's generate endpoint."""
+        client = await self._get_client()
+        model = model or self.default_model
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "system": system,
+            "stream": True,
+            "options": {"temperature": temperature, "num_predict": max_tokens},
+        }
+        logger.info("Ollama generate stream start", model=model)
+        try:
+            async with client.stream("POST", "/api/generate", json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line:
+                        import json as j
+                        try:
+                            data = j.loads(line)
+                            token = data.get("response", "")
+                            if token:
+                                yield token
+                            if data.get("done"):
+                                break
+                        except j.JSONDecodeError:
+                            continue
+            logger.info("Ollama generate stream complete", model=model)
+        except httpx.HTTPStatusError as e:
+            logger.error("Ollama stream HTTP error", model=model, status=e.response.status_code)
+            raise LLMConnectionError(model=model, original_error=f"HTTP {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error("Ollama stream connection error", model=model, error=str(e))
+            raise LLMConnectionError(model=model, original_error=str(e))
 
     async def chat(
         self,

@@ -100,4 +100,12 @@ test.describe("Sidebar navigation", () => {
     await link.click();
     await expect(page).toHaveURL(/\/settings/);
   });
+
+  test("navigates to /rag (Knowledge)", async ({ page }) => {
+    await page.goto("/");
+    const link = page.locator("a[href='/rag']").first();
+    await expect(link).toBeVisible();
+    await link.click();
+    await expect(page).toHaveURL(/\/rag/);
+  });
 });

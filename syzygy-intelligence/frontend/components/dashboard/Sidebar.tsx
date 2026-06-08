@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Palette,
   Cloud,
+  Database,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Users, label: "Agents", href: "/agents" },
   { icon: Brain, label: "Consensus", href: "/consensus" },
   { icon: MessageSquare, label: "Chat", href: "/chat" },
+  { icon: Database, label: "Knowledge", href: "/rag" },
   { icon: Workflow, label: "Workflows", href: "/workflows" },
   { icon: Search, label: "Research", href: "/research" },
   { icon: Code2, label: "Code", href: "/code" },

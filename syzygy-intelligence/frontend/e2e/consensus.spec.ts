@@ -25,4 +25,16 @@ test.describe("Consensus page", () => {
     await input.fill("AI alignment");
     await expect(input).toHaveValue("AI alignment");
   });
+
+  test("shows WebSocket connection status", async ({ page }) => {
+    await page.goto("/consensus");
+    const statusText = page.getByText(/WebSocket/i);
+    await expect(statusText).toBeVisible();
+  });
+
+  test("shows WebSocket status indicator dot", async ({ page }) => {
+    await page.goto("/consensus");
+    const dot = page.locator("span.rounded-full").first();
+    await expect(dot).toBeVisible();
+  });
 });

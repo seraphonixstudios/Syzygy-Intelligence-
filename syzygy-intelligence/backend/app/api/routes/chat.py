@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.consensus.engine import ConsensusEngine
 from app.agents.registry import agent_registry
@@ -12,6 +14,7 @@ from app.errors import LLMConnectionError
 from app.llm.model_manager import ModelManager
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
+from app.rag.injector import build_rag_context
 
 router = APIRouter()
 llm = OllamaClient()
@@ -23,15 +26,24 @@ engine = ConsensusEngine()
 async def chat_completion(data: dict):
     message = data.get("message", "")
     model = data.get("model", "")
+    use_rag = data.get("use_rag", False)
 
     try:
+        # Optionally inject RAG context
+        rag_context = ""
+        if use_rag:
+            rag_context = await build_rag_context(message)
+
         # Route "syzygy" model through the consensus engine
         if model == "syzygy" or data.get("use_consensus", False):
             CONSENSUS_TIMEOUT = 300.0
             try:
+                augmented_task = message
+                if rag_context:
+                    augmented_task = f"{rag_context}\n\nUser question: {message}"
                 session = await asyncio.wait_for(
                     engine.run_consensus(
-                        task=message,
+                        task=augmented_task,
                         max_rounds=data.get("consensus_rounds", 2),
                     ),
                     timeout=CONSENSUS_TIMEOUT,
@@ -41,6 +53,7 @@ async def chat_completion(data: dict):
                     "session_id": session.id,
                     "rounds": session.current_round,
                     "fusion_report": session.polarity_fusion_report,
+                    "rag_context_used": bool(rag_context),
                 }
             except asyncio.TimeoutError:
                 logger.error("Consensus timed out", timeout=CONSENSUS_TIMEOUT)
@@ -52,12 +65,17 @@ async def chat_completion(data: dict):
                     },
                 )
 
-        # Direct LLM response
+        # Direct LLM response with optional RAG context
+        messages = []
+        if rag_context:
+            messages.append({"role": "system", "content": rag_context})
+        messages.append({"role": "user", "content": message})
+
         response = await llm.chat(
-            messages=[{"role": "user", "content": message}],
+            messages=messages,
             model=model or "",
         )
-        return {"response": response}
+        return {"response": response, "rag_context_used": bool(rag_context)}
 
     except LLMConnectionError as e:
         logger.error("Chat completion failed", model=model, error=e.message)
@@ -110,4 +128,47 @@ async def list_configured_models():
 
 @router.post("/stream")
 async def chat_stream(data: dict):
-    return {"type": "stream", "status": "streaming_started"}
+    """SSE streaming chat completion with optional RAG context injection."""
+    message = data.get("message", "")
+    model = data.get("model", "")
+    use_rag = data.get("use_rag", False)
+    
+    if not message:
+        raise HTTPException(400, "Message is required")
+    
+    async def event_generator():
+        try:
+            full_response = ""
+            rag_context = ""
+            
+            if use_rag:
+                rag_context = await build_rag_context(message)
+                if rag_context:
+                    yield f"data: {json.dumps({'rag_context': True})}\n\n"
+            
+            augmented_prompt = message
+            if rag_context:
+                augmented_prompt = f"{rag_context}\n\nUser question: {message}"
+            
+            async for token in llm.generate_stream(
+                prompt=augmented_prompt,
+                model=model or llm.default_model,
+            ):
+                full_response += token
+                yield f"data: {json.dumps({'token': token})}\n\n"
+            
+            yield f"data: {json.dumps({'done': True, 'full': full_response, 'rag_context_used': bool(rag_context)})}\n\n"
+        except LLMConnectionError as e:
+            yield f"data: {json.dumps({'error': e.message})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

@@ -31,10 +31,10 @@ test.describe("Layout", () => {
     expect(count).toBeGreaterThanOrEqual(2);
   });
 
-  test("sidebar has exactly 13 nav links", async ({ page }) => {
+  test("sidebar has at least 14 nav links", async ({ page }) => {
     await page.goto("/");
     const links = page.locator("nav a, aside a");
     const count = await links.count();
-    expect(count).toBeGreaterThanOrEqual(13);
+    expect(count).toBeGreaterThanOrEqual(14);
   });
 });

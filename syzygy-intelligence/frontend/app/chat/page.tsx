@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
-import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight } from "lucide-react";
+import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight, StopCircle, Database } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useSSE } from "@/hooks/useSSE";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -97,13 +98,17 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
   const [selectedModel, setSelectedModel] = useState("syzygy");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [useRag, setUseRag] = useState(false);
+  const [ragActive, setRagActive] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { isStreaming, stream: sseStream, cancel: cancelStream } = useSSE();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,6 +135,7 @@ export default function ChatPage() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     setSending(true);
+    setStreamingContent("");
 
     try {
       if (selectedModel === "__all__") {
@@ -152,14 +158,42 @@ export default function ChatPage() {
           },
         ]);
         setReasoning([{ agent: "Multi-Model", thought: `Queried ${models.length} models in parallel.`, model: models.join(", ") }]);
+        setSending(false);
+      } else if (selectedModel !== "syzygy" && selectedModel !== "__all__") {
+        // SSE streaming for direct model queries with optional RAG
+        setStreamingContent("");
+        setRagActive(false);
+        await sseStream(
+          `${API}/api/chat/stream`,
+          { message: userMsg, model: selectedModel, use_rag: useRag },
+          {
+            onRagContext: () => setRagActive(true),
+            onToken: (token) => {
+              setStreamingContent((prev) => prev + token);
+            },
+            onDone: (full) => {
+              setMessages((prev) => [...prev, { role: "assistant", content: full, modelName: selectedModel }]);
+              setStreamingContent("");
+              setReasoning([{ agent: selectedModel, thought: "Streaming complete. Response generated.", model: selectedModel }]);
+              setSending(false);
+            },
+            onError: (errMsg) => {
+              toast.error(errMsg);
+              setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errMsg}`, modelName: selectedModel }]);
+              setStreamingContent("");
+              setSending(false);
+            },
+          }
+        );
       } else {
-        // Single model or syzygy consensus
+        // syzygy consensus
         const res = await fetch(`${API}/api/chat/completions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userMsg,
             model: selectedModel,
+            use_rag: useRag,
             files: uploadedFiles,
             links: attachedLinks,
           }),
@@ -171,10 +205,11 @@ export default function ChatPage() {
         }
         const data = await res.json();
         const reply = data.response || "No response.";
+        if (data.rag_context_used) setRagActive(true);
         if (data.reasoning) {
           setReasoning(data.reasoning);
         } else {
-          setReasoning([{ agent: selectedModel === "syzygy" ? "Syzygy" : selectedModel, thought: "Processing complete. Response generated.", model: selectedModel }]);
+          setReasoning([{ agent: "Syzygy", thought: "Consensus complete. Response generated.", model: selectedModel }]);
         }
         setMessages((prev) => [...prev, { role: "assistant", content: reply, modelName: selectedModel }]);
       }
@@ -186,7 +221,11 @@ export default function ChatPage() {
         { role: "assistant", content: "Error: Could not reach the backend. Ensure Docker containers are running." },
       ]);
     } finally {
-      setSending(false);
+      if (selectedModel !== "__all__" && selectedModel !== "syzygy") {
+        // streaming sets sending=false in callbacks already
+      } else {
+        setSending(false);
+      }
     }
   };
 
@@ -238,7 +277,23 @@ export default function ChatPage() {
             )}
           </div>
         ))}
-        {sending && (
+        {streamingContent && (
+          <div className="flex gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-syzygy-gold/20">
+              <Bot className="h-4 w-4 text-syzygy-gold" />
+            </div>
+            <div className="max-w-[80%] space-y-1">
+              {selectedModel !== "syzygy" && (
+                <div className="text-xs text-syzygy-gold/60 font-mono">{selectedModel}</div>
+              )}
+              <div className="rounded-2xl bg-syzygy-obsidian/50 px-4 py-2 text-sm text-syzygy-grey">
+                {streamingContent}
+                <span className="inline-block w-0.5 h-4 ml-0.5 bg-syzygy-gold/60 animate-pulse align-middle" />
+              </div>
+            </div>
+          </div>
+        )}
+        {sending && !streamingContent && (
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-syzygy-gold/20">
               <Loader2 className="h-4 w-4 animate-spin text-syzygy-gold" />
@@ -257,6 +312,23 @@ export default function ChatPage() {
 
       <form onSubmit={handleSend} className="space-y-2">
         <div className="flex items-center gap-2 rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/50 px-4 py-3">
+          {/* RAG toggle */}
+          <button
+            type="button"
+            onClick={() => setUseRag(!useRag)}
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs transition-colors ${
+              useRag
+                ? "border-syzygy-gold/50 bg-syzygy-gold/10 text-syzygy-gold"
+                : "border-syzygy-surface-border text-syzygy-grey/50 hover:border-syzygy-gold/30 hover:text-syzygy-grey"
+            }`}
+            title="Use Knowledge Base for context"
+          >
+            <Database className="h-3 w-3" />
+            KB
+          </button>
+          {ragActive && useRag && (
+            <span className="text-[10px] text-syzygy-gold/50">RAG active</span>
+          )}
           {/* Model selector */}
           <div className="relative">
             <button
@@ -312,10 +384,17 @@ export default function ChatPage() {
             disabled={sending}
           />
           <VoiceButton onTranscript={(t) => setInput((prev) => prev + t)} />
-          <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
-            <Send className="h-3.5 w-3.5" />
-            Send
-          </Button>
+          {isStreaming ? (
+            <Button type="button" onClick={cancelStream} variant="destructive" size="sm" className="shrink-0 gap-1">
+              <StopCircle className="h-3.5 w-3.5" />
+              Stop
+            </Button>
+          ) : (
+            <Button type="submit" disabled={!input.trim() || sending} variant="gold" size="sm" className="shrink-0 gap-1">
+              <Send className="h-3.5 w-3.5" />
+              Send
+            </Button>
+          )}
         </div>
         <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={sending} />
       </form>

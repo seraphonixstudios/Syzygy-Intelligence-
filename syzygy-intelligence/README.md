@@ -98,6 +98,8 @@ Through iterative rounds of **Proposal → Critique (Shadow Integration) → Ref
 | **Agents** | LangGraph graphs + role-based crews + debate patterns |
 | **Models** | Ollama (Qwen3.5, Qwen-Coder, DeepSeek, Dolphin-Llama3, Llama 3.3) |
 | **Memory** | PostgreSQL + pgvector, Chroma, Neo4j, LangGraph checkpoints |
+| **RAG** | ChromaDB + Ollama embeddings, txt/md/pdf ingestion (single & batch), semantic search, context injection into chat |
+| **Streaming** | SSE (Server-Sent Events) for token-by-token chat, WebSocket for live consensus events |
 | **Frontend** | Next.js 15, React 19, shadcn/ui, Tailwind CSS, Framer Motion |
 | **Execution** | Docker sandboxed containers |
 | **Orchestration** | LangGraph checkpointing, Redis task queues |
@@ -274,6 +276,7 @@ syzygy-intelligence/
 │   │   │   ├── report_gen.py
 │   │   │   ├── data_pipeline.py
 │   │   │   └── ci_piper.py
+│   │   ├── rag/                 # RAG pipeline (ingester, embeddings, retriever)
 │   │   ├── api/                 # REST + WebSocket endpoints
 │   │   ├── tools/               # Tool implementations
 │   │   ├── llm/                 # LLM abstraction layer
@@ -291,8 +294,8 @@ syzygy-intelligence/
 │   │   ├── memory/              # Memory browser
 │   │   ├── workflow/            # Workflow builder
 │   │   └── dashboard/           # Dashboard panels
-│   ├── lib/                     # Utilities & API client
-│   └── hooks/                   # React hooks
+│   ├── hooks/                   # React hooks (useSSE, useWebSocket, etc.)
+│   └── lib/                     # Utilities & API client
 └── docs/
 ```
 

@@ -183,20 +183,43 @@ Execute a workflow.
 ## Chat
 
 ### `POST /api/chat/completions`
-Chat completion with optional consensus or direct model query.
+Chat completion with optional consensus, RAG context, or direct model query.
 
 **Request:**
 ```json
 {
   "message": "Analyze AI safety",
   "model": "syzygy",
-  "consensus_rounds": 2
+  "consensus_rounds": 2,
+  "use_rag": false
 }
 ```
 
 - `model: "syzygy"` — runs consensus engine (5 agents, 2 rounds default)
 - `model: "qwen3:8b-gpu"` — direct query to a specific model
+- `use_rag: true` — injects relevant documents from the knowledge base as context before the prompt
 - Returns `{ "response": "…", "session_id": "…", "rounds": N, "fusion_report": {…} }`
+
+### `POST /api/chat/stream`
+Stream chat completions token-by-token via Server-Sent Events.
+
+**Request:**
+```json
+{
+  "message": "Explain quantum computing",
+  "model": "qwen3:8b-gpu",
+  "use_rag": false
+}
+```
+
+**Response:** `text/event-stream` with:
+- `data: {"token": "Quantum"}\n\n` per generated token
+- `data: {"rag_context": true}\n\n` (first event when RAG is active)
+- `data: {"done": true}\n\n` final event
+
+Supports `AbortController` cancellation on the client side.
+
+### `POST /api/chat/multi-model`
 
 ### `POST /api/chat/multi-model`
 Query multiple models in parallel. Returns responses from all.
@@ -275,11 +298,87 @@ Connect to `ws://localhost:8000/ws`.
 {"action": "run_consensus", "task": "Analyze market trends"}
 ```
 
-**Server streams:**
+**Server streams (live events per phase):**
 ```json
-{"type": "consensus_round", "round": 1, ...}
+{"type": "consensus_started", "task": "..."}
+{"type": "consensus_proposal", "agent": "Sage", "archetype": "sage", "polarity": "masculine", "content": "..."}
+{"type": "consensus_critique", "agent": "Heracles", "archetype": "hero", "polarity": "masculine", "content": "..."}
+{"type": "consensus_refinement", "agent": "Nurtura", ...}
+{"type": "consensus_evaluation", "agent": "Aphrodite", ...}
+{"type": "consensus_synthesis", "synthesis": "..."}
 {"type": "consensus_complete", "session_id": "...", "synthesis": "..."}
 ```
+
+---
+
+## RAG (Knowledge Base)
+
+### `POST /api/rag/ingest`
+Ingest a single document or raw text into the vector knowledge base.
+
+**Request (multipart/form-data):**
+- `file` — uploaded file (txt, md, pdf)
+- OR `text` — raw text string
+- Optionally: `source` — document label
+
+**Response:**
+```json
+{"document_id": "uuid", "chunks": 12, "filename": "doc.txt"}
+```
+
+### `POST /api/rag/ingest/batch`
+Ingest multiple files in a single request.
+
+**Request:** `multipart/form-data` with multiple `files` fields.
+
+**Response:**
+```json
+{
+  "results": [
+    {"file": "doc1.txt", "document_id": "uuid", "chunks": 5},
+    {"file": "doc2.pdf", "document_id": "uuid", "chunks": 24}
+  ],
+  "errors": [],
+  "total": 2
+}
+```
+
+Individual file failures don't fail the entire batch — errors are returned in the `errors` array.
+
+### `POST /api/rag/query`
+Semantic search over ingested documents.
+
+**Request:**
+```json
+{
+  "query": "What is syzygy?",
+  "top_k": 5
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {"chunk": "Syzygy Intelligence is...", "score": 0.92, "document_id": "uuid", "source": "doc.txt"}
+  ]
+}
+```
+
+### `GET /api/rag/documents`
+List all ingested documents.
+
+**Response:**
+```json
+{
+  "documents": [
+    {"id": "uuid", "filename": "doc.txt", "chunk_count": 12, "created_at": "2026-06-07T..."}
+  ]
+}
+```
+
+### `DELETE /api/rag/documents/{document_id}`
+Delete a document and its chunks from the vector store.
 
 ---
 
