@@ -52,12 +52,26 @@ class TestChunking:
 class TestEmbed:
     @pytest.mark.asyncio
     async def test_embed_basic(self):
+        from app.errors import LLMConnectionError
         try:
             result = await embed([SAMPLE_TEXT])
             assert isinstance(result, list)
             assert len(result) > 0
-        except Exception:
-            pytest.skip("Ollama not reachable from test container")
+        except LLMConnectionError:
+            pytest.skip("Ollama server does not support embeddings")
+
+    @pytest.mark.asyncio
+    async def test_embed_raises_on_unsupported_server(self):
+        from app.errors import LLMConnectionError
+        import app.config
+
+        original = app.config.settings.ollama_base_url
+        app.config.settings.ollama_base_url = "http://nonexistent.invalid:9999"
+        try:
+            with pytest.raises((LLMConnectionError, Exception)):
+                await embed(["test"])
+        finally:
+            app.config.settings.ollama_base_url = original
 
 
 class TestRetriever:

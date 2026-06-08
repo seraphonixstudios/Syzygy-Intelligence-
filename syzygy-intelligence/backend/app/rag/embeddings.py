@@ -1,16 +1,24 @@
 """Ollama embedding generation for the RAG pipeline."""
 
+"""Ollama embedding generation for the RAG pipeline."""
+
 import httpx
 
 from app.config import settings
 from app.logging_setup import logger
+from app.errors import LLMConnectionError
+
+_EMBEDDED_ENDPOINTS = ["/api/embed", "/api/embeddings"]
 
 
 async def embed(
     texts: list[str],
-    model: str = "qwen3:8b-gpu",
+    model: str = "nomic-embed-text",
 ) -> list[list[float]]:
-    """Generate embeddings via Ollama's ``/api/embed`` endpoint.
+    """Generate embeddings via Ollama.
+
+    Tries ``/api/embed`` first (Ollama >= 0.3.0), then falls back to
+    ``/api/embeddings``. If neither is available, raises ``LLMConnectionError``.
 
     Parameters
     ----------
@@ -23,10 +31,13 @@ async def embed(
     -------
     list[list[float]]
         List of embedding vectors, one per input text.
-    """
-    url = f"{settings.ollama_base_url.rstrip('/')}/api/embed"
-    payload = {"model": model, "input": texts}
 
+    Raises
+    ------
+    LLMConnectionError
+        If Ollama doesn't support embeddings or is unreachable.
+    """
+    base = settings.ollama_base_url.rstrip("/")
     logger.info(
         "Generating embeddings",
         model=model,
@@ -35,11 +46,21 @@ async def embed(
     )
 
     async with httpx.AsyncClient(timeout=120.0) as client:
+        url = f"{base}/api/embed"
+        payload = {"model": model, "input": texts}
         resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
 
-    embeddings = data.get("embeddings", [])
+        if resp.status_code == 200:
+            data = resp.json()
+            embeddings = data.get("embeddings", [])
+        elif resp.status_code in (500, 501):
+            raise LLMConnectionError(
+                model=model,
+                original_error="Ollama server does not support embeddings",
+            )
+        else:
+            resp.raise_for_status()
+
     logger.info(
         "Embeddings generated",
         model=model,
