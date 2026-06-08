@@ -57,7 +57,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - C:/Users/User/.ollama:/root/.ollama
+      - ~/.ollama:/root/.ollama
     deploy:
       resources:
         reservations:

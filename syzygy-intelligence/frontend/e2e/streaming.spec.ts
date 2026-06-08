@@ -1,23 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Chat streaming features", () => {
-  test("shows model selector with Auto default", async ({ page }) => {
+  test("shows model selector with qwen3:8b-gpu default", async ({ page }) => {
     await page.goto("/chat");
-    const modelBtn = page.locator("button:has-text('Auto')").first();
+    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await expect(modelBtn).toBeVisible();
   });
 
   test("model picker opens on click", async ({ page }) => {
     await page.goto("/chat");
-    const modelBtn = page.locator("button:has-text('Auto')").first();
+    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
-    const picker = page.locator("button:has-text('All Models')");
-    await expect(picker).toBeVisible();
+    const autoOpt = page.locator("button:has-text('Auto (Syzygy Consensus)')");
+    await expect(autoOpt).toBeVisible();
   });
 
   test("model picker has All Models option", async ({ page }) => {
     await page.goto("/chat");
-    const modelBtn = page.locator("button:has-text('Auto')").first();
+    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
     await expect(allModels).toBeVisible();
@@ -25,7 +25,7 @@ test.describe("Chat streaming features", () => {
 
   test("can select All Models option", async ({ page }) => {
     await page.goto("/chat");
-    const modelBtn = page.locator("button:has-text('Auto')").first();
+    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
     await allModels.click();
