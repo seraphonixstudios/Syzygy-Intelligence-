@@ -149,7 +149,10 @@ docker compose up -d
 docker exec -it syzygy-ollama ollama pull qwen3:8b
 docker exec -it syzygy-ollama ollama pull dolphin-llama3:8b
 docker exec -it syzygy-ollama ollama pull llava:13b
+docker exec -it syzygy-ollama ollama pull nomic-embed-text
 ```
+
+> **Note:** `nomic-embed-text` is required for the RAG knowledge base (vector embeddings). All models use GPU acceleration when available.
 
 ### Development Setup
 
