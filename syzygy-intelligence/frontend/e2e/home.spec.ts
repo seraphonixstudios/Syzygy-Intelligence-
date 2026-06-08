@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Home page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders brand elements", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("img[alt*='Syzygy' i]").first()).toBeVisible();

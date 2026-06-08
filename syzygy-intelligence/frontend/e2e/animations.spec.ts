@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Animations", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("brand page animations tab lists all 13 animations", async ({ page }) => {
     await page.goto("/brand");
     const animBtn = page.locator("button:has-text('animations')");

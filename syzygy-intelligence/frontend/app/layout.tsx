@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Toaster } from "sonner";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AetherBackground } from "@/components/AetherBackground";
+import { AuthInitializer } from "@/components/AuthInitializer";
+import { RouteGuard } from "@/components/RouteGuard";
 
 export const metadata: Metadata = {
   title: "Syzygy Intelligence",
@@ -21,11 +23,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
-        <div className="relative flex h-dvh overflow-hidden">
-          <AetherBackground />
-          <Sidebar />
-          <ScrollToTop>{children}</ScrollToTop>
-        </div>
+        <AuthInitializer>
+          <div className="relative flex h-dvh overflow-hidden">
+            <AetherBackground />
+            <Sidebar />
+            <ScrollToTop><RouteGuard>{children}</RouteGuard></ScrollToTop>
+          </div>
+        </AuthInitializer>
         <Toaster
           position="top-right"
           toastOptions={{

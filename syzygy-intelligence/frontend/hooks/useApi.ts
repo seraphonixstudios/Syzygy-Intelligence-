@@ -2,12 +2,14 @@
 
 import { useCallback, useState } from "react";
 import { logger } from "@/lib/logger";
+import { useAuthStore } from "@/store/authStore";
 
 const API_URL = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
 
   const fetchApi = useCallback(async (path: string, options?: RequestInit) => {
     setLoading(true);
@@ -17,6 +19,7 @@ export function useApi() {
       const res = await fetch(`${API_URL}${path}`, {
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
           ...options?.headers,
         },
         ...options,

@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Agents page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders agents interface", async ({ page }) => {
     await page.goto("/agents");
     await expect(page.locator("h1")).toContainText("Agent", { ignoreCase: true });

@@ -10,4 +10,5 @@ from app.api.routes.chat import router as chat_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.meta import router as meta_router
 from app.api.routes.uploads import router as uploads_router
+from app.api.routes.auth import router as auth_router
 from app.api.routes.rag import router as rag_router

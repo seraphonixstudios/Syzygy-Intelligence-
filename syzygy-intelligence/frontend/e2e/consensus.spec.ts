@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Consensus page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders consensus interface", async ({ page }) => {
     await page.goto("/consensus");
     await expect(page.locator("h1")).toContainText("Consensus");

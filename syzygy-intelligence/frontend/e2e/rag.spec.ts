@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("RAG Knowledge Base page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders RAG interface", async ({ page }) => {
     await page.goto("/rag");
     await expect(page.locator("h1")).toContainText("Knowledge Base");

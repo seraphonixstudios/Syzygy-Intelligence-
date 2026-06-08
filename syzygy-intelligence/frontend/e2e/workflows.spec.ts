@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Workflows page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders workflows interface", async ({ page }) => {
     await page.goto("/workflows");
     await expect(page.locator("h1")).toContainText("Workflows");

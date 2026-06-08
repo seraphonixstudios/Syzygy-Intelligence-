@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agents, sessions, consensus, memory, tools, workflows, chat, audit, meta, uploads, rag as rag_route
+from app.api.routes import agents, sessions, consensus, memory, tools, workflows, chat, audit, meta, uploads, rag as rag_route, auth, admin
 from app.api.websockets import ws_handler
 from app.config import settings
 from app.db.session import init_db, close_db
@@ -54,10 +54,12 @@ app.include_router(memory.router, prefix="/api/memory", tags=["Memory"])
 app.include_router(tools.router, prefix="/api/tools", tags=["Tools"])
 app.include_router(workflows.router, prefix="/api/workflows", tags=["Workflows"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(audit.router, prefix="/api/audit", tags=["Audit"])
 app.include_router(meta.router, prefix="/api/meta", tags=["Meta"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
 app.include_router(rag_route.router, prefix="/api/rag", tags=["RAG"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 
 app.add_api_websocket_route("/ws", ws_handler)
 

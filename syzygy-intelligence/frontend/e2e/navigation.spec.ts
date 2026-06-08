@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Sidebar navigation", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("sidebar shows all nav links", async ({ page }) => {
     await page.goto("/");
     const links = page.locator("nav a, aside a");

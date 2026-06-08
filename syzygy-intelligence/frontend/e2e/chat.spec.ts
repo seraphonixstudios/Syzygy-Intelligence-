@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Chat page", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("renders chat interface", async ({ page }) => {
     await page.goto("/chat");
     await expect(page.locator("h1")).toContainText("Chat");

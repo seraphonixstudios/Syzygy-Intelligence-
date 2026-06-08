@@ -61,6 +61,16 @@ class SyzygyConfig(BaseSettings):
             logger.warning("CORS origins list is empty in production. No cross-origin requests will be allowed.")
         return origins
 
+    # Auth
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
+
+    # Free tier & trial
+    free_tier_days: int = 14
+    free_tier_monthly_messages: int = 100
+    premium_monthly_messages: int = 10000
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 

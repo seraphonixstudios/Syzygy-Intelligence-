@@ -187,6 +187,51 @@ SYZYGY_FAST_MODEL=dolphin-llama3:8b-gpu
 
 ---
 
+## User Authentication
+
+Syzygy includes a built-in authentication system enabling user registration, login, session management, and admin access control.
+
+### Features
+
+- **Email/Password Registration** — Sign up with email, display name, and password
+- **JWT-based Login** — Token-based authentication with access + refresh tokens
+- **Persistent Sessions** — Auth state stored via zustand persist (localStorage), survives page reloads
+- **Route Protection** — `RouteGuard` component redirects unauthenticated users to `/auth/login`
+- **Admin Access** — Superuser accounts get an Admin panel (`/admin`) with user management
+- **Free Tier** — Usage quota (messages/month) tracked per user with trial period support
+
+### Auth Flow
+
+```
+User → /auth/login or /auth/register
+  → Backend validates credentials, returns JWT tokens
+  → Frontend stores tokens in zustand persist (localStorage)
+  → RouteGuard checks isAuthenticated on every protected route
+  → AuthInitializer syncs session on app load via /api/auth/me
+  → Sidebar shows user info, message usage bar, and logout button
+```
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register a new user |
+| POST | `/api/auth/login` | Login, returns JWT tokens |
+| GET | `/api/auth/me` | Get current user profile |
+| POST | `/api/auth/logout` | Invalidate session |
+| GET | `/api/admin/users` | List all users (admin only) |
+
+### Routes
+
+| Path | Access | Description |
+|------|--------|-------------|
+| `/auth/login` | Public | Login form with alchemical branding (Rebis/Sol/Luna triangle) |
+| `/auth/register` | Public | Registration form with matching design |
+| `/admin` | Admin only | User management dashboard |
+| All others | Authenticated | Protected by `RouteGuard` |
+
+---
+
 ## Usage
 
 ### Natural Language Command
@@ -289,8 +334,16 @@ syzygy-intelligence/
 │   ├── requirements.txt
 │   └── pyproject.toml
 ├── frontend/
-│   ├── app/                     # Next.js App Router
-│   ├── components/              # React components
+│   ├── app/
+│   │   ├── auth/                # Login & register pages
+│   │   │   ├── login/
+│   │   │   └── register/
+│   │   ├── admin/               # Admin panel (superuser only)
+│   │   └── ...                  # App Router
+│   ├── components/
+│   │   ├── AuthInitializer.tsx  # Session sync on app load
+│   │   ├── RouteGuard.tsx       # Protected route redirect
+│   │   └── ...                  # React components
 │   │   ├── ui/                  # Base UI (shadcn)
 │   │   ├── agents/              # Agent cards, glyphs
 │   │   ├── consensus/           # Consensus visualizations

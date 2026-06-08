@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { registerAndLogin } from "./helpers";
 
 test.describe("Chat streaming features", () => {
+  test.beforeEach(async ({ page }) => {
+    await registerAndLogin(page);
+  });
+
   test("shows model selector with qwen3:8b-gpu default", async ({ page }) => {
     await page.goto("/chat");
     const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();

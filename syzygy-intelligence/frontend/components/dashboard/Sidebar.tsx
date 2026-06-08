@@ -16,9 +16,16 @@ import {
   Palette,
   Cloud,
   Database,
+  LogIn,
+  LogOut,
+  User,
+  Gauge,
+  Shield,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 const navItems = [
   { icon: Cloud, label: "Cloud", href: "/cloud" },
@@ -37,8 +44,22 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
+const authPaths = ["/auth/login", "/auth/register"];
+
 export function Sidebar() {
   const pathname = usePathname();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      fetchMe();
+    }
+  }, [isAuthenticated, user, fetchMe]);
+
+  if (authPaths.includes(pathname)) return null;
 
   return (
     <aside className="syzygy-sidebar relative flex w-16 flex-col items-center py-4 transition-all duration-300 md:w-64">
@@ -94,12 +115,82 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2 px-4 py-2">
-        <div className="flex items-center gap-1.5 rounded-full border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-0.5">
-          <img src="/branding/sol.logo.png" alt="Sol" className="h-10 w-auto brightness-110" />
-          <div className="h-2 w-5 rounded-full bg-gradient-to-r from-syzygy-gold/40 to-syzygy-grey/40" />
-          <img src="/branding/luna.logo.png" alt="Luna" className="h-8 w-auto brightness-110" />
+      {/* Admin link */}
+      {user?.is_superuser && (
+        <div className="w-full px-2 pb-1">
+          <Link
+            href="/admin"
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition-all duration-200",
+              pathname === "/admin"
+                ? "bg-syzygy-gold/10 text-syzygy-gold-light"
+                : "text-syzygy-grey/40 hover:bg-syzygy-obsidian hover:text-syzygy-gold"
+            )}
+          >
+            <Shield className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden md:block">Admin</span>
+          </Link>
         </div>
+      )}
+
+      {/* Auth section */}
+      <div className="w-full border-t border-syzygy-surface-border px-2 pt-3 mt-2">
+        {isAuthenticated && user ? (
+          <div className="space-y-2">
+            {/* Usage bar */}
+            {user.subscription_tier === "free" && (
+              <div className="hidden md:block px-3 py-1.5">
+                <div className="flex items-center justify-between text-[10px] text-syzygy-grey/50 mb-1">
+                  <span className="flex items-center gap-1">
+                    <Gauge className="h-3 w-3" />
+                    Messages
+                  </span>
+                  <span>{user.message_count}/{user.monthly_message_limit}</span>
+                </div>
+                <div className="h-1 rounded-full bg-syzygy-surface-border overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      user.message_count / user.monthly_message_limit > 0.8
+                        ? "bg-red-500"
+                        : "bg-syzygy-gold/60"
+                    )}
+                    style={{
+                      width: `${Math.min(100, (user.message_count / user.monthly_message_limit) * 100)}%`,
+                    }}
+                  />
+                </div>
+                {user.trial_ends_at && new Date(user.trial_ends_at) > new Date() ? (
+                  <p className="text-[9px] text-syzygy-gold/40 mt-1">
+                    Trial &middot; Unlimited
+                  </p>
+                ) : user.message_count >= user.monthly_message_limit ? (
+                  <p className="text-[9px] text-red-400/60 mt-1">
+                    Limit reached &middot; <Link href="/cloud" className="underline">Upgrade</Link>
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            {/* User info + logout */}
+            <button
+              onClick={logout}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-syzygy-grey/50 transition-colors hover:bg-syzygy-obsidian hover:text-red-400"
+            >
+              <LogOut className="h-3.5 w-3.5 hidden md:block" />
+              <User className="h-3.5 w-3.5 md:hidden" />
+              <span className="hidden md:block truncate">{user.display_name || user.email}</span>
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/auth/login"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-syzygy-grey/50 transition-colors hover:bg-syzygy-obsidian hover:text-syzygy-gold"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            <span className="hidden md:block">Sign In</span>
+          </Link>
+        )}
       </div>
     </aside>
   );

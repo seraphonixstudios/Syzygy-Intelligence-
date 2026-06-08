@@ -5,11 +5,15 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import check_usage_limit, get_current_user
 from app.consensus.engine import ConsensusEngine
 from app.agents.registry import agent_registry
+from app.db.models import User
+from app.db.session import get_db
 from app.errors import LLMConnectionError
 from app.llm.model_manager import ModelManager
 from app.llm.ollama_client import OllamaClient
@@ -22,11 +26,25 @@ model_manager = ModelManager()
 engine = ConsensusEngine()
 
 
+async def _track_usage(user: User | None, db: AsyncSession):
+    if user is not None:
+        user.message_count += 1
+        db.add(user)
+        await db.commit()
+
+
 @router.post("/completions")
-async def chat_completion(data: dict):
+async def chat_completion(
+    data: dict,
+    user: User | None = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     message = data.get("message", "")
     model = data.get("model", "")
     use_rag = data.get("use_rag", False)
+
+    if user is not None:
+        await check_usage_limit(user, db)
 
     try:
         # Optionally inject RAG context
@@ -48,6 +66,7 @@ async def chat_completion(data: dict):
                     ),
                     timeout=CONSENSUS_TIMEOUT,
                 )
+                await _track_usage(user, db)
                 return {
                     "response": session.final_synthesis,
                     "session_id": session.id,
@@ -75,6 +94,7 @@ async def chat_completion(data: dict):
             messages=messages,
             model=model or "",
         )
+        await _track_usage(user, db)
         return {"response": response, "rag_context_used": bool(rag_context)}
 
     except LLMConnectionError as e:
@@ -90,7 +110,11 @@ async def chat_completion(data: dict):
 
 
 @router.post("/multi-model")
-async def chat_multi_model(data: dict):
+async def chat_multi_model(
+    data: dict,
+    user: User | None = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Query multiple models in parallel and return all responses."""
     message = data.get("message", "")
     models = data.get("models", [])
@@ -100,12 +124,17 @@ async def chat_multi_model(data: dict):
     if not models:
         models = model_manager.get_all_model_names()
 
+    if user is not None:
+        await check_usage_limit(user, db)
+
     logger.info("Multi-model chat requested", models=models)
 
     results = await model_manager.generate_multi_model(
         prompt=message,
         models=models,
     )
+    if user is not None:
+        await _track_usage(user, db)
     return {"responses": results}
 
 
@@ -127,7 +156,11 @@ async def list_configured_models():
 
 
 @router.post("/stream")
-async def chat_stream(data: dict):
+async def chat_stream(
+    data: dict,
+    user: User | None = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """SSE streaming chat completion with optional RAG context injection."""
     message = data.get("message", "")
     model = data.get("model", "")
@@ -135,6 +168,10 @@ async def chat_stream(data: dict):
     
     if not message:
         raise HTTPException(400, "Message is required")
+
+    if user is not None:
+        await check_usage_limit(user, db)
+        await _track_usage(user, db)
     
     async def event_generator():
         try:
