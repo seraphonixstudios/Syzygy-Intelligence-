@@ -47,6 +47,7 @@ class OllamaClient:
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
+                "num_ctx": 2048,
             },
             "stream": stream,
         }
@@ -114,7 +115,7 @@ class OllamaClient:
             "prompt": prompt,
             "system": system,
             "stream": True,
-            "options": {"temperature": temperature, "num_predict": max_tokens},
+            "options": {"temperature": temperature, "num_predict": max_tokens, "num_ctx": 2048},
         }
         logger.info("Ollama generate stream start", model=model)
         try:
@@ -158,6 +159,7 @@ class OllamaClient:
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
+                "num_ctx": 2048,
             },
         }
 
