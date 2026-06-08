@@ -61,7 +61,11 @@ export default function ConsensusPage() {
         // ignore
       }
     };
-    return () => { ws.close(); };
+    return () => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+    };
   }, []);
 
   const handleRun = async (e: React.FormEvent) => {
