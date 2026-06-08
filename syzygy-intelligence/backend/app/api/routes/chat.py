@@ -36,7 +36,7 @@ async def chat_completion(data: dict):
 
         # Route "syzygy" model through the consensus engine
         if model == "syzygy" or data.get("use_consensus", False):
-            CONSENSUS_TIMEOUT = 300.0
+            CONSENSUS_TIMEOUT = 600.0
             try:
                 augmented_task = message
                 if rag_context:

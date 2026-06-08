@@ -102,7 +102,7 @@ export default function ChatPage() {
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
-  const [selectedModel, setSelectedModel] = useState("syzygy");
+  const [selectedModel, setSelectedModel] = useState("qwen3:8b-gpu");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [useRag, setUseRag] = useState(false);
