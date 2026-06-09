@@ -1,4 +1,4 @@
-"""Auth routes — register, login, refresh, me, settings."""
+"""Auth routes — register, login, refresh, me, settings, password reset."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import (
     create_access_token,
     create_refresh_token,
+    create_password_reset_token,
     decode_token,
     hash_password,
     verify_password,
@@ -64,6 +65,47 @@ class UserResponse(BaseModel):
 
 class UpdateSettingsRequest(BaseModel):
     settings: dict
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"message": "If that email exists, a reset link has been sent."}
+
+    token = create_password_reset_token(str(user.id))
+    return {"message": "If that email exists, a reset link has been sent.", "reset_token": token}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    payload = decode_token(req.token)
+    if payload is None or payload.get("type") != "password_reset":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
+
+    user.hashed_password = hash_password(req.new_password)
+    db.add(user)
+    await db.commit()
+    return {"message": "Password has been reset successfully."}
 
 
 def _user_to_response(user: User) -> UserResponse:

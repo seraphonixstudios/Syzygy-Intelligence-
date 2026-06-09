@@ -200,17 +200,25 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-syzygy-surface-border bg-syzygy-obsidian text-syzygy-gold focus:ring-syzygy-gold/40"
-                />
-                <label htmlFor="remember" className="cursor-pointer select-none text-[11px] text-syzygy-grey/50">
-                  Remember me
-                </label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-syzygy-surface-border bg-syzygy-obsidian text-syzygy-gold focus:ring-syzygy-gold/40"
+                  />
+                  <label htmlFor="remember" className="cursor-pointer select-none text-[11px] text-syzygy-grey/50">
+                    Remember me
+                  </label>
+                </div>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-[11px] text-syzygy-grey/40 transition-colors hover:text-syzygy-gold"
+                >
+                  Forgot password?
+                </Link>
               </div>
 
               {error && (
