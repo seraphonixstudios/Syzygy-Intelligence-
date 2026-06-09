@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { StateStorage } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 
 const API_URL = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
@@ -26,13 +27,36 @@ interface AuthState {
   refreshToken: string | null;
   user: UserInfo | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  rememberMe: boolean;
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => void;
   refreshAuth: () => Promise<void>;
   fetchMe: () => Promise<void>;
   getAuthHeaders: () => Record<string, string>;
+  setRememberMe: (value: boolean) => void;
 }
+
+const sessionAwareStorage: StateStorage = {
+  getItem: (name: string) => {
+    return sessionStorage.getItem(name) || localStorage.getItem(name);
+  },
+  setItem: (name: string, value: string) => {
+    const parsed = JSON.parse(value);
+    const remember = parsed?.state?.rememberMe;
+    if (remember !== false) {
+      localStorage.setItem(name, value);
+      sessionStorage.removeItem(name);
+    } else {
+      sessionStorage.setItem(name, value);
+      localStorage.removeItem(name);
+    }
+  },
+  removeItem: (name: string) => {
+    localStorage.removeItem(name);
+    sessionStorage.removeItem(name);
+  },
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -41,8 +65,9 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       isAuthenticated: false,
+      rememberMe: true,
 
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, remember = true) => {
         const res = await fetch(`${API_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -57,6 +82,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: data.access_token,
           refreshToken: data.refresh_token,
           isAuthenticated: true,
+          rememberMe: remember,
         });
         await get().fetchMe();
       },
@@ -129,14 +155,20 @@ export const useAuthStore = create<AuthState>()(
         const { accessToken } = get();
         return accessToken ? { Authorization: `Bearer ${accessToken}` } : ({} as Record<string, string>);
       },
+
+      setRememberMe: (value: boolean) => {
+        set({ rememberMe: value });
+      },
     }),
     {
       name: "syzygy-auth",
+      storage: createJSONStorage(() => sessionAwareStorage),
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
-      }),
-    }
+        rememberMe: state.rememberMe,
+      } as AuthState),
+    },
   )
 );

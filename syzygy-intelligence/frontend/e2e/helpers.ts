@@ -1,22 +1,34 @@
 import { Page } from "@playwright/test";
 
-let userCounter = Date.now();
+const TEST_EMAIL = "e2e-test@syzygy.local";
+const TEST_PASS = "testpass123";
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 export async function registerAndLogin(page: Page, email?: string) {
-  const testEmail = email || `test-${userCounter++}@example.com`;
+  const testEmail = email || TEST_EMAIL;
 
-  // Register via the API directly
-  const res = await page.request.post(`${API}/api/auth/register`, {
-    data: { email: testEmail, password: "testpass123" },
+  // Try register — if user already exists, fall back to login
+  let data: { access_token: string; refresh_token: string };
+  const regRes = await page.request.post(`${API}/api/auth/register`, {
+    data: { email: testEmail, password: TEST_PASS },
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Registration failed: ${res.status()} ${body}`);
+  if (regRes.ok) {
+    data = await regRes.json();
+  } else if (regRes.status() === 409) {
+    const loginRes = await page.request.post(`${API}/api/auth/login`, {
+      data: { email: testEmail, password: TEST_PASS },
+    });
+    if (!loginRes.ok) {
+      const body = await loginRes.text();
+      throw new Error(`Login failed: ${loginRes.status()} ${body}`);
+    }
+    data = await loginRes.json();
+  } else {
+    const body = await regRes.text();
+    throw new Error(`Registration failed: ${regRes.status()} ${body}`);
   }
-  const data = await res.json();
 
-  // Set auth state in localStorage using a public page to avoid RouteGuard redirect
+  // Set auth state in localStorage using a public path to avoid RouteGuard redirect
   await page.goto("/cloud");
   await page.evaluate(
     ({ token, refresh }) => {

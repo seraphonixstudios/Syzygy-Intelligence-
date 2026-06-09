@@ -58,10 +58,10 @@ export default function RegisterPage() {
       </div>
 
       {/* Triangle wrapper */}
-      <div className="relative w-full max-w-lg py-28">
-        {/* SVG connecting lines */}
+      <div className="relative w-full max-w-lg py-12 md:py-28">
+        {/* SVG connecting lines — hidden on mobile */}
         <svg
-          className="pointer-events-none absolute inset-0 h-full w-full"
+          className="pointer-events-none absolute inset-0 hidden h-full w-full md:block"
           viewBox="0 0 512 480"
           preserveAspectRatio="xMidYMid meet"
         >
@@ -87,8 +87,8 @@ export default function RegisterPage() {
           </defs>
         </svg>
 
-        {/* Rebis — top vertex */}
-        <div className="absolute left-1/2 top-[5px] -translate-x-1/2">
+        {/* Rebis — top vertex — hidden on mobile */}
+        <div className="absolute left-1/2 top-[5px] -translate-x-1/2 hidden md:block">
           <div className="rebis-fusion">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-syzygy-gold/10 to-syzygy-bone/5 ring-1 ring-syzygy-gold/30 shadow-lg shadow-syzygy-gold/10">
               <img src="/branding/rebis.logo.png" alt="Rebis" className="h-12 w-auto brightness-110 drop-shadow-[0_0_8px_#d4a84340]" />
@@ -96,8 +96,8 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Sol — left vertex */}
-        <div className="absolute bottom-[30px] left-[calc(50%-156px)] -translate-x-1/2">
+        {/* Sol — left vertex — hidden on mobile */}
+        <div className="absolute bottom-[30px] left-[calc(50%-156px)] -translate-x-1/2 hidden md:block">
           <div className="polarity-sun">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-syzygy-gold/10 to-amber-900/10 ring-1 ring-syzygy-gold/20 shadow-sm">
               <img src="/branding/sol.logo.png" alt="Sol" className="h-10 w-auto brightness-110" />
@@ -105,8 +105,8 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Luna — right vertex */}
-        <div className="absolute bottom-[30px] right-[calc(50%-156px)] translate-x-1/2">
+        {/* Luna — right vertex — hidden on mobile */}
+        <div className="absolute bottom-[30px] right-[calc(50%-156px)] translate-x-1/2 hidden md:block">
           <div className="polarity-moon">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-syzygy-grey/10 to-syzygy-bone/10 ring-1 ring-syzygy-grey/20 shadow-sm">
               <img src="/branding/luna.logo.png" alt="Luna" className="h-9 w-auto brightness-110" />
@@ -116,8 +116,8 @@ export default function RegisterPage() {
 
         {/* Card — at the centroid */}
         <div className="gradient-border-gold relative z-10 mx-auto w-full max-w-md animate-fade-in-up rounded-2xl">
-          <div className="relative bg-syzygy-shadow/90 px-8 pb-8 pt-8 backdrop-blur-xl rounded-2xl">
-            <div className="mb-8 text-center">
+          <div className="relative bg-syzygy-shadow/90 px-5 py-6 backdrop-blur-xl rounded-2xl md:px-8 md:pb-8 md:pt-8">
+            <div className="mb-6 md:mb-8 text-center">
               <p className="syzygy-title text-2xl font-bold tracking-wider">SYZYGY</p>
               <p className="animate-flicker-gold mt-1.5 text-xs text-syzygy-grey/40 tracking-[0.15em] uppercase">
                 Start your 14-day free trial
