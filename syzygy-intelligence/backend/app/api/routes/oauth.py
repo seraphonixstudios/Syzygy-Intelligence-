@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from app.api.auth import create_access_token, create_refresh_token
 from app.config import settings
 from app.db.models import User, SubscriptionTier
-from app.db.session import AsyncSessionLocal
+from app.db.session import _get_session_factory
 
 router = APIRouter(prefix="/oauth")
 
@@ -116,7 +116,8 @@ async def oauth_callback(provider: str, code: str, request: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not retrieve email from provider")
 
     # Create or find user
-    async with AsyncSessionLocal() as db:
+    factory = _get_session_factory()
+    async with factory() as db:
         from sqlalchemy import select
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()

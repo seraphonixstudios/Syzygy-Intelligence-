@@ -82,4 +82,61 @@ test.describe("Auth pages", () => {
     const toggleButton = page.locator("button:has-text('')").last();
     await expect(passwordInput).toBeVisible();
   });
+
+  test("forgot password link navigates to forgot password page", async ({ page }) => {
+    await page.goto("/auth/login");
+    const forgotLink = page.locator("a[href='/auth/forgot-password']");
+    await expect(forgotLink).toBeVisible();
+    await forgotLink.click();
+    await expect(page).toHaveURL(/\/auth\/forgot-password/);
+  });
+
+  test("forgot password page renders with email input", async ({ page }) => {
+    await page.goto("/auth/forgot-password");
+    await expect(page.locator("input[type='email']")).toBeVisible();
+    await expect(page.locator("button:has-text('Send Reset Link')")).toBeVisible();
+  });
+
+  test("forgot password page has back to login link", async ({ page }) => {
+    await page.goto("/auth/forgot-password");
+    const backLink = page.locator("a[href='/auth/login']").last();
+    await expect(backLink).toBeVisible();
+  });
+
+  test("reset password page renders with token and password inputs", async ({ page }) => {
+    await page.goto("/auth/reset-password");
+    await expect(page.locator("input[placeholder*='reset token']")).toBeVisible();
+    await expect(page.locator("input[placeholder*='8 characters']")).toBeVisible();
+    await expect(page.locator("button:has-text('Reset Password')")).toBeVisible();
+  });
+
+  test("oauth buttons visible on login page", async ({ page }) => {
+    await page.goto("/auth/login");
+    await expect(page.locator("text=or continue with")).toBeVisible();
+    await expect(page.locator("a[href*='/api/auth/oauth/google']")).toBeVisible();
+    await expect(page.locator("a[href*='/api/auth/oauth/github']")).toBeVisible();
+  });
+
+  test("oauth buttons visible on register page", async ({ page }) => {
+    await page.goto("/auth/register");
+    await expect(page.locator("text=or continue with")).toBeVisible();
+    await expect(page.locator("a[href*='/api/auth/oauth/google']")).toBeVisible();
+    await expect(page.locator("a[href*='/api/auth/oauth/github']")).toBeVisible();
+  });
+
+  test("remember me checkbox is visible on login", async ({ page }) => {
+    await page.goto("/auth/login");
+    await expect(page.locator("label:has-text('Remember me')")).toBeVisible();
+    await expect(page.locator("input[type='checkbox']")).toBeVisible();
+  });
+
+  test("verify email page renders with no token error", async ({ page }) => {
+    await page.goto("/auth/verify-email");
+    await expect(page.getByText(/verifying/i)).toBeVisible({ timeout: 10000 });
+  });
+
+  test("oauth callback page renders loading state", async ({ page }) => {
+    await page.goto("/auth/oauth-callback");
+    await expect(page.locator("text=Completing sign in")).toBeVisible({ timeout: 10000 });
+  });
 });

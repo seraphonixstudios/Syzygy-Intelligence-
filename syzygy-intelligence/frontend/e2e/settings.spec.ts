@@ -59,4 +59,29 @@ test.describe("Settings page", () => {
     const thresholdInput = page.locator("input[type='number']").last();
     await expect(thresholdInput).toBeVisible();
   });
+
+  test("profile section shows display name and email", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.locator("text=Display Name")).toBeVisible();
+    await expect(page.locator("text=Email")).toBeVisible();
+  });
+
+  test("profile save button is visible", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.locator("button:has-text('Save Profile')")).toBeVisible();
+  });
+
+  test("subscription section shows tier and usage", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.locator("text=Subscription")).toBeVisible();
+    await expect(page.locator("text=Tier")).toBeVisible();
+    await expect(page.locator("text=Messages Used")).toBeVisible();
+  });
+
+  test("display name input is editable", async ({ page }) => {
+    await page.goto("/settings");
+    const displayNameInput = page.locator("input[type='text']").first();
+    await displayNameInput.fill("Test User Updated");
+    await expect(displayNameInput).toHaveValue("Test User Updated");
+  });
 });

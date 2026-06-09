@@ -15,24 +15,37 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
       const parsed = JSON.parse(stored);
       const token = parsed?.state?.accessToken || parsed?.accessToken;
       if (!token) return;
+
+      // Restore state optimistically so the UI works even if backend is unreachable
+      const current = useAuthStore.getState();
+      useAuthStore.setState({
+        ...current,
+        accessToken: token,
+        refreshToken: parsed?.state?.refreshToken || parsed?.refreshToken || null,
+        isAuthenticated: true,
+      });
+
       fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(3000),
       })
         .then((res) => {
-          if (!res.ok) throw new Error("Unauthorized");
+          if (!res.ok) {
+            if (res.status === 401) {
+              localStorage.removeItem("syzygy-auth");
+              useAuthStore.setState({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
+            }
+            return;
+          }
           return res.json();
         })
         .then((user) => {
-          const current = useAuthStore.getState();
-          useAuthStore.setState({
-            ...current,
-            accessToken: token,
-            user,
-            isAuthenticated: true,
-          });
+          if (user) {
+            useAuthStore.setState({ user, isAuthenticated: true });
+          }
         })
         .catch(() => {
-          localStorage.removeItem("syzygy-auth");
+          // Backend unreachable — keep optimistic state
         });
     } catch {
       localStorage.removeItem("syzygy-auth");

@@ -54,6 +54,13 @@ def _get_session_factory():
     return _async_session_factory
 
 
+# Re-export for modules that need direct session creation outside DI
+async def get_standalone_session() -> AsyncSession:
+    factory = _get_session_factory()
+    async with factory() as session:
+        return session
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     factory = _get_session_factory()
     async with factory() as session:
@@ -68,7 +75,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database — create all tables if they don't exist. Safe to call repeatedly."""
+    """Initialize database — create all tables if they don't exist. Returns True on success, False if skipped."""
     try:
         engine = _get_engine()
         async with engine.begin() as conn:
@@ -77,8 +84,10 @@ async def init_db():
             await conn.execute(text("SELECT 1"))
             await conn.commit()
         logger.info("Database initialized successfully")
+        return True
     except Exception as e:
         logger.warning(f"Database initialization skipped: {e}")
+        return False
 
 
 async def close_db():

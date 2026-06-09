@@ -18,12 +18,42 @@ from app.logging_setup import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Syzygy Intelligence starting", env=settings.env, version="0.1.0")
-    
+
+    # Check critical dependencies
+    missing = []
     try:
-        await init_db()
-        logger.info("Database initialized successfully")
+        import sqlalchemy
+        logger.info("sqlalchemy", version=sqlalchemy.__version__)
+    except ImportError:
+        missing.append("sqlalchemy")
+    try:
+        import httpx
+        logger.info("httpx", version=httpx.__version__)
+    except ImportError:
+        missing.append("httpx")
+    try:
+        import bcrypt
+        logger.info("bcrypt", version=bcrypt.__version__)
+    except ImportError:
+        missing.append("bcrypt")
+    try:
+        import jwt
+        logger.info("PyJWT", version=jwt.__version__)
+    except ImportError:
+        missing.append("PyJWT")
+
+    if missing:
+        logger.warning(f"Missing dependencies: {', '.join(missing)} — install with: pip install {' '.join(missing)}")
+
+    try:
+        ok = await init_db()
+        if ok:
+            logger.info("Database initialized successfully")
+        else:
+            logger.warning("Database unavailable — features requiring DB will fail")
     except Exception as e:
-        logger.warning(f"Database init skipped (will retry on first request): {e}")
+        logger.warning(f"Database initialization error: {e}")
+
     yield
     logger.info("Syzygy Intelligence shutting down")
     await close_db()

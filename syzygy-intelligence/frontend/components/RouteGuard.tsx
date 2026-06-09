@@ -4,7 +4,15 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
-const publicPaths = ["/cloud", "/auth/login", "/auth/register"];
+const publicPaths = [
+  "/cloud",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/auth/verify-email",
+  "/auth/oauth-callback",
+];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
