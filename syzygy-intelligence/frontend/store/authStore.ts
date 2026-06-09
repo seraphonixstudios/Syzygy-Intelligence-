@@ -190,6 +190,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         rememberMe: state.rememberMe,
       } as AuthState),
+      version: 0,
     },
   )
 );

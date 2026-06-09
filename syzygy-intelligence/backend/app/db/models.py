@@ -17,20 +17,62 @@ from sqlalchemy import (
     Text,
     JSON,
     Enum as SAEnum,
+    TypeDecorator,
 )
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, ARRAY as PG_ARRAY
 
 try:
     from sqlalchemy.dialects.postgresql import VECTOR
 except ImportError:
-    # pgvector not installed — define a placeholder
-    from sqlalchemy import TypeDecorator, LargeBinary
+    from sqlalchemy import LargeBinary
 
     class VECTOR(TypeDecorator):  # type: ignore
         """Fallback for when pgvector is not installed."""
         impl = LargeBinary
         def load_dialect_impl(self, dialect):
             return dialect.type_descriptor(LargeBinary())
+
+
+# SQLite-compatible UUID fallback
+class UUID(TypeDecorator):
+    impl = String(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "sqlite":
+            return dialect.type_descriptor(String(36))
+        return PG_UUID()
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        return value
+
+
+# SQLite-compatible ARRAY fallback
+class ARRAY(TypeDecorator):
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "sqlite":
+            return dialect.type_descriptor(Text())
+        return PG_ARRAY(String)
+
+    def process_bind_param(self, value, dialect):
+        if dialect.name == "sqlite":
+            import json
+            return json.dumps(value or [])
+        return value
+
+    def process_result_value(self, value, dialect):
+        if dialect.name == "sqlite" and isinstance(value, str):
+            import json
+            return json.loads(value)
+        return value or []
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base

@@ -170,6 +170,17 @@ npm install
 npm run dev
 ```
 
+> The backend auto-detects development mode and uses SQLite (`sqlite+aiosqlite:///data/syzygy.db`) by default — no PostgreSQL needed for local dev. Set `SYZYGY_ENV=production` to use PostgreSQL.
+
+### Run E2E Tests
+
+```bash
+cd frontend
+npx playwright test
+```
+
+Tests use `addInitScript` to set auth state before page JavaScript runs, avoiding hydration race conditions. Backend should be running locally for full-stack tests.
+
 ### Configure Models
 
 Edit `backend/app/config/settings.yaml` or set via `.env`:
@@ -196,8 +207,14 @@ Syzygy includes a built-in authentication system enabling user registration, log
 - **Email/Password Registration** — Sign up with email, display name, and password
 - **JWT-based Login** — Token-based authentication with access + refresh tokens
 - **Persistent Sessions** — Auth state stored via zustand persist (localStorage), survives page reloads
-- **Route Protection** — `RouteGuard` component redirects unauthenticated users to `/auth/login`
+- **Remember Me** — Choose between persistent (localStorage) and session-only (sessionStorage) auth storage
+- **Route Protection** — `RouteGuard` component waits for store hydration before redirecting, preventing race conditions
+- **Auto-Refresh** — Expired tokens are automatically refreshed via `/api/auth/refresh` on any 401 response
+- **OAuth Login** — Sign in with Google or GitHub accounts
+- **Password Reset** — Forgot password flow with time-limited JWT reset tokens
+- **Email Verification** — Verify email addresses with time-limited JWT verification tokens
 - **Admin Access** — Superuser accounts get an Admin panel (`/admin`) with user management
+- **User Settings** — Profile editing (display name), subscription tier with message usage meter
 - **Free Tier** — Usage quota (messages/month) tracked per user with trial period support
 
 ### Auth Flow
@@ -205,9 +222,10 @@ Syzygy includes a built-in authentication system enabling user registration, log
 ```
 User → /auth/login or /auth/register
   → Backend validates credentials, returns JWT tokens
-  → Frontend stores tokens in zustand persist (localStorage)
-  → RouteGuard checks isAuthenticated on every protected route
+  → Frontend stores tokens in zustand persist (localStorage or sessionStorage)
+  → RouteGuard waits for persist hydration, then checks isAuthenticated
   → AuthInitializer syncs session on app load via /api/auth/me
+  → On 401, useApi hook auto-calls refreshAuth() and retries the request
   → Sidebar shows user info, message usage bar, and logout button
 ```
 
@@ -218,7 +236,15 @@ User → /auth/login or /auth/register
 | POST | `/api/auth/register` | Register a new user |
 | POST | `/api/auth/login` | Login, returns JWT tokens |
 | GET | `/api/auth/me` | Get current user profile |
+| POST | `/api/auth/refresh` | Refresh access token using refresh token |
 | POST | `/api/auth/logout` | Invalidate session |
+| POST | `/api/auth/forgot-password` | Request password reset (dev mode copies token) |
+| POST | `/api/auth/reset-password` | Reset password with token |
+| POST | `/api/auth/send-verification` | Send email verification link |
+| POST | `/api/auth/verify-email` | Verify email with token |
+| GET | `/api/auth/oauth/{provider}` | Redirect to OAuth provider (google, github) |
+| GET | `/api/auth/oauth/{provider}/callback` | OAuth callback handler |
+| PUT | `/api/auth/me/settings` | Update user profile/settings |
 | GET | `/api/admin/users` | List all users (admin only) |
 
 ### Routes
@@ -227,7 +253,12 @@ User → /auth/login or /auth/register
 |------|--------|-------------|
 | `/auth/login` | Public | Login form with alchemical branding (Rebis/Sol/Luna triangle) |
 | `/auth/register` | Public | Registration form with matching design |
+| `/auth/forgot-password` | Public | Request password reset |
+| `/auth/reset-password` | Public | Reset password with token |
+| `/auth/verify-email` | Public | Verify email with token |
+| `/auth/oauth-callback` | Public | OAuth callback handler (reads tokens from URL hash) |
 | `/admin` | Admin only | User management dashboard |
+| `/settings` | Authenticated | Profile, subscription, and app settings |
 | All others | Authenticated | Protected by `RouteGuard` |
 
 ---

@@ -26,15 +26,14 @@ export async function registerAndLogin(page: Page, email?: string) {
       data = await loginRes.json();
     }
   } catch {
-    // Backend unavailable — use a mock token so UI tests can still run
+    // Backend unavailable — use mock token so UI tests can still run
   }
 
   const token = data?.access_token || "mock-token";
   const refresh = data?.refresh_token || "mock-refresh";
 
-  // Set auth state in localStorage using a public path to avoid RouteGuard redirect
-  await page.goto("/cloud");
-  await page.evaluate(
+  // Set init script so localStorage is populated BEFORE any page JS runs
+  await page.addInitScript(
     ({ token, refresh }) => {
       localStorage.setItem(
         "syzygy-auth",
@@ -43,6 +42,7 @@ export async function registerAndLogin(page: Page, email?: string) {
             accessToken: token,
             refreshToken: refresh,
             isAuthenticated: true,
+            rememberMe: true,
           },
           version: 0,
         })
@@ -50,9 +50,10 @@ export async function registerAndLogin(page: Page, email?: string) {
     },
     { token, refresh }
   );
-  // Reload to pick up the auth state
-  await page.reload();
-  await page.waitForTimeout(1000);
+
+  // Navigate to a public path so the init script fires
+  await page.goto("/cloud");
+  await page.waitForTimeout(1500);
 
   return { email: testEmail };
 }

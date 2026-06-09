@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 from app.config import settings
 from app.logging_setup import logger
@@ -27,11 +27,37 @@ class Base(DeclarativeBase):
 
 _engine = None
 _async_session_factory = None
+_db_type: str | None = None
+
+
+def _get_sqlite_engine():
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
 
 
 def _get_engine():
-    global _engine
-    if _engine is None:
+    global _engine, _db_type
+    if _engine is not None:
+        return _engine
+
+    if settings.db_is_sqlite:
+        logger.info("Using SQLite database (development mode)")
+        _db_type = "sqlite"
+        _engine = _get_sqlite_engine()
+    else:
+        _db_type = "postgresql"
         _engine = create_async_engine(
             settings.database_url,
             echo=settings.env == "development",

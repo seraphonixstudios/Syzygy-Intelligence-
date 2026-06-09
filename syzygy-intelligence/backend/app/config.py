@@ -29,6 +29,7 @@ class SyzygyConfig(BaseSettings):
     db_name: str = "syzygy"
     db_user: str = "syzygy"
     db_password: str = "syzygy_secret"
+    db_sqlite_path: str = str(Path("./data/syzygy.db").absolute())
 
     def model_post_init(self, __context):
         """Validate configuration after initialization."""
@@ -40,6 +41,8 @@ class SyzygyConfig(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.env == "development":
+            return f"sqlite+aiosqlite:///{self.db_sqlite_path}"
         return (
             f"postgresql+asyncpg://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
@@ -47,10 +50,16 @@ class SyzygyConfig(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
+        if self.env == "development":
+            return f"sqlite:///{self.db_sqlite_path}"
         return (
             f"postgresql://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+
+    @property
+    def db_is_sqlite(self) -> bool:
+        return self.env == "development"
 
     @property
     def allowed_origins(self) -> list[str]:

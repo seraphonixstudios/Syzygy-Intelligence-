@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
@@ -17,16 +17,24 @@ const publicPaths = [
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore.persist.hasHydrated();
+  const [ready, setReady] = useState(hasHydrated);
 
   useEffect(() => {
-    if (!publicPaths.includes(pathname) && !isAuthenticated) {
-      // Small delay to let zustand v5's async hydration complete
-      const timer = setTimeout(() => {
-        window.location.href = "/auth/login";
-      }, 50);
-      return () => clearTimeout(timer);
+    if (!hasHydrated) {
+      const unsub = useAuthStore.persist.onFinishHydration(() => setReady(true));
+      return unsub;
     }
-  }, [pathname, isAuthenticated]);
+    setReady(true);
+  }, [hasHydrated]);
+
+  useEffect(() => {
+    if (ready && !publicPaths.includes(pathname) && !isAuthenticated) {
+      window.location.href = "/auth/login";
+    }
+  }, [pathname, isAuthenticated, ready]);
+
+  if (!ready) return null;
 
   if (publicPaths.includes(pathname) || isAuthenticated) {
     return <>{children}</>;
