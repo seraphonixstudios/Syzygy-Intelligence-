@@ -66,6 +66,13 @@ class SyzygyConfig(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
 
+    # OAuth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    oauth_redirect_url: str = "http://localhost:8000/api/auth/oauth"
+
     # Free tier & trial
     free_tier_days: int = 14
     free_tier_monthly_messages: int = 100
