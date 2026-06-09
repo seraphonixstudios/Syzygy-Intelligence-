@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar } from "lucide-react";
+import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
@@ -54,6 +54,8 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const [verifying, setVerifying] = useState(false);
+
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     try {
@@ -63,6 +65,29 @@ export default function SettingsPage() {
       toast.error("Failed to update profile");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!user) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`${API}/api/auth/send-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json();
+      if (data.verification_token) {
+        navigator.clipboard?.writeText(data.verification_token);
+        toast.success("Verification link copied to clipboard (dev mode)");
+      } else {
+        toast.success("Verification email sent (if configured)");
+      }
+    } catch {
+      toast.error("Failed to send verification");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -133,6 +158,18 @@ export default function SettingsPage() {
               <User className="h-4 w-4" />
               Profile
             </h2>
+
+            {user && !user.verified_at && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-400/80">Email not verified</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleVerifyEmail} disabled={verifying}>
+                  {verifying ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                </Button>
+              </div>
+            )}
 
             <SettingRow label="Display Name">
               <input

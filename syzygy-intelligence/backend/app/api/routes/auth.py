@@ -14,6 +14,7 @@ from app.api.auth import (
     create_access_token,
     create_refresh_token,
     create_password_reset_token,
+    create_verification_token,
     decode_token,
     hash_password,
     verify_password,
@@ -76,6 +77,14 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class SendVerificationRequest(BaseModel):
+    email: str
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
 @router.post("/forgot-password")
 async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == req.email))
@@ -106,6 +115,38 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
     db.add(user)
     await db.commit()
     return {"message": "Password has been reset successfully."}
+
+
+@router.post("/send-verification")
+async def send_verification(req: SendVerificationRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalar_one_or_none()
+    if not user or user.verified_at:
+        return {"message": "If that email exists, a verification link has been sent."}
+
+    token = create_verification_token(str(user.id))
+    return {"message": "If that email exists, a verification link has been sent.", "verification_token": token}
+
+
+@router.post("/verify-email")
+async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    payload = decode_token(req.token)
+    if payload is None or payload.get("type") != "email_verification":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token")
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
+
+    user.verified_at = datetime.now(timezone.utc)
+    db.add(user)
+    await db.commit()
+    return {"message": "Email verified successfully."}
 
 
 def _user_to_response(user: User) -> UserResponse:

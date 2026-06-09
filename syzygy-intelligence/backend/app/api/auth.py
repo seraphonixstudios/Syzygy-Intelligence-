@@ -59,6 +59,16 @@ def create_password_reset_token(user_id: str) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
+def create_verification_token(user_id: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    payload = {
+        "sub": user_id,
+        "type": "email_verification",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
 def decode_token(token: str) -> dict | None:
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
