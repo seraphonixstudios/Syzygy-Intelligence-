@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle } from "lucide-react";
-import { logger } from "@/lib/logger";
+import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle, Key, Copy, Trash2, Plus, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 
@@ -36,6 +35,23 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
+  // API Key management
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(true);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [showNewKey, setShowNewKey] = useState<string | null>(null);
+  const [revokingKey, setRevokingKey] = useState<string | null>(null);
+
+  interface ApiKeyItem {
+    id: string;
+    name: string;
+    key_prefix: string;
+    last_used_at: string | null;
+    is_active: boolean;
+    created_at: string;
+  }
+
   useEffect(() => {
     if (user?.display_name) setDisplayName(user.display_name);
   }, [user?.display_name]);
@@ -53,6 +69,72 @@ export default function SettingsPage() {
       } catch {}
     }
   }, []);
+
+  useEffect(() => {
+    fetchApiKeys();
+  }, []);
+
+  const fetchApiKeys = async () => {
+    setApiKeysLoading(true);
+    try {
+      const headers = useAuthStore.getState().getAuthHeaders();
+      const res = await fetch(`${API}/api/auth/api-keys`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeys(data.keys || []);
+      }
+    } catch {
+      // Silent fail — backend may not support API keys yet
+    } finally {
+      setApiKeysLoading(false);
+    }
+  };
+
+  const handleCreateKey = async () => {
+    if (!newKeyName.trim()) return;
+    setCreatingKey(true);
+    try {
+      const headers = useAuthStore.getState().getAuthHeaders();
+      const res = await fetch(`${API}/api/auth/api-keys`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newKeyName.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to create API key");
+      const key = await res.json();
+      setShowNewKey(key.raw_key);
+      setNewKeyName("");
+      toast.success("API key created");
+      await fetchApiKeys();
+    } catch {
+      toast.error("Failed to create API key");
+    } finally {
+      setCreatingKey(false);
+    }
+  };
+
+  const handleRevokeKey = async (keyId: string) => {
+    setRevokingKey(keyId);
+    try {
+      const headers = useAuthStore.getState().getAuthHeaders();
+      const res = await fetch(`${API}/api/auth/api-keys/${keyId}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (!res.ok) throw new Error("Failed to revoke API key");
+      toast.success("API key revoked");
+      await fetchApiKeys();
+    } catch {
+      toast.error("Failed to revoke API key");
+    } finally {
+      setRevokingKey(null);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard?.writeText(text);
+    toast.success("Copied to clipboard");
+  };
 
   const [verifying, setVerifying] = useState(false);
 
@@ -198,14 +280,14 @@ export default function SettingsPage() {
               Subscription
             </h2>
 
-            <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 px-4 py-3">
-              <div className="flex items-center justify-between mb-2">
+            <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 px-4 py-3 space-y-3">
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-syzygy-grey">Tier</span>
                 <span className="text-sm font-medium text-syzygy-gold uppercase tracking-wider">
                   {user.subscription_tier}
                 </span>
               </div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-syzygy-grey">Messages Used</span>
                 <span className="text-sm text-foreground">
                   {user.message_count} / {user.monthly_message_limit}
@@ -218,7 +300,7 @@ export default function SettingsPage() {
                 />
               </div>
               {user.trial_ends_at && (
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-syzygy-surface-border">
+                <div className="flex items-center justify-between pt-2 border-t border-syzygy-surface-border">
                   <span className="flex items-center gap-1 text-sm text-syzygy-grey">
                     <Calendar className="h-3 w-3" />
                     Trial ends
@@ -228,10 +310,143 @@ export default function SettingsPage() {
                   </span>
                 </div>
               )}
+              {user.subscription_tier === "free" ? (
+                <Button
+                  variant="gold"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => window.location.href = "/cloud"}
+                >
+                  Upgrade Plan
+                </Button>
+              ) : (
+                <Button
+                  variant="occult"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={async () => {
+                    try {
+                      const headers = useAuthStore.getState().getAuthHeaders();
+                      const res = await fetch(
+                        `${API}/api/payments/customer-portal`,
+                        { method: "POST", headers },
+                      );
+                      if (res.ok) {
+                        const data = await res.json();
+                        window.location.href = data.url;
+                      } else {
+                        toast.error("Manage subscription unavailable");
+                      }
+                    } catch {
+                      toast.error("Failed to open billing portal");
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Manage Subscription
+                </Button>
+              )}
             </div>
           </div>
         </>
       )}
+
+      {/* ─── API Keys ──────────────────────────────────── */}
+      <div className="space-y-3">
+        <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">
+          <Key className="h-4 w-4" />
+          API Keys
+        </h2>
+        <p className="text-xs text-syzygy-grey/50 mb-3">
+          Use API keys for programmatic access. Store them securely — they won&apos;t be shown again.
+        </p>
+
+        {showNewKey && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 mb-1.5">
+                  <CheckCircle2 className="h-3 w-3" />
+                  New API Key created — copy it now
+                </p>
+                <code className="block break-all rounded bg-syzygy-obsidian px-3 py-2 text-xs font-mono text-syzygy-gold-light select-all">
+                  {showNewKey}
+                </code>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(showNewKey)}>
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowNewKey(null)}>
+                  <XCircle className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            placeholder="Key name (e.g. CI pipeline)"
+            className="flex-1 rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/50 px-3 py-2 text-sm text-foreground placeholder-syzygy-grey/40 outline-none focus:border-syzygy-gold/50"
+            onKeyDown={(e) => e.key === "Enter" && handleCreateKey()}
+          />
+          <Button variant="gold" size="sm" onClick={handleCreateKey} disabled={creatingKey || !newKeyName.trim()}>
+            {creatingKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+            Create
+          </Button>
+        </div>
+
+        {apiKeysLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-syzygy-grey/50" />
+          </div>
+        ) : apiKeys.length === 0 ? (
+          <p className="text-xs text-syzygy-grey/40 py-4 text-center">No API keys yet</p>
+        ) : (
+          <div className="space-y-2">
+            {apiKeys.map((key) => (
+              <div
+                key={key.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 px-4 py-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-foreground">{key.name}</span>
+                    {!key.is_active && (
+                      <span className="text-[10px] uppercase tracking-wider text-red-400/70">Revoked</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <code className="text-xs font-mono text-syzygy-grey/50">{key.key_prefix}...</code>
+                    {key.last_used_at ? (
+                      <span className="text-[10px] text-syzygy-grey/40">
+                        Last used {new Date(key.last_used_at).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-syzygy-grey/30">Never used</span>
+                    )}
+                  </div>
+                </div>
+                {key.is_active && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRevokeKey(key.id)}
+                    disabled={revokingKey === key.id}
+                    className="text-red-400/60 hover:text-red-400"
+                  >
+                    {revokingKey === key.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">

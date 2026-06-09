@@ -6,7 +6,8 @@ to run without a live PostgreSQL database.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import (
@@ -85,6 +86,21 @@ async def get_standalone_session() -> AsyncSession:
     factory = _get_session_factory()
     async with factory() as session:
         return session
+
+
+@asynccontextmanager
+async def get_db_context() -> AsyncIterator[AsyncSession]:
+    """Async context manager for DB sessions outside FastAPI DI (webhooks, background tasks)."""
+    factory = _get_session_factory()
+    async with factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

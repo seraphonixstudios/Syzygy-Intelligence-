@@ -149,12 +149,33 @@ class User(Base):
     message_count = Column(Integer, default=0)
     subscription_tier = Column(SAEnum(SubscriptionTier), default=SubscriptionTier.FREE)
     stripe_customer_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
     settings = Column(JSON, default=dict)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index("idx_user_email", "email"),
+    )
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    key_prefix = Column(String(8), nullable=False)
+    hashed_key = Column(String(255), nullable=False, unique=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", backref="api_keys")
+
+    __table_args__ = (
+        Index("idx_api_key_user", "user_id"),
+        Index("idx_api_key_hash", "hashed_key"),
     )
 
 

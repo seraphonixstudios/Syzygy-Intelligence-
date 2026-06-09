@@ -1,26 +1,51 @@
-"""Consensus engine API routes."""
+"""Consensus engine API routes — memory-integrated."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 
-from app.consensus.engine import ConsensusEngine
 from app.agents.registry import agent_registry
+from app.consensus.engine import ConsensusEngine
+from app.orchestration.consensus_integration import run_consensus_with_memory
 
 router = APIRouter()
 engine = ConsensusEngine()
 
 
+class RunConsensusRequest(BaseModel):
+    task: str
+    max_rounds: int = 6
+    min_rounds: int = 2
+    threshold: float = 0.85
+    agent_ids: list[str] | None = None
+    session_id: str = ""
+
+
 @router.post("/run")
-async def run_consensus(data: dict):
-    task = data.get("task", "")
-    if not task:
+async def run_consensus(data: RunConsensusRequest):
+    if not data.task:
         raise HTTPException(400, "Task is required")
 
-    session = await engine.run_consensus(
-        task=task,
-        max_rounds=data.get("max_rounds", 6),
-        convergence_threshold=data.get("threshold", 0.85),
+    if data.agent_ids:
+        agents = []
+        for aid in data.agent_ids:
+            agent = agent_registry.get(aid)
+            if agent:
+                agents.append(agent)
+        if not agents:
+            raise HTTPException(400, "No valid agents found for the given IDs")
+    else:
+        agents = agent_registry.create_default_team()
+
+    session = await run_consensus_with_memory(
+        engine=engine,
+        task=data.task,
+        agents=agents,
+        session_id=data.session_id,
+        max_rounds=data.max_rounds,
+        min_rounds=data.min_rounds,
+        convergence_threshold=data.threshold,
     )
 
     return {

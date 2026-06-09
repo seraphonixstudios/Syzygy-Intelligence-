@@ -133,6 +133,32 @@ class SyzygyConfig(BaseSettings):
     # Paths
     data_dir: str = str(Path("./data").absolute())
 
+    # Email
+    email_provider: str = "console"
+    sendgrid_api_key: str = ""
+    ses_region: str = "us-east-1"
+    ses_access_key_id: str = ""
+    ses_secret_access_key: str = ""
+    email_from_address: str = "noreply@syzygy.local"
+    email_from_name: str = "Syzygy Intelligence"
+
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    rate_limit_per_second: float = 10.0
+    rate_limit_burst: int = 20
+    rate_limit_authenticated_per_second: float = 30.0
+    rate_limit_authenticated_burst: int = 60
+
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_premium_price_id: str = "price_premium_monthly"
+    stripe_enterprise_price_id: str = "price_enterprise_monthly"
+
+    # API Keys
+    api_key_length: int = 48
+
     @property
     def sync_database_url(self) -> str:
         return self.database_url_sync

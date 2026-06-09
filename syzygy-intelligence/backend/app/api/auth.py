@@ -1,7 +1,8 @@
-"""Auth utilities — JWT, password hashing, current user dependency."""
+"""Auth utilities — JWT, password hashing, current user dependency, API keys."""
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -11,10 +12,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
-from app.db.models import SubscriptionTier, User
+from app.db.models import ApiKey, SubscriptionTier, User
 from app.db.session import get_db
+from app.services.email import EmailMessage, create_email_sender
 
 security = HTTPBearer(auto_error=False)
 
@@ -76,20 +79,47 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
+def generate_api_key() -> tuple[str, str]:
+    """Returns (raw_key, hashed_key)."""
+    raw = f"syzygy_{secrets.token_urlsafe(settings.api_key_length)}"
+    hashed = hash_password(raw)
+    return raw, hashed
+
+
+async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
+    """Look up an API key by its hash. Updates last_used_at."""
+    result = await db.execute(
+        select(ApiKey)
+        .options(selectinload(ApiKey.user))
+        .where(ApiKey.is_active == True)
+    )
+    for api_key in result.scalars().all():
+        if verify_password(token, api_key.hashed_key):
+            api_key.last_used_at = datetime.now(timezone.utc)
+            db.add(api_key)
+            await db.commit()
+            return api_key.user
+    return None
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
     if credentials is None:
         return None
-    payload = decode_token(credentials.credentials)
-    if payload is None or payload.get("type") != "access":
-        return None
-    user_id = payload.get("sub")
-    if user_id is None:
-        return None
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
-    return result.scalar_one_or_none()
+    token = credentials.credentials
+
+    # Try JWT first
+    payload = decode_token(token)
+    if payload and payload.get("type") == "access":
+        user_id = payload.get("sub")
+        if user_id:
+            result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+            return result.scalar_one_or_none()
+
+    # Fall back to API key auth
+    return await authenticate_api_key(token, db)
 
 
 async def require_user(
@@ -106,7 +136,10 @@ async def check_usage_limit(
 ) -> User:
     now = datetime.now(timezone.utc)
 
-    if user.usage_reset_at and user.usage_reset_at.replace(day=1) < now.replace(day=1):
+    usage_reset = user.usage_reset_at
+    if usage_reset and usage_reset.tzinfo is None:
+        usage_reset = usage_reset.replace(tzinfo=timezone.utc)
+    if usage_reset and usage_reset.replace(day=1) < now.replace(day=1):
         user.message_count = 0
         user.usage_reset_at = now
         db.add(user)
@@ -115,7 +148,10 @@ async def check_usage_limit(
     if user.subscription_tier == SubscriptionTier.PREMIUM or user.subscription_tier == SubscriptionTier.ENTERPRISE:
         return user
 
-    if user.trial_ends_at and user.trial_ends_at > now:
+    trial_ends = user.trial_ends_at
+    if trial_ends and trial_ends.tzinfo is None:
+        trial_ends = trial_ends.replace(tzinfo=timezone.utc)
+    if trial_ends and trial_ends > now:
         return user
 
     if user.message_count >= settings.free_tier_monthly_messages:
@@ -135,3 +171,16 @@ async def require_admin(
     if not user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+async def send_email(message: EmailMessage) -> None:
+    sender = create_email_sender(
+        provider=settings.email_provider,
+        sendgrid_api_key=settings.sendgrid_api_key,
+        ses_region=settings.ses_region,
+        ses_access_key_id=settings.ses_access_key_id,
+        ses_secret_access_key=settings.ses_secret_access_key,
+        from_address=settings.email_from_address,
+        from_name=settings.email_from_name,
+    )
+    await sender.send(message)

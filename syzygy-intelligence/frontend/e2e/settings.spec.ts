@@ -84,4 +84,29 @@ test.describe("Settings page", () => {
     await displayNameInput.fill("Test User Updated");
     await expect(displayNameInput).toHaveValue("Test User Updated");
   });
+
+  test("subscription shows upgrade button for free tier", async ({ page }) => {
+    await page.goto("/settings");
+    const upgradeBtn = page.locator("button:has-text('Upgrade Plan')");
+    await expect(upgradeBtn).toBeVisible();
+  });
+
+  test("API Keys section is visible", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.locator("text=API Keys")).toBeVisible();
+  });
+
+  test("can create API key and see it in list", async ({ page }) => {
+    await page.goto("/settings");
+    const input = page.locator("input[placeholder*='Key name']");
+    await input.fill("Settings Test Key");
+    const createBtn = page.locator("button:has-text('Create')");
+    await createBtn.click();
+    await expect(page.locator("text=New API Key created")).toBeVisible({ timeout: 10000 });
+
+    const dismissBtn = page.locator("button:has-text('')").last();
+    await dismissBtn.click();
+
+    await expect(page.locator("text=Settings Test Key")).toBeVisible();
+  });
 });

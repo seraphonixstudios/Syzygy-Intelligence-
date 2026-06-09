@@ -351,8 +351,13 @@ function PricingCard({ tier, index, isAnnual }: { tier: typeof TIERS[0]; index: 
       {/* CTA */}
       <Button
         onClick={() => {
-          if (tier.href.startsWith("http")) window.open(tier.href, "_blank");
-          else document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+          if (tier.id !== "open-source" && tier.id !== "rebis") {
+            handleTierClick(tier.id);
+          } else if (tier.href.startsWith("http")) {
+            window.open(tier.href, "_blank");
+          } else {
+            document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+          }
         }}
         variant={tier.popular ? "gold" : "occult"}
         size="lg"
@@ -524,6 +529,43 @@ export default function CloudPage() {
     return () => clearInterval(t);
   }, []);
 
+  const checkoutPriceIds: Record<string, string> = {
+    solve: "price_premium_monthly",
+    coagula: "price_enterprise_monthly",
+  };
+
+  // Stripe checkout or fallback to waitlist
+  const handleTierClick = useCallback(async (tierId: string) => {
+    const priceId = checkoutPriceIds[tierId];
+    if (!priceId) return;
+
+    try {
+      const { useAuthStore } = await import("@/store/authStore");
+      const headers = useAuthStore.getState().getAuthHeaders();
+      if (!headers.Authorization) {
+        document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000"}/api/payments/create-checkout-session`,
+        {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ price_id: priceId }),
+        },
+      );
+      if (!res.ok) throw new Error("Checkout failed");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Checkout unavailable. Please try again.");
+      }
+    } catch {
+      document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
+
   // Waitlist submit
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -531,7 +573,6 @@ export default function CloudPage() {
       if (!email.trim()) return;
       setSubmitting(true);
       try {
-        // Simulate API call
         await new Promise((r) => setTimeout(r, 1200));
         setSubmitted(true);
         toast.success("You're on the list! We'll be in touch soon.");

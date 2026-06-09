@@ -121,6 +121,8 @@ The UI manifests the alchemical aesthetic:
 | **Solve et Coagula** | Dissolution → Coalescence transitions |
 | **Crystalline Geometry** | Node network visualization |
 | **Aether Particles** | Ambient background animations |
+| **Page Transitions** | Framer Motion fade + slide route transitions via `AnimatePresence` |
+| **Error Boundaries** | React error boundary wrapping layout, logs to structured logger |
 
 ---
 
@@ -176,10 +178,22 @@ npm run dev
 
 ```bash
 cd frontend
-npx playwright test
+npx playwright test              # Run all tests
+npx playwright test e2e/auth.spec.ts   # Single file
+npx playwright test --ui              # Interactive UI mode
 ```
 
 Tests use `addInitScript` to set auth state before page JavaScript runs, avoiding hydration race conditions. Backend should be running locally for full-stack tests.
+
+**Test coverage** (22 spec files, ~170 tests):
+- Auth flows (login, register, password reset, email verify, OAuth)
+- API key management (create, list, revoke, auth via Bearer token)
+- Navigation & layout (all 14+ routes, sidebar visibility)
+- Workflow cards (all 18 workflow types)
+- Settings page (model, polarity, consensus threshold, profile, subscription)
+- Animations (stagger, fade-in-up, brand animations)
+- Cloud/pricing page (4 tiers, features, FAQ, testimonials)
+- All 11 feature pages (chat, code, research, content, memory, etc.)
 
 ### Configure Models
 
@@ -216,6 +230,10 @@ Syzygy includes a built-in authentication system enabling user registration, log
 - **Admin Access** — Superuser accounts get an Admin panel (`/admin`) with user management
 - **User Settings** — Profile editing (display name), subscription tier with message usage meter
 - **Free Tier** — Usage quota (messages/month) tracked per user with trial period support
+- **API Key Management** — Create, list, and revoke API keys from Settings; authenticate programmatic access via `Bearer <api_key>`
+- **Rate Limiting** — Token-bucket rate limiter (per-IP 10/s burst 20, authenticated 30/s burst 60) with 429 responses and `Retry-After` headers
+- **Subscription Payments** — Stripe integration with checkout sessions, webhook handling, and customer portal; mock mode for development
+- **Memory-Integrated Consensus** — Consensus engine stores each round (proposals, critiques, refinements) to memory and recalls past context for informed agent reasoning
 
 ### Auth Flow
 
@@ -245,7 +263,29 @@ User → /auth/login or /auth/register
 | GET | `/api/auth/oauth/{provider}` | Redirect to OAuth provider (google, github) |
 | GET | `/api/auth/oauth/{provider}/callback` | OAuth callback handler |
 | PUT | `/api/auth/me/settings` | Update user profile/settings |
+| POST | `/api/auth/api-keys` | Create a new API key (returns raw key once) |
+| GET | `/api/auth/api-keys` | List user's API keys (prefix only) |
+| DELETE | `/api/auth/api-keys/{id}` | Revoke an API key |
 | GET | `/api/admin/users` | List all users (admin only) |
+
+### Payment Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/payments/create-checkout-session` | Create Stripe checkout session for subscription |
+| POST | `/api/payments/customer-portal` | Get Stripe customer portal link (manage subscription) |
+| POST | `/api/payments/webhook` | Stripe webhook handler (subscription events) |
+
+### Rate Limiting
+
+Requests to `/api/*` are rate-limited using token bucket:
+
+| Scope | Rate | Burst |
+|-------|------|-------|
+| Unauthenticated (per IP) | 10 req/s | 20 |
+| Authenticated (per user) | 30 req/s | 60 |
+
+Exempt routes: `/api/auth/login`, `/api/auth/register`, `/health`, `/`. Rate limit config is set via environment variables (`SYZYGY_RATE_LIMIT_*`). Exceeded requests return `429 Too Many Requests` with a `Retry-After` header.
 
 ### Routes
 
@@ -258,7 +298,8 @@ User → /auth/login or /auth/register
 | `/auth/verify-email` | Public | Verify email with token |
 | `/auth/oauth-callback` | Public | OAuth callback handler (reads tokens from URL hash) |
 | `/admin` | Admin only | User management dashboard |
-| `/settings` | Authenticated | Profile, subscription, and app settings |
+| `/settings` | Authenticated | Profile, subscription, API keys, and app settings |
+| `/cloud` | Public | Pricing tiers with Stripe checkout (Solve $29/mo, Coagula $99/mo) |
 | All others | Authenticated | Protected by `RouteGuard` |
 
 ---

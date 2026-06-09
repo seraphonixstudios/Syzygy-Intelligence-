@@ -264,7 +264,7 @@ export default function RegisterPage() {
 
             <div className="mt-4 rounded-lg border border-syzygy-gold/10 bg-syzygy-gold/5 px-3 py-2">
               <p className="text-center text-[10px] text-syzygy-grey/50">
-                Free tier: {process.env.NEXT_PUBLIC_FREE_TIER_MESSAGES || "100"} messages/month &middot; 14-day trial with unlimited messages
+                Free tier: 100 messages/month &middot; 14-day trial with unlimited messages
               </p>
             </div>
           </div>
