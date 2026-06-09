@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Save, RefreshCw, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/authStore";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -22,6 +23,9 @@ const POLARITY_PRESETS = [
 ];
 
 export default function SettingsPage() {
+  const { user, updateProfile } = useAuthStore();
+  const [displayName, setDisplayName] = useState(user?.display_name || "");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [defaultModel, setDefaultModel] = useState("qwen3:8b-gpu");
   const [polarityPreset, setPolarityPreset] = useState("balanced");
@@ -31,6 +35,10 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.display_name) setDisplayName(user.display_name);
+  }, [user?.display_name]);
 
   useEffect(() => {
     const saved = localStorage.getItem("syzygy-settings");
@@ -45,6 +53,18 @@ export default function SettingsPage() {
       } catch {}
     }
   }, []);
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    try {
+      await updateProfile({ display_name: displayName });
+      toast.success("Profile updated");
+    } catch {
+      toast.error("Failed to update profile");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleSave = () => {
     setSaving(true);
@@ -105,6 +125,76 @@ export default function SettingsPage() {
           {saved ? "Saved!" : "Save Settings"}
         </Button>
       </div>
+
+      {user && (
+        <>
+          <div className="space-y-3">
+            <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">
+              <User className="h-4 w-4" />
+              Profile
+            </h2>
+
+            <SettingRow label="Display Name">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/50 px-3 py-1.5 text-sm text-foreground outline-none focus:border-syzygy-gold/50"
+              />
+            </SettingRow>
+
+            <SettingRow label="Email">
+              <span className="text-sm text-syzygy-grey/80">{user.email}</span>
+            </SettingRow>
+
+            <div className="flex justify-end">
+              <Button variant="gold" size="sm" onClick={handleSaveProfile} disabled={profileSaving}>
+                {profileSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                Save Profile
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">
+              <Shield className="h-4 w-4" />
+              Subscription
+            </h2>
+
+            <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 px-4 py-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-syzygy-grey">Tier</span>
+                <span className="text-sm font-medium text-syzygy-gold uppercase tracking-wider">
+                  {user.subscription_tier}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-syzygy-grey">Messages Used</span>
+                <span className="text-sm text-foreground">
+                  {user.message_count} / {user.monthly_message_limit}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-syzygy-surface-border overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-syzygy-gold transition-all"
+                  style={{ width: `${Math.min((user.message_count / user.monthly_message_limit) * 100, 100)}%` }}
+                />
+              </div>
+              {user.trial_ends_at && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-syzygy-surface-border">
+                  <span className="flex items-center gap-1 text-sm text-syzygy-grey">
+                    <Calendar className="h-3 w-3" />
+                    Trial ends
+                  </span>
+                  <span className="text-sm text-foreground">
+                    {new Date(user.trial_ends_at).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="space-y-3">
         <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">

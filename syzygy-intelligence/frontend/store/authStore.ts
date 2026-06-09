@@ -33,6 +33,7 @@ interface AuthState {
   logout: () => void;
   refreshAuth: () => Promise<void>;
   fetchMe: () => Promise<void>;
+  updateProfile: (data: { display_name?: string }) => Promise<void>;
   getAuthHeaders: () => Record<string, string>;
   setRememberMe: (value: boolean) => void;
 }
@@ -149,6 +150,26 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
         }
+      },
+
+      updateProfile: async (data: { display_name?: string }) => {
+        const { accessToken, user } = get();
+        if (!accessToken || !user) throw new Error("Not authenticated");
+        const res = await fetch(`${API_URL}/api/auth/me/settings`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            ...user.settings,
+            display_name: data.display_name || user.display_name,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update profile");
+        set({
+          user: { ...user, display_name: data.display_name || user.display_name },
+        });
       },
 
       getAuthHeaders: () => {

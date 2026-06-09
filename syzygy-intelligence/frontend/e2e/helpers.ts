@@ -12,13 +12,13 @@ export async function registerAndLogin(page: Page, email?: string) {
   const regRes = await page.request.post(`${API}/api/auth/register`, {
     data: { email: testEmail, password: TEST_PASS },
   });
-  if (regRes.ok) {
+  if (regRes.ok()) {
     data = await regRes.json();
   } else if (regRes.status() === 409) {
     const loginRes = await page.request.post(`${API}/api/auth/login`, {
       data: { email: testEmail, password: TEST_PASS },
     });
-    if (!loginRes.ok) {
+    if (!loginRes.ok()) {
       const body = await loginRes.text();
       throw new Error(`Login failed: ${loginRes.status()} ${body}`);
     }
