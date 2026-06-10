@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -33,6 +34,22 @@ class SyzygyConfig(BaseSettings):
 
     def model_post_init(self, __context):
         """Validate configuration after initialization."""
+        # Support DATABASE_URL env var (raw, no SYZYGY_ prefix)
+        raw_url = os.environ.get("DATABASE_URL", "")
+        if raw_url:
+            m = re.match(
+                r"(?:postgresql|postgresql\+asyncpg)://"
+                r"(?P<user>[^:]+):(?P<pass>[^@]+)@"
+                r"(?P<host>[^:/]+)(?::(?P<port>\d+))?/(?P<db>.+)",
+                raw_url,
+            )
+            if m:
+                self.db_user = m.group("user")
+                self.db_password = m.group("pass")
+                self.db_host = m.group("host")
+                if m.group("port"):
+                    self.db_port = int(m.group("port"))
+                self.db_name = m.group("db")
         if self.env == "production" and self.secret_key == "change-me-to-a-random-secret":
             raise ValueError(
                 "SYZYGY_SECRET_KEY must be set to a secure random value in production. "

@@ -38,6 +38,7 @@ jobs:
       - run: pytest tests/ -v --tb=short
         env:
           DATABASE_URL: postgresql+asyncpg://syzygy:syzygy@localhost:5432/syzygy
+          SYZYGY_DB_PASSWORD: syzygy
 
   frontend-lint:
     runs-on: ubuntu-latest
@@ -92,10 +93,19 @@ jobs:
       - name: Start backend
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
+          # Poll /health until ready (max 30s)
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Backend is ready"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 1
+          done
         working-directory: syzygy-intelligence/backend
         env:
           DATABASE_URL: postgresql+asyncpg://syzygy:syzygy@localhost:5432/syzygy
+          SYZYGY_DB_PASSWORD: syzygy
           SYZYGY_ENV: testing
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
@@ -103,7 +113,15 @@ jobs:
         run: |
           npm run build
           npx next start --port 3000 &
-          sleep 3
+          # Poll frontend until ready (max 60s)
+          for i in $(seq 1 60); do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Frontend is ready"
+              break
+            fi
+            echo "Waiting for frontend... ($i/60)"
+            sleep 1
+          done
         working-directory: syzygy-intelligence/frontend
         env:
           NEXT_PUBLIC_SYZYGY_API_URL: http://localhost:8000
