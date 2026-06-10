@@ -1,7 +1,5 @@
 """Ollama embedding generation for the RAG pipeline."""
 
-"""Ollama embedding generation for the RAG pipeline."""
-
 import httpx
 
 from app.config import settings
@@ -46,9 +44,12 @@ async def embed(
     )
 
     async with httpx.AsyncClient(timeout=120.0) as client:
-        url = f"{base}/api/embed"
-        payload = {"model": model, "input": texts}
-        resp = await client.post(url, json=payload)
+        try:
+            url = f"{base}/api/embed"
+            payload = {"model": model, "input": texts}
+            resp = await client.post(url, json=payload)
+        except httpx.RequestError as e:
+            raise LLMConnectionError(model=model, original_error=str(e))
 
         if resp.status_code == 200:
             data = resp.json()

@@ -35,6 +35,19 @@ jobs:
           cache-dependency-path: syzygy-intelligence/backend/requirements.txt
       - run: pip install -r requirements.txt
       - run: pip install pytest pytest-asyncio httpx
+      - name: Start mock Ollama server
+        run: |
+          cd tests
+          nohup python mock_ollama_server.py > /tmp/ollama-mock.log 2>&1 &
+          # Wait for mock to be ready
+          for i in $(seq 1 15); do
+            if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+              echo "Mock Ollama is ready"
+              break
+            fi
+            echo "Waiting for mock Ollama... ($i/15)"
+            sleep 1
+          done
       - run: pytest tests/ -v --tb=short
         env:
           DATABASE_URL: postgresql+asyncpg://syzygy:syzygy@localhost:5432/syzygy
