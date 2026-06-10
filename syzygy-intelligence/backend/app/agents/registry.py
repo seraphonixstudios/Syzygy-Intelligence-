@@ -16,14 +16,14 @@ DEFAULT_AGENT_MODELS: dict[str, str] = {
     "ruler": "qwen3:8b-gpu",
     "magician": "qwen3:8b-gpu",
     "explorer": "qwen3:8b-gpu",
-    "great_mother": "dolphin-llama3:8b-gpu",
-    "lover": "dolphin-llama3:8b-gpu",
-    "innocent": "dolphin-llama3:8b-gpu",
+    "great_mother": "qwen3:8b-gpu",
+    "lover": "qwen3:8b-gpu",
+    "innocent": "qwen3:8b-gpu",
     "creator": "qwen3:8b-gpu",
     "anima": "qwen3:8b-gpu",
     "self": "qwen3:8b-gpu",
     "hermes": "qwen3:8b-gpu",
-    "trickster": "dolphin-llama3:8b-gpu",
+    "trickster": "qwen3:8b-gpu",
 }
 
 

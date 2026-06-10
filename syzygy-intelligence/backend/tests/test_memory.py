@@ -7,6 +7,17 @@ from app.memory.team_memory import TeamMemory
 from app.memory.vector_store import VectorMemory
 
 
+@pytest.fixture(autouse=True)
+def _mock_vector_init(monkeypatch):
+    """Prevent VectorMemory from initializing ChromaDB (onnxruntime segfaults on some platforms)."""
+    from app.memory import vector_store
+
+    async def mock_ensure_init(self):
+        self._initialized = True
+
+    monkeypatch.setattr(vector_store.VectorMemory, "_ensure_init", mock_ensure_init)
+
+
 class TestShortTermMemory:
     @pytest.mark.asyncio
     async def test_store_and_recall(self):

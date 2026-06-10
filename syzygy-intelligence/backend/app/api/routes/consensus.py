@@ -1,12 +1,17 @@
-"""Consensus engine API routes — memory-integrated."""
+"""Consensus engine API routes — memory-integrated, usage-gated, with optional WS streaming."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import check_usage_limit, require_user
+from app.api.websockets import manager as ws_manager
 from app.agents.registry import agent_registry
 from app.consensus.engine import ConsensusEngine
+from app.db.models import User
+from app.db.session import get_db
 from app.orchestration.consensus_integration import run_consensus_with_memory
 
 router = APIRouter()
@@ -20,12 +25,19 @@ class RunConsensusRequest(BaseModel):
     threshold: float = 0.85
     agent_ids: list[str] | None = None
     session_id: str = ""
+    ws_client_id: str | None = None
 
 
 @router.post("/run")
-async def run_consensus(data: RunConsensusRequest):
+async def run_consensus(
+    data: RunConsensusRequest,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
     if not data.task:
         raise HTTPException(400, "Task is required")
+
+    await check_usage_limit(user, db)
 
     if data.agent_ids:
         agents = []
@@ -38,6 +50,13 @@ async def run_consensus(data: RunConsensusRequest):
     else:
         agents = agent_registry.create_default_team()
 
+    async def on_event(event_type: str, payload: dict):
+        if data.ws_client_id:
+            await ws_manager.send_to(data.ws_client_id, {
+                "type": f"consensus_{event_type}",
+                **payload,
+            })
+
     session = await run_consensus_with_memory(
         engine=engine,
         task=data.task,
@@ -46,6 +65,7 @@ async def run_consensus(data: RunConsensusRequest):
         max_rounds=data.max_rounds,
         min_rounds=data.min_rounds,
         convergence_threshold=data.threshold,
+        on_event=on_event if data.ws_client_id else None,
     )
 
     return {

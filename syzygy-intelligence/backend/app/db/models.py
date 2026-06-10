@@ -165,7 +165,7 @@ class ApiKey(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(100), nullable=False)
-    key_prefix = Column(String(8), nullable=False)
+    key_prefix = Column(String(16), nullable=False)
     hashed_key = Column(String(255), nullable=False, unique=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)

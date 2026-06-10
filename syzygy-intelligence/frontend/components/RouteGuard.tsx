@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
 const publicPaths = [
+  "/",
   "/cloud",
   "/auth/login",
   "/auth/register",
@@ -17,16 +18,20 @@ const publicPaths = [
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const hasHydrated = useAuthStore.persist.hasHydrated();
-  const [ready, setReady] = useState(hasHydrated);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!hasHydrated) {
-      const unsub = useAuthStore.persist.onFinishHydration(() => setReady(true));
-      return unsub;
+    if (useAuthStore.persist.hasHydrated()) {
+      setReady(true);
+      return;
     }
-    setReady(true);
-  }, [hasHydrated]);
+    const unsub = useAuthStore.persist.onFinishHydration(() => {
+      setReady(true);
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
 
   useEffect(() => {
     if (ready && !publicPaths.includes(pathname) && !isAuthenticated) {

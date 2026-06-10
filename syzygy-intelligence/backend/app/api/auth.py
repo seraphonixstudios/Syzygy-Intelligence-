@@ -139,7 +139,7 @@ async def check_usage_limit(
     usage_reset = user.usage_reset_at
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=timezone.utc)
-    if usage_reset and usage_reset.replace(day=1) < now.replace(day=1):
+    if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0
         user.usage_reset_at = now
         db.add(user)

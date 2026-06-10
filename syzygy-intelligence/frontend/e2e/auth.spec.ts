@@ -132,11 +132,11 @@ test.describe("Auth pages", () => {
 
   test("verify email page renders with no token error", async ({ page }) => {
     await page.goto("/auth/verify-email");
-    await expect(page.getByText(/verifying/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("No verification token provided.")).toBeVisible({ timeout: 10000 });
   });
 
-  test("oauth callback page renders loading state", async ({ page }) => {
+  test("oauth callback page renders error on missing tokens", async ({ page }) => {
     await page.goto("/auth/oauth-callback");
-    await expect(page.locator("text=Completing sign in")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Invalid OAuth response. Redirecting to login...")).toBeVisible({ timeout: 10000 });
   });
 });

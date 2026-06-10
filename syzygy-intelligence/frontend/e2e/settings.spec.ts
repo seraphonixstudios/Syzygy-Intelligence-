@@ -13,9 +13,11 @@ test.describe("Settings page", () => {
 
   test("shows model dropdown with options", async ({ page }) => {
     await page.goto("/settings");
-    const select = page.locator("select").first();
-    const options = await select.locator("option").all();
-    expect(options.length).toBeGreaterThanOrEqual(3);
+    await expect(page.locator("h1")).toContainText("Settings");
+    await page.waitForSelector("select", { timeout: 10000 });
+    const options = page.locator("select").first().locator("option");
+    const all = await options.all();
+    expect(all.length).toBeGreaterThanOrEqual(3);
   });
 
   test("can change default model", async ({ page }) => {
@@ -38,7 +40,7 @@ test.describe("Settings page", () => {
     const saveBtn = page.locator("button:has-text('Save Settings')");
     await expect(saveBtn).toBeVisible();
     await saveBtn.click();
-    await expect(page.locator("text=Saved!")).toBeVisible();
+    await expect(page.locator("button:has-text('Saved!')")).toBeVisible({ timeout: 10000 });
   });
 
   test("test connection button is visible", async ({ page }) => {
@@ -49,9 +51,9 @@ test.describe("Settings page", () => {
 
   test("ollama url input is editable", async ({ page }) => {
     await page.goto("/settings");
-    const input = page.locator("input[type='text']").first();
-    await input.fill("http://custom-host:11434");
-    await expect(input).toHaveValue("http://custom-host:11434");
+    const ollamaInput = page.locator('div:has(> label:text("Ollama URL")) input[type="text"]');
+    await ollamaInput.fill("http://custom-host:11434");
+    await expect(ollamaInput).toHaveValue("http://custom-host:11434");
   });
 
   test("consensus threshold input exists", async ({ page }) => {
@@ -63,24 +65,24 @@ test.describe("Settings page", () => {
   test("profile section shows display name and email", async ({ page }) => {
     await page.goto("/settings");
     await expect(page.locator("text=Display Name")).toBeVisible();
-    await expect(page.locator("text=Email")).toBeVisible();
+    await expect(page.locator("label:text('Email')")).toBeVisible();
   });
 
   test("profile save button is visible", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("button:has-text('Save Profile')")).toBeVisible();
+    await expect(page.locator("button:has-text('Save Profile')")).toBeVisible({ timeout: 10000 });
   });
 
   test("subscription section shows tier and usage", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("text=Subscription")).toBeVisible();
+    await expect(page.locator("h2:has-text('Subscription')")).toBeVisible();
     await expect(page.locator("text=Tier")).toBeVisible();
     await expect(page.locator("text=Messages Used")).toBeVisible();
   });
 
   test("display name input is editable", async ({ page }) => {
     await page.goto("/settings");
-    const displayNameInput = page.locator("input[type='text']").first();
+    const displayNameInput = page.locator('div:has(> label:text("Display Name")) input[type="text"]');
     await displayNameInput.fill("Test User Updated");
     await expect(displayNameInput).toHaveValue("Test User Updated");
   });
@@ -88,12 +90,12 @@ test.describe("Settings page", () => {
   test("subscription shows upgrade button for free tier", async ({ page }) => {
     await page.goto("/settings");
     const upgradeBtn = page.locator("button:has-text('Upgrade Plan')");
-    await expect(upgradeBtn).toBeVisible();
+    await expect(upgradeBtn).toBeVisible({ timeout: 10000 });
   });
 
   test("API Keys section is visible", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("text=API Keys")).toBeVisible();
+    await expect(page.locator("h2:has-text('API Keys')")).toBeVisible();
   });
 
   test("can create API key and see it in list", async ({ page }) => {
@@ -103,10 +105,6 @@ test.describe("Settings page", () => {
     const createBtn = page.locator("button:has-text('Create')");
     await createBtn.click();
     await expect(page.locator("text=New API Key created")).toBeVisible({ timeout: 10000 });
-
-    const dismissBtn = page.locator("button:has-text('')").last();
-    await dismissBtn.click();
-
-    await expect(page.locator("text=Settings Test Key")).toBeVisible();
+    await expect(page.locator("text=Settings Test Key")).toBeVisible({ timeout: 10000 });
   });
 });

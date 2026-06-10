@@ -269,7 +269,7 @@ function Particles({ tier }: { tier?: string }) {
   return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-0" />;
 }
 
-function PricingCard({ tier, index, isAnnual }: { tier: typeof TIERS[0]; index: number; isAnnual: boolean }) {
+function PricingCard({ tier, index, isAnnual, onTierClick }: { tier: typeof TIERS[0]; index: number; isAnnual: boolean; onTierClick: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const effectivePrice = tier.price !== null && isAnnual ? Math.round(tier.price * 10 * 12) / 12 : tier.price;
 
@@ -352,7 +352,7 @@ function PricingCard({ tier, index, isAnnual }: { tier: typeof TIERS[0]; index: 
       <Button
         onClick={() => {
           if (tier.id !== "open-source" && tier.id !== "rebis") {
-            handleTierClick(tier.id);
+            onTierClick(tier.id);
           } else if (tier.href.startsWith("http")) {
             window.open(tier.href, "_blank");
           } else {
@@ -721,7 +721,7 @@ export default function CloudPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {TIERS.map((tier, i) => (
-              <PricingCard key={tier.id} tier={tier} index={i} isAnnual={isAnnual} />
+              <PricingCard key={tier.id} tier={tier} index={i} isAnnual={isAnnual} onTierClick={handleTierClick} />
             ))}
           </div>
         </section>

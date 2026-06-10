@@ -1,59 +1,35 @@
-import { Page } from "@playwright/test";
+import { Page, expect } from "@playwright/test";
 
-const TEST_EMAIL = "e2e-test@syzygy.local";
-const TEST_PASS = "testpass123";
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+export const TEST_PASS = "testpass123";
+export const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 export async function registerAndLogin(page: Page, email?: string) {
-  const testEmail = email || TEST_EMAIL;
+  const testEmail = email || `e2e-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@syzygy.local`;
 
-  // Try register — if user already exists, fall back to login
-  let data: { access_token: string; refresh_token: string } | null = null;
+  // Ensure user exists via API
   try {
     const regRes = await page.request.post(`${API}/api/auth/register`, {
       data: { email: testEmail, password: TEST_PASS },
     });
-    if (regRes.ok()) {
-      data = await regRes.json();
-    } else if (regRes.status() === 409) {
-      const loginRes = await page.request.post(`${API}/api/auth/login`, {
-        data: { email: testEmail, password: TEST_PASS },
-      });
-      if (!loginRes.ok()) {
-        const body = await loginRes.text();
-        throw new Error(`Login failed: ${loginRes.status()} ${body}`);
-      }
-      data = await loginRes.json();
+    if (!regRes.ok() && regRes.status() !== 409) {
+      console.warn("Register failed", regRes.status());
     }
   } catch {
-    // Backend unavailable — use mock token so UI tests can still run
+    // Backend unavailable
   }
 
-  const token = data?.access_token || "mock-token";
-  const refresh = data?.refresh_token || "mock-refresh";
+  // Do a real browser-based login to set up auth state properly
+  await page.goto("/auth/login", { waitUntil: "load" });
+  await page.waitForTimeout(1000);
 
-  // Set init script so localStorage is populated BEFORE any page JS runs
-  await page.addInitScript(
-    ({ token, refresh }) => {
-      localStorage.setItem(
-        "syzygy-auth",
-        JSON.stringify({
-          state: {
-            accessToken: token,
-            refreshToken: refresh,
-            isAuthenticated: true,
-            rememberMe: true,
-          },
-          version: 0,
-        })
-      );
-    },
-    { token, refresh }
-  );
+  // Fill login form
+  await page.fill("input[type='email']", testEmail);
+  await page.fill("input[type='password']", TEST_PASS);
+  await page.click("button[type='submit']");
 
-  // Navigate to a public path so the init script fires
-  await page.goto("/cloud");
-  await page.waitForTimeout(1500);
+  // Wait for redirect to home/settings after successful login
+  await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 15000 });
+  await page.waitForTimeout(1000);
 
   return { email: testEmail };
 }

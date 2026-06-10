@@ -1,79 +1,98 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
 
-interface WebSocketMessage {
-  type: string;
-  [key: string]: unknown;
+const WS_URL = process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8000/ws";
+
+interface UseWebSocketReturn {
+  isConnected: boolean;
+  lastMessage: Record<string, unknown> | null;
+  error: string | null;
+  connect: () => void;
+  disconnect: () => void;
+  send: (data: Record<string, unknown>) => void;
 }
 
-export function useWebSocket(url?: string) {
+export function useWebSocket(autoConnect = true): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+  const [lastMessage, setLastMessage] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   const connect = useCallback(() => {
-    const wsUrl =
-      url || process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8000/ws";
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    logger.info(`WS connecting to ${wsUrl}`, undefined, "WS");
-    setError(null);
+    try {
+      const ws = new WebSocket(WS_URL);
+      wsRef.current = ws;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+      ws.onopen = () => {
+        if (mountedRef.current) {
+          setIsConnected(true);
+          setError(null);
+        }
+      };
 
-    ws.onopen = () => {
-      logger.info("WS connected", undefined, "WS");
-      setIsConnected(true);
-      setError(null);
-    };
+      ws.onclose = () => {
+        if (mountedRef.current) {
+          setIsConnected(false);
+          // Auto-reconnect after 3s
+          reconnectRef.current = setTimeout(() => {
+            if (mountedRef.current) connect();
+          }, 3000);
+        }
+      };
 
-    ws.onclose = (event) => {
-      logger.warn(`WS disconnected (code: ${event.code})`, undefined, "WS");
-      setIsConnected(false);
-    };
+      ws.onerror = () => {
+        if (mountedRef.current) {
+          setError("WebSocket connection failed");
+          setIsConnected(false);
+        }
+      };
 
-    ws.onerror = () => {
-      const msg = "WebSocket connection failed";
-      logger.error(msg, undefined, "WS");
-      setError(msg);
-      setIsConnected(false);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        logger.debug("WS message received", { type: data.type }, "WS");
-        setLastMessage(data);
-      } catch {
-        logger.debug("WS non-JSON message", { data: event.data }, "WS");
-      }
-    };
-  }, [url]);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as Record<string, unknown>;
+          if (mountedRef.current) setLastMessage(data);
+        } catch {
+          // ignore invalid JSON
+        }
+      };
+    } catch (err) {
+      logger.error("Failed to create WebSocket", err, "WS");
+      setError("Failed to connect");
+    }
+  }, []);
 
   const disconnect = useCallback(() => {
-    logger.info("WS disconnecting", undefined, "WS");
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
     wsRef.current?.close();
     wsRef.current = null;
-    setIsConnected(false);
+    if (mountedRef.current) setIsConnected(false);
   }, []);
 
   const send = useCallback((data: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      logger.debug("WS send", { type: data.type }, "WS");
       wsRef.current.send(JSON.stringify(data));
     } else {
-      logger.warn("WS not open, cannot send", undefined, "WS");
+      logger.warn("WebSocket not connected, cannot send", undefined, "WS");
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
+    if (autoConnect) connect();
     return () => {
-      wsRef.current?.close();
+      mountedRef.current = false;
+      disconnect();
     };
-  }, []);
+  }, [autoConnect, connect, disconnect]);
 
   return { isConnected, lastMessage, error, connect, disconnect, send };
 }

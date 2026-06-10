@@ -14,6 +14,7 @@ from app.consensus.engine import ConsensusEngine
 from app.agents.registry import agent_registry
 from app.logging_setup import logger
 from app.notifications import notification_manager, NotificationType, NotificationSeverity
+from app.orchestration.consensus_integration import run_consensus_with_memory
 
 
 class ConnectionManager:
@@ -114,7 +115,13 @@ async def ws_handler(websocket: WebSocket):
                         **payload,
                     })
 
-                session = await engine.run_consensus(task, on_event=on_event)
+                agents = agent_registry.create_default_team()
+                session = await run_consensus_with_memory(
+                    engine=engine,
+                    task=task,
+                    agents=agents,
+                    on_event=on_event,
+                )
 
                 await manager.send_to(client_id, {
                     "type": "consensus_complete",

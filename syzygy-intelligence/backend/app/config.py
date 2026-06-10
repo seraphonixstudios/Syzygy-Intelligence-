@@ -59,7 +59,7 @@ class SyzygyConfig(BaseSettings):
 
     @property
     def db_is_sqlite(self) -> bool:
-        return self.env == "development"
+        return self.env == "development" and "sqlite" in self.database_url
 
     @property
     def allowed_origins(self) -> list[str]:
@@ -104,10 +104,10 @@ class SyzygyConfig(BaseSettings):
     critic_model: str = "qwen3:8b-gpu"
     synthesis_model: str = "qwen3:8b-gpu"
     coding_model: str = "qwen3:8b-gpu"
-    creative_model: str = "dolphin-llama3:8b-gpu"
+    creative_model: str = "qwen3:8b-gpu"
     vision_model: str = "llava:13b-gpu"
     gpu_model: str = "qwen3:8b-gpu"
-    fast_model: str = "dolphin-llama3:8b-gpu"
+    fast_model: str = "qwen3:8b-gpu"
 
     # LiteLLM Fallback
     litellm_enabled: bool = False

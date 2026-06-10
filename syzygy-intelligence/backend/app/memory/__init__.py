@@ -131,6 +131,21 @@ class MemorySystem:
                 )
             )
 
+        if "rag" in memory_types or "knowledge" in memory_types:
+            try:
+                from app.rag.retriever import query as rag_query
+                rag_results = await rag_query(query, top_k=limit, min_score=0.3)
+                for r in rag_results:
+                    results.append({
+                        "id": r.get("id", ""),
+                        "content": r.get("content", ""),
+                        "importance": 0.8,
+                        "source": "rag",
+                        "metadata": r.get("metadata", {}),
+                    })
+            except Exception:
+                pass
+
         # Sort by relevance/importance and deduplicate
         seen_ids = set()
         unique_results = []

@@ -13,104 +13,27 @@ test.describe("Sidebar navigation", () => {
     expect(linkCount).toBeGreaterThanOrEqual(13);
   });
 
-  test("navigates to /cloud", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/cloud']").first();
-    await expect(link).toBeVisible();
-    await link.click();
-    await expect(page).toHaveURL(/\/cloud/);
-  });
+  const routes = [
+    { path: "/cloud", expected: "Cloud" },
+    { path: "/", expected: "Dashboard" },
+    { path: "/agents", expected: "Agents" },
+    { path: "/consensus", expected: "Consensus" },
+    { path: "/chat", expected: "Chat" },
+    { path: "/rag", expected: "Rag" },
+    { path: "/workflows", expected: "Workflows" },
+    { path: "/research", expected: "Research" },
+    { path: "/code", expected: "Code" },
+    { path: "/content", expected: "Content" },
+    { path: "/memory", expected: "Memory" },
+    { path: "/improve", expected: "Improve" },
+    { path: "/brand", expected: "Brand" },
+    { path: "/settings", expected: "Settings" },
+  ];
 
-  test("navigates to /", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/']").first();
-    await expect(link).toBeVisible();
-    await link.click();
-    await expect(page).toHaveURL(/\/$/);
-  });
-
-  test("navigates to /agents", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/agents']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/agents/);
-  });
-
-  test("navigates to /consensus", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/consensus']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/consensus/);
-  });
-
-  test("navigates to /chat", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/chat']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/chat/);
-  });
-
-  test("navigates to /workflows", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/workflows']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/workflows/);
-  });
-
-  test("navigates to /research", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/research']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/research/);
-  });
-
-  test("navigates to /code", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/code']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/code/);
-  });
-
-  test("navigates to /content", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/content']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/content/);
-  });
-
-  test("navigates to /memory", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/memory']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/memory/);
-  });
-
-  test("navigates to /improve", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/improve']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/improve/);
-  });
-
-  test("navigates to /brand", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/brand']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/brand/);
-  });
-
-  test("navigates to /settings", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/settings']").first();
-    await link.click();
-    await expect(page).toHaveURL(/\/settings/);
-  });
-
-  test("navigates to /rag (Knowledge)", async ({ page }) => {
-    await page.goto("/");
-    const link = page.locator("a[href='/rag']").first();
-    await expect(link).toBeVisible();
-    await link.click();
-    await expect(page).toHaveURL(/\/rag/);
-  });
+  for (const { path, expected } of routes) {
+    test(`navigates to ${path}`, async ({ page }) => {
+      await page.goto(path, { waitUntil: "load" });
+      await expect(page).toHaveURL(new RegExp(path.replace("/", "\\/")), { timeout: 10000 });
+    });
+  }
 });

@@ -9,6 +9,7 @@ import { ConsensusView } from "@/components/consensus/ConsensusView";
 import { Brain, Send, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useAuthStore } from "@/store/authStore";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 const WS_URL = process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8000/ws";
@@ -76,33 +77,23 @@ export default function ConsensusPage() {
     setLiveEvents([]);
     setReasoning([]);
 
+    const headers = useAuthStore.getState().getAuthHeaders();
+
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // Use WebSocket for live events
       wsRef.current.send(JSON.stringify({
         action: "run_consensus",
         task: task.trim(),
         max_rounds: 2,
       }));
-      // Also call REST endpoint to get final result (WS sends completion separately)
-      fetch(`${API}/api/consensus/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: task.trim(), max_rounds: 2, threshold: 0.85 }),
-      }).then((res) => res.json()).then((data) => {
-        const synthesis = data.synthesis || "Consensus completed.";
-        setResult(synthesis);
-        setHistory((prev) => [{ task: task.trim(), result: synthesis, time: new Date().toISOString() }, ...prev]);
-      }).catch(() => {
-        // result will come from WS
-      });
+      // REST will also run via WS, result comes from ws "consensus_complete"
     } else {
-      // Fallback to REST-only
       try {
         const res = await fetch(`${API}/api/consensus/run`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ task: task.trim(), max_rounds: 2, threshold: 0.85, files: uploadedFiles, links: attachedLinks }),
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({ task: task.trim(), max_rounds: 2, threshold: 0.85 }),
         });
+        if (!res.ok) throw new Error(`Consensus failed: ${res.status}`);
         const data = await res.json();
         const synthesis = data.synthesis || "Consensus completed.";
         setResult(synthesis);
