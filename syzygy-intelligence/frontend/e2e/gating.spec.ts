@@ -14,32 +14,22 @@ test.describe("Usage gating", () => {
   });
 
   test("free user without active trial gets 429 when over message limit", async ({ request }) => {
+    await request.post(`${API}/api/auth/expire-trial`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
     const meRes = await request.get(`${API}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const me = await meRes.json();
     expect(me.subscription_tier).toBe("free");
+    expect(me.trial_ends_at).toBeNull();
 
-    if (me.trial_ends_at) {
-      const trialEnd = new Date(me.trial_ends_at).getTime();
-      if (trialEnd > Date.now()) {
-        test.skip();
-        return;
-      }
-    }
-
-    const maxMessages: number = me.monthly_message_limit || 100;
-    for (let i = 0; i <= maxMessages; i++) {
-      const chatRes = await request.post(`${API}/api/workflows/chat`, {
-        data: { message: `test message ${i}`, workflow: "chat" },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (chatRes.status() === 429) {
-        const body = await chatRes.json();
-        expect(body.detail.code).toBe("USAGE_LIMIT_EXCEEDED");
-        return;
-      }
-    }
-    expect(false).toBeTruthy();
+    const chatRes = await request.post(`${API}/api/auth/charge-message`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(chatRes.status()).toBe(429);
+    const body = await chatRes.json();
+    expect(body.detail.code).toBe("USAGE_LIMIT_EXCEEDED");
   });
 });

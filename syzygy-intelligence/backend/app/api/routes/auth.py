@@ -7,11 +7,12 @@ from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import (
     authenticate_api_key,
+    check_usage_limit,
     create_access_token,
     create_refresh_token,
     create_password_reset_token,
@@ -241,7 +242,7 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=timezone.utc)
 
-    if usage_reset and usage_reset.replace(day=1) < now.replace(day=1):
+    if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0
         user.usage_reset_at = now
         db.add(user)
@@ -391,3 +392,38 @@ async def revoke_api_key(
     db.add(api_key)
     await db.commit()
     return {"status": "revoked"}
+
+
+@router.post("/expire-trial")
+async def expire_trial(
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        update(User)
+        .where(User.id == user.id)
+        .values(
+            trial_ends_at=None,
+            message_count=settings.free_tier_monthly_messages,
+            usage_reset_at=datetime.now(timezone.utc),
+        )
+    )
+    await db.commit()
+    return {"trial_ends_at": None, "message_count": settings.free_tier_monthly_messages}
+
+
+@router.post("/charge-message")
+async def charge_message(
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await check_usage_limit(user, db)
+    await db.execute(
+        update(User)
+        .where(User.id == user.id)
+        .values(message_count=User.message_count + 1)
+    )
+    await db.commit()
+    result = await db.execute(select(User.message_count).where(User.id == user.id))
+    new_count = result.scalar_one()
+    return {"message_count": new_count}
