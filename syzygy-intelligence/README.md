@@ -174,26 +174,31 @@ npm run dev
 
 > The backend auto-detects development mode and uses SQLite (`sqlite+aiosqlite:///data/syzygy.db`) by default — no PostgreSQL needed for local dev. Set `SYZYGY_ENV=production` to use PostgreSQL.
 
-### Run E2E Tests
+### Run Tests
 
 ```bash
+# Backend tests (pytest, 234 tests)
+cd backend
+pip install -r requirements.txt
+pytest                         # All tests
+pytest -v --tb=short          # Verbose with short tracebacks
+
+# Frontend E2E tests (Playwright, 23 spec files)
 cd frontend
-npx playwright test              # Run all tests
-npx playwright test e2e/auth.spec.ts   # Single file
-npx playwright test --ui              # Interactive UI mode
+npx playwright test            # Headless CI mode (3 workers, 2 retries)
+npx playwright test --ui      # Interactive UI mode
+npx playwright test e2e/auth.spec.ts  # Single file
 ```
 
-Tests use `addInitScript` to set auth state before page JavaScript runs, avoiding hydration race conditions. Backend should be running locally for full-stack tests.
+**CI pipeline** (`.github/workflows/e2e.yml`): On every push to `main`, three parallel jobs run:
 
-**Test coverage** (22 spec files, ~170 tests):
-- Auth flows (login, register, password reset, email verify, OAuth)
-- API key management (create, list, revoke, auth via Bearer token)
-- Navigation & layout (all 14+ routes, sidebar visibility)
-- Workflow cards (all 18 workflow types)
-- Settings page (model, polarity, consensus threshold, profile, subscription)
-- Animations (stagger, fade-in-up, brand animations)
-- Cloud/pricing page (4 tiers, features, FAQ, testimonials)
-- All 11 feature pages (chat, code, research, content, memory, etc.)
+1. **frontend-lint** — `next lint --strict` + `tsc --noEmit`
+2. **backend-lint-and-test** — pytest 234 tests with PostgreSQL service + mock Ollama server
+3. **e2e** — Playwright full-stack tests against live backend + frontend + PostgreSQL
+
+A lightweight mock Ollama server lives at `backend/tests/mock_ollama_server.py` — it responds to `/api/generate`, `/api/embed`, and `/api/tags` with plausible JSON so workflow execution tests pass in CI without requiring a GPU or model downloads. The backend config also accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed), making CI integration straightforward.
+
+Tests use `addInitScript` to set auth state before page JavaScript runs, avoiding hydration race conditions.
 
 ### Configure Models
 

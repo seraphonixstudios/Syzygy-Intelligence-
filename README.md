@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 [![Ollama](https://img.shields.io/badge/Ollama-GPU-000000?style=flat&logo=llama)](https://ollama.ai/)
 [![License](https://img.shields.io/badge/License-MIT-d4a843?style=flat)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-38%20passing-4ade80?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/seraphonixstudios/Syzygy-Intelligence-/.github/workflows/e2e.yml?branch=main&style=flat&label=CI&color=success)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions)
 [![PRs](https://img.shields.io/badge/PRs-Welcome-8b6914?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/pulls)
 
 > *"The union of opposites is the eternal cosmic pattern."* — Heraclitus
@@ -246,7 +246,7 @@ syzygy-intelligence/
 ├── backend/                    # FastAPI application
 │   ├── app/                    # Python application code
 │   ├── migrations/             # Alembic database migrations
-│   └── tests/                  # Test suite
+│   └── tests/                  # Test suite (+ mock_ollama_server.py for CI)
 ├── sandbox/                    # Isolated code execution
 ├── docker-compose.yml          # Full stack orchestration
 └── .env.example                # Environment template
@@ -302,21 +302,30 @@ alembic revision --autogenerate -m "description"
 ### Testing
 
 ```bash
-# Frontend E2E tests (Playwright, 38 tests across all pages)
+# Frontend E2E tests (Playwright, 23 spec files across all pages)
 cd frontend
 npm install          # includes @playwright/test
 npx playwright install chromium
-npm run test         # headless CI mode
-npm run test:headed  # visible browser mode
-npm run test:ui      # Playwright UI mode
+npx playwright test  # headless CI mode
 
-# Backend tests (pytest, 12 test files)
+# Backend tests (pytest, 234 tests across all modules)
 cd backend
 pip install -r requirements.txt
 pytest              # auto-discovers tests/
 pytest -v           # verbose output
-pytest --cov        # coverage report
 ```
+
+### CI Pipeline
+
+The CI pipeline (`.github/workflows/e2e.yml`) runs three jobs in parallel on every push to `main`:
+
+| Job | What it does |
+|-----|-------------|
+| **frontend-lint** | `next lint --strict` + `tsc --noEmit` |
+| **backend-lint-and-test** | `pytest` 234 tests against PostgreSQL service + mock Ollama |
+| **e2e** | Playwright 23 spec files against full stack (PostgreSQL + backend + frontend) |
+
+A lightweight mock Ollama server (`backend/tests/mock_ollama_server.py`) serves canned responses for `/api/generate`, `/api/embed`, and `/api/tags` so workflow execution tests pass without requiring a GPU or downloaded models. The backend config accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed) for easy CI integration.
 
 ### Logging
 
