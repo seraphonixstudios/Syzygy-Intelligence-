@@ -1,6 +1,7 @@
 """Unit tests for Syzygy Workflow System."""
 
 import asyncio
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -10,13 +11,21 @@ from app.workflows.debate import DebateWorkflow
 from app.workflows.research import ResearchWorkflow
 from app.workflows.task_decomposition import Subtask, TaskDecompositionWorkflow
 
-EXECUTE_TIMEOUT = 300.0
+EXECUTE_TIMEOUT = 30.0
+
+
+@pytest.fixture
+def mock_llm():
+    llm = AsyncMock()
+    llm.generate.return_value = "mock output"
+    return llm
 
 
 class TestCodingWorkflow:
     @pytest.mark.asyncio
-    async def test_execute(self):
+    async def test_execute(self, mock_llm):
         wf = CodingWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("Build a hello world app", {"language": "python"}),
             timeout=EXECUTE_TIMEOUT,
@@ -35,8 +44,9 @@ class TestCodingWorkflow:
 
 class TestResearchWorkflow:
     @pytest.mark.asyncio
-    async def test_execute(self):
+    async def test_execute(self, mock_llm):
         wf = ResearchWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("Test research query"),
             timeout=EXECUTE_TIMEOUT,
@@ -51,8 +61,9 @@ class TestResearchWorkflow:
 
 class TestContentWorkflow:
     @pytest.mark.asyncio
-    async def test_execute(self):
+    async def test_execute(self, mock_llm):
         wf = ContentWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("Write about AI", {"polarity": "balanced"}),
             timeout=EXECUTE_TIMEOUT,
@@ -61,8 +72,9 @@ class TestContentWorkflow:
         assert "final" in result
 
     @pytest.mark.asyncio
-    async def test_execute_masculine(self):
+    async def test_execute_masculine(self, mock_llm):
         wf = ContentWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("Technical topic", {"polarity": "masculine"}),
             timeout=EXECUTE_TIMEOUT,
@@ -70,8 +82,9 @@ class TestContentWorkflow:
         assert result["status"] == "completed"
 
     @pytest.mark.asyncio
-    async def test_execute_feminine(self):
+    async def test_execute_feminine(self, mock_llm):
         wf = ContentWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("Creative topic", {"polarity": "feminine"}),
             timeout=EXECUTE_TIMEOUT,
@@ -81,8 +94,9 @@ class TestContentWorkflow:
 
 class TestDebateWorkflow:
     @pytest.mark.asyncio
-    async def test_execute(self):
+    async def test_execute(self, mock_llm):
         wf = DebateWorkflow()
+        wf.llm = mock_llm
         result = await asyncio.wait_for(
             wf.execute("AI safety debate"),
             timeout=EXECUTE_TIMEOUT,
@@ -108,8 +122,9 @@ class TestTaskDecomposition:
         assert "parent" in st.dependencies
 
     @pytest.mark.asyncio
-    async def test_decompose(self):
+    async def test_decompose(self, mock_llm):
         wf = TaskDecompositionWorkflow()
+        wf.llm = mock_llm
         subtasks = await asyncio.wait_for(
             wf.decompose("Build a web application"),
             timeout=EXECUTE_TIMEOUT,

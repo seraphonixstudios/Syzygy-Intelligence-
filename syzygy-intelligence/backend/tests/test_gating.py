@@ -80,6 +80,7 @@ class TestApiKeyAuth:
         api_key.user = user
 
         db = AsyncMock()
+        db.add = MagicMock()
         result = MagicMock()
         result.scalars.return_value.all.return_value = [api_key]
         db.execute.return_value = result
@@ -100,6 +101,7 @@ class TestApiKeyAuth:
         other_key.user = MagicMock()
 
         db = AsyncMock()
+        db.add = MagicMock()
         result = MagicMock()
         result.scalars.return_value.all.return_value = [other_key]
         db.execute.return_value = result
@@ -111,6 +113,7 @@ class TestApiKeyAuth:
     async def test_authenticate_api_key_empty_db(self):
         from app.api.auth import authenticate_api_key
         db = AsyncMock()
+        db.add = MagicMock()
         result = MagicMock()
         result.scalars.return_value.all.return_value = []
         db.execute.return_value = result
@@ -183,7 +186,9 @@ class TestCheckUsageLimit:
             usage_reset_at=datetime.now(UTC) - timedelta(days=40),
             message_count=50,
         )
-        result = await check_usage_limit(user=user, db=AsyncMock())
+        _db = AsyncMock()
+        _db.add = MagicMock()
+        result = await check_usage_limit(user=user, db=_db)
         assert result is user
 
     @pytest.mark.asyncio

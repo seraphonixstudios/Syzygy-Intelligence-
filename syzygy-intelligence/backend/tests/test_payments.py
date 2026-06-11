@@ -99,6 +99,7 @@ class TestWebhookHandlers:
 
         with patch("app.db.session.get_db_context") as mock_db:
             db = AsyncMock()
+            db.add = MagicMock()
             mock_db.return_value.__aenter__.return_value = db
             result = MagicMock()
             result.scalar_one_or_none.return_value = user
@@ -127,6 +128,7 @@ class TestWebhookHandlers:
 
         with patch("app.db.session.get_db_context") as mock_db:
             db = AsyncMock()
+            db.add = MagicMock()
             mock_db.return_value.__aenter__.return_value = db
             result = MagicMock()
             result.scalar_one_or_none.return_value = user
@@ -150,6 +152,7 @@ class TestWebhookHandlers:
 
         with patch("app.db.session.get_db_context") as mock_db:
             db = AsyncMock()
+            db.add = MagicMock()
             mock_db.return_value.__aenter__.return_value = db
             result = MagicMock()
             result.scalar_one_or_none.return_value = user
@@ -172,6 +175,7 @@ class TestWebhookHandlers:
 
         with patch("app.db.session.get_db_context") as mock_db:
             db = AsyncMock()
+            db.add = MagicMock()
             mock_db.return_value.__aenter__.return_value = db
             result = MagicMock()
             result.scalar_one_or_none.return_value = user
