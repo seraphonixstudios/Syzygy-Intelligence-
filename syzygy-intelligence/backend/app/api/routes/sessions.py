@@ -57,7 +57,10 @@ async def list_sessions(
                 "state": s.state.value if s.state else "unknown",
                 "workflow_type": s.workflow_type,
                 "rounds_completed": s.consensus_rounds_completed,
-                "final_synthesis": s.final_synthesis[:200] + "..." if s.final_synthesis and len(s.final_synthesis) > 200 else s.final_synthesis,
+                "final_synthesis": (
+                    s.final_synthesis[:200] + "..." if s.final_synthesis and len(s.final_synthesis) > 200
+                    else s.final_synthesis
+                ),
                 "created_at": s.created_at.isoformat() if s.created_at else "",
             }
             for s in sessions

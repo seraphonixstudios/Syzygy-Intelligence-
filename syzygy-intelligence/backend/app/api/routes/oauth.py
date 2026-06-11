@@ -48,7 +48,11 @@ async def oauth_redirect(provider: str, request: Request):
         logger.warning(f"OAuth {provider} requested but not configured (missing client_id)")
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=f"OAuth for {provider} is not configured. Set SYZYGY_{provider.upper()}_CLIENT_ID and SYZYGY_{provider.upper()}_CLIENT_SECRET in your .env file.",
+            detail=(
+                f"OAuth for {provider} is not configured. "
+                f"Set SYZYGY_{provider.upper()}_CLIENT_ID and "
+                f"SYZYGY_{provider.upper()}_CLIENT_SECRET in your .env file."
+            ),
         )
 
     params = {
@@ -102,7 +106,10 @@ async def oauth_callback(provider: str, code: str, request: Request):
         userinfo_res = await client.get(cfg["userinfo_url"], headers=userinfo_headers)
         if userinfo_res.status_code != 200:
             error_body = userinfo_res.text[:500]
-            logger.error(f"OAuth userinfo fetch failed for {provider}", status=userinfo_res.status_code, body=error_body)
+            logger.error(
+                f"OAuth userinfo fetch failed for {provider}",
+                status=userinfo_res.status_code, body=error_body,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to fetch user info: {error_body}",

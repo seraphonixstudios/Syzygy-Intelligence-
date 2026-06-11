@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import UTC, datetime
 
@@ -23,6 +24,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import relationship
+
+from app.db.session import Base
 
 try:
     from sqlalchemy.dialects.postgresql import VECTOR
@@ -76,20 +80,15 @@ class ARRAY(TypeDecorator):
             import json
             return json.loads(value)
         return value or []
-import enum
-
-from sqlalchemy.orm import relationship
-
-from app.db.session import Base
 
 
-class Polarity(str, enum.Enum):
+class Polarity(enum.StrEnum):
     MASCULINE = "masculine"
     FEMININE = "feminine"
     UNIFIED = "unified"
 
 
-class ArchetypeType(str, enum.Enum):
+class ArchetypeType(enum.StrEnum):
     HERO = "hero"
     SAGE = "sage"
     RULER = "ruler"
@@ -105,7 +104,7 @@ class ArchetypeType(str, enum.Enum):
     TRICKSTER = "trickster"
 
 
-class AgentRole(str, enum.Enum):
+class AgentRole(enum.StrEnum):
     PROPOSER = "proposer"
     CRITIC = "critic"
     REFINER = "refiner"
@@ -114,14 +113,14 @@ class AgentRole(str, enum.Enum):
     ORCHESTRATOR = "orchestrator"
 
 
-class SessionState(str, enum.Enum):
+class SessionState(enum.StrEnum):
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class ConsensusRoundStatus(str, enum.Enum):
+class ConsensusRoundStatus(enum.StrEnum):
     PENDING = "pending"
     PROPOSAL = "proposal"
     CRITIQUE = "critique"
@@ -132,7 +131,7 @@ class ConsensusRoundStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-class SubscriptionTier(str, enum.Enum):
+class SubscriptionTier(enum.StrEnum):
     FREE = "free"
     PREMIUM = "premium"
     ENTERPRISE = "enterprise"

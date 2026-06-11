@@ -51,7 +51,9 @@ test.describe("Settings page", () => {
 
   test("ollama url input is editable", async ({ page }) => {
     await page.goto("/settings");
-    const ollamaInput = page.locator('div:has(> label:text("Ollama URL")) input[type="text"]');
+    await expect(page.locator("h1")).toContainText("Settings");
+    const ollamaInput = page.locator('label:text("Ollama URL")').locator('..').locator('input[type="text"]');
+    await ollamaInput.waitFor({ state: "visible", timeout: 5000 });
     await ollamaInput.fill("http://custom-host:11434");
     await expect(ollamaInput).toHaveValue("http://custom-host:11434");
   });

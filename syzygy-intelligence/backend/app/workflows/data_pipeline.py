@@ -55,7 +55,8 @@ class DataPipelineWorkflow:
     async def transform(self, data: str, transformations: list[str]) -> dict[str, Any]:
         prompt = (
             f"Design data transformations for:\n\n{data[:2000]}\n\n"
-            f"Required transformations: {', '.join(transformations) if transformations else 'Normalize and structure'}\n\n"
+            f"Required transformations: "
+            f"{', '.join(transformations) if transformations else 'Normalize and structure'}\n\n"
             f"For each transformation provide:\n"
             f"1. Input → Output mapping\n"
             f"2. Logic description\n"

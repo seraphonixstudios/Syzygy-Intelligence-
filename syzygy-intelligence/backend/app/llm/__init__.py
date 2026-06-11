@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.litellm_client import LiteLLMClient
 from app.llm.model_manager import ModelManager

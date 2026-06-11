@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class PersonaStyle(str, Enum):
+class PersonaStyle(StrEnum):
     FORMAL = "formal"
     CASUAL = "casual"
     POETIC = "poetic"
@@ -16,7 +16,7 @@ class PersonaStyle(str, Enum):
     NARRATIVE = "narrative"
 
 
-class PersonaTone(str, Enum):
+class PersonaTone(StrEnum):
     WISE = "wise"
     FIERY = "fiery"
     GENTLE = "gentle"

@@ -10,10 +10,10 @@ Each archetype includes:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class Polarity(str, Enum):
+class Polarity(StrEnum):
     MASCULINE = "masculine"
     FEMININE = "feminine"
     UNIFIED = "unified"
@@ -72,7 +72,8 @@ RULER = Archetype(
     polarity=Polarity.MASCULINE,
     description="Authoritative, stabilizing, responsible. Creates order and structure.",
     strengths=["authority", "stability", "responsibility", "governance", "structure"],
-    cognitive_style="Strategic, big-picture, systems-oriented. Focuses on order, governance, and sustainable structures.",
+    cognitive_style="Strategic, big-picture, systems-oriented. "
+    "Focuses on order, governance, and sustainable structures.",
     system_prompt_fragment="You are the Ruler/King archetype — authoritative, stabilizing, and responsible. "
     "You create order from chaos and establish structures that endure. "
     "You value sovereignty, responsibility, and wise governance.",
@@ -294,7 +295,8 @@ SHADOWS: dict[str, ShadowArchetype] = {
         name="Shadow Saboteur",
         description="The one who disrupts without purpose, the chaos-bringer.",
         weakness="Disruption for its own sake, malice disguised as humor.",
-        activation_prompt="Activate the Shadow Saboteur. Where is disruption serving destruction rather than revelation?",
+        activation_prompt="Activate the Shadow Saboteur. "
+        "Where is disruption serving destruction rather than revelation?",
         symbol="💢",
     ),
 }

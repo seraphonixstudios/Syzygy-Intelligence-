@@ -61,7 +61,8 @@ async def upload_link(payload: LinkPayload):
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
             title = soup.title.string.strip() if soup.title else url
-            desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", attrs={"property": "og:description"})
+            meta_desc = soup.find("meta", attrs={"name": "description"})
+            desc_tag = meta_desc or soup.find("meta", attrs={"property": "og:description"})
             description = desc_tag.get("content", "").strip() if desc_tag else ""
             favicon_tag = soup.find("link", rel=lambda v: v and "icon" in v.lower()) if hasattr(soup, "find") else None
             favicon = ""

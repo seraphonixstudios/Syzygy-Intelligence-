@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import json
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -51,7 +49,9 @@ class MetaCognitionEngine:
             "completeness": min(1.0, word_count / 500) if word_count > 0 else 0,
             "coherence": min(1.0, 1.0 - (line_count / max(word_count, 1)) * 0.1),
             "specificity": min(1.0, len(set(output.lower().split())) / max(word_count, 1) * 5),
-            "actionability": 0.8 if any(w in output.lower() for w in ["implement", "run", "build", "create", "use"]) else 0.3,
+            "actionability": 0.8 if any(
+                w in output.lower() for w in ["implement", "run", "build", "create", "use"]
+            ) else 0.3,
             "structure": 0.9 if any(c in output for c in ["\n1.", "\n- ", "\n  "]) else 0.5,
         }
         score = sum(dimensions.values()) / len(dimensions)

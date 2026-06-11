@@ -18,8 +18,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
-
 from app.agents.base import SyzygyAgent
 from app.agents.polarity import PolarityType, compute_polarity_balance
 from app.agents.registry import agent_registry
@@ -27,6 +25,8 @@ from app.config import settings
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
 from app.llm.ollama_client import OllamaClient
+
+ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
 
 
 @dataclass

@@ -81,8 +81,8 @@ class QABotWorkflow:
             f"or explore related topics. Return as a numbered list."
         )
         suggestions = await self.llm.generate(prompt, temperature=0.4)
-        lines = [l.strip() for l in suggestions.split("\n") if l.strip()]
-        return [l for l in lines if any(c.isdigit() for c in l[:3])] or [
+        lines = [line.strip() for line in suggestions.split("\n") if line.strip()]
+        return [line for line in lines if any(c.isdigit() for c in line[:3])] or [
             "What are the limitations?",
             "How does this compare to alternatives?",
             "What are the next steps?",

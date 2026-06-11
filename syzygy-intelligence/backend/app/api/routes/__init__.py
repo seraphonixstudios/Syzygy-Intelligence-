@@ -12,3 +12,18 @@ from app.api.routes.sessions import router as sessions_router
 from app.api.routes.tools import router as tools_router
 from app.api.routes.uploads import router as uploads_router
 from app.api.routes.workflows import router as workflows_router
+
+__all__ = [
+    "agents_router",
+    "audit_router",
+    "auth_router",
+    "chat_router",
+    "consensus_router",
+    "memory_router",
+    "meta_router",
+    "rag_router",
+    "sessions_router",
+    "tools_router",
+    "uploads_router",
+    "workflows_router",
+]

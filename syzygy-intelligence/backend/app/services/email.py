@@ -69,7 +69,10 @@ class SendGridEmailSender:
 class SESEmailSender:
     """Sends emails via AWS SES."""
 
-    def __init__(self, region: str, access_key_id: str, secret_access_key: str, from_address: str, from_name: str) -> None:
+    def __init__(
+        self, region: str, access_key_id: str, secret_access_key: str,
+        from_address: str, from_name: str,
+    ) -> None:
         self.region = region
         self.access_key_id = access_key_id
         self.secret_access_key = secret_access_key

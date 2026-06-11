@@ -118,7 +118,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db():
     """Initialize database — create all tables if they don't exist. Returns True on success, False if skipped."""
-    safe_url = settings.database_url.replace(settings.db_password, "****") if settings.db_password else settings.database_url
+    safe_url = (
+        settings.database_url.replace(settings.db_password, "****")
+        if settings.db_password else settings.database_url
+    )
     logger.info("Initializing database", url=safe_url, env=settings.env)
     try:
         engine = _get_engine()

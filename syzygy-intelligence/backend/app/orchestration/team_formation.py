@@ -47,9 +47,18 @@ class TeamFormation:
         # Keyword-based heuristic
         needs_analysis = any(w in task_lower for w in ["analyze", "research", "investigate", "study"])
         needs_creation = any(w in task_lower for w in ["create", "write", "design", "build", "generate"])
-        needs_code = any(w in task_lower for w in ["code", "program", "develop", "implement", "debug", "build", "web", "api", "app", "software", "script"])
+        needs_code = any(
+            w in task_lower
+            for w in [
+                "code", "program", "develop", "implement", "debug",
+                "build", "web", "api", "app", "software", "script",
+            ]
+        )
         needs_critique = any(w in task_lower for w in ["critique", "review", "evaluate", "assess"])
-        needs_synthesis = any(w in task_lower for w in ["synthesize", "integrate", "unify", "combine"])
+        needs_synthesis = any(
+            w in task_lower
+            for w in ["synthesize", "integrate", "unify", "combine"]
+        )
 
         archetypes = []
         if needs_analysis:

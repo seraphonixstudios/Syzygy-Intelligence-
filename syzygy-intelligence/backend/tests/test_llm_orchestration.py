@@ -65,7 +65,7 @@ class TestTaskQueue:
     @pytest.mark.asyncio
     async def test_priority_ordering(self):
         q = TaskQueue()
-        low_id = await q.enqueue("Low priority", priority=1)
+        await q.enqueue("Low priority", priority=1)
         high_id = await q.enqueue("High priority", priority=10)
 
         first = await q.dequeue()

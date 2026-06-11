@@ -14,7 +14,10 @@ class DataAnalyzerWorkflow:
     """Statistical analysis, anomaly detection, correlation discovery, and visualization recommendations."""
 
     name: str = "data_analyzer"
-    description: str = "Statistical analysis, anomaly detection, correlation discovery, and visualization recommendations"
+    description: str = (
+        "Statistical analysis, anomaly detection, "
+        "correlation discovery, and visualization recommendations"
+    )
     required_capabilities: list[str] = field(
         default_factory=lambda: ["statistical_analysis", "anomaly_detection", "visualization"]
     )

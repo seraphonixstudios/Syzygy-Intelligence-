@@ -61,7 +61,10 @@ class ResearchWorkflow:
                 seen_urls.add(url)
                 unique_results.append(r)
 
-        logger.info("Research search complete", query=query, results_found=len(unique_results), sub_queries=len(sub_queries))
+        logger.info(
+            "Research search complete",
+            query=query, results_found=len(unique_results), sub_queries=len(sub_queries),
+        )
         return unique_results[:15]
 
     async def validate(self, findings: list[dict]) -> list[dict]:
@@ -82,7 +85,7 @@ class ResearchWorkflow:
             f"3. Source quality assessment\n"
             f"4. Confidence level for each major claim"
         )
-        validation = await self.llm.generate(prompt, temperature=0.3)
+        await self.llm.generate(prompt, temperature=0.3)
 
         for f in findings:
             f["validated"] = True

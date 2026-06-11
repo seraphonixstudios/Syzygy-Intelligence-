@@ -6,10 +6,10 @@ Manages the balance between Masculine (☉), Feminine (☽), and Unified (☿) p
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class PolarityType(str, Enum):
+class PolarityType(StrEnum):
     MASCULINE = "masculine"
     FEMININE = "feminine"
     UNIFIED = "unified"

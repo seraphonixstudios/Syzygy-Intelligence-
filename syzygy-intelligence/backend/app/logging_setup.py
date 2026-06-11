@@ -31,7 +31,7 @@ class StructuredMessage:
 
 class SyzygyLogger:
     """Structured logger with file rotation, console output, and context injection.
-    
+
     Uses contextvars for request-scoped logging context to prevent context bleed
     in async code with concurrent requests.
     """

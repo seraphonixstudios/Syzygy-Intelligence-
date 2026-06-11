@@ -4,7 +4,11 @@ import pytest
 from app.rag.embeddings import embed
 from app.rag.ingester import chunk_text, parse_document
 
-SAMPLE_TEXT = "Syzygy Intelligence is an AI orchestration platform. It uses multiple agents. The consensus engine produces well-reasoned answers."
+SAMPLE_TEXT = (
+    "Syzygy Intelligence is an AI orchestration platform. "
+    "It uses multiple agents. "
+    "The consensus engine produces well-reasoned answers."
+)
 
 
 class TestIngester:

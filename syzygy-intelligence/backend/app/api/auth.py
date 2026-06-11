@@ -91,7 +91,7 @@ async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
     result = await db.execute(
         select(ApiKey)
         .options(selectinload(ApiKey.user))
-        .where(ApiKey.is_active == True)
+        .where(ApiKey.is_active)
     )
     for api_key in result.scalars().all():
         if verify_password(token, api_key.hashed_key):
@@ -159,7 +159,10 @@ async def check_usage_limit(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={
                 "code": "USAGE_LIMIT_EXCEEDED",
-                "message": f"Free tier limit of {settings.free_tier_monthly_messages} messages per month exceeded. Upgrade to continue.",
+                "message": (
+                    f"Free tier limit of {settings.free_tier_monthly_messages} "
+                    "messages per month exceeded. Upgrade to continue."
+                ),
             },
         )
     return user

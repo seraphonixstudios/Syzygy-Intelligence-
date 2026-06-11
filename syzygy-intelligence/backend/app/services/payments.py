@@ -41,7 +41,11 @@ async def create_checkout_session(
     cfg = get_stripe_config()
     if not cfg:
         return {
-            "url": f"{success_url}?mock_checkout=true&tier={'premium' if 'premium' in price_id else 'enterprise'}&user_id={user_id}",
+            "url": (
+                f"{success_url}?mock_checkout=true"
+                f"&tier={'premium' if 'premium' in price_id else 'enterprise'}"
+                f"&user_id={user_id}"
+            ),
         }
 
     try:
@@ -129,7 +133,7 @@ async def _handle_checkout_completed(session: dict) -> None:
         if user:
             user.stripe_customer_id = customer_id
             user.stripe_subscription_id = subscription_id
-            mode = session.get("mode", "")
+            session.get("mode", "")
             if session.get("amount_total", 0) >= 9900:
                 user.subscription_tier = "enterprise"
             elif session.get("amount_total", 0) >= 2900:

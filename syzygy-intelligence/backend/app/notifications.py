@@ -15,14 +15,14 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from app.audit import audit_service
 from app.logging_setup import logger
 
 
-class NotificationSeverity(str, Enum):
+class NotificationSeverity(StrEnum):
     DEBUG = "debug"
     INFO = "info"
     WARNING = "warning"
@@ -30,7 +30,7 @@ class NotificationSeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class NotificationType(str, Enum):
+class NotificationType(StrEnum):
     CONSENSUS_STARTED = "consensus_started"
     CONSENSUS_ROUND = "consensus_round"
     CONSENSUS_COMPLETE = "consensus_complete"

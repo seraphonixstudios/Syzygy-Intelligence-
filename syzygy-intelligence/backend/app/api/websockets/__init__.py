@@ -6,7 +6,6 @@ Integrates with the notification system for persistent message delivery.
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -41,7 +40,10 @@ class ConnectionManager:
         self.active_connections.pop(client_id, None)
         self._connection_health.pop(client_id, None)
         notification_manager.unregister_ws(client_id)
-        logger.info("WebSocket client disconnected", client_id=client_id, active_connections=len(self.active_connections))
+        logger.info(
+            "WebSocket client disconnected",
+            client_id=client_id, active_connections=len(self.active_connections),
+        )
 
     async def send_to(self, client_id: str, message: dict):
         ws = self.active_connections.get(client_id)
@@ -85,7 +87,8 @@ async def ws_handler(websocket: WebSocket):
             action = data.get("action", "")
 
             if action == "ping":
-                await manager.send_to(client_id, {"type": "pong", "timestamp": __import__("datetime").datetime.now().isoformat()})
+                from datetime import datetime as _dt
+                await manager.send_to(client_id, {"type": "pong", "timestamp": _dt.now().isoformat()})
 
             elif action == "subscribe":
                 event_types = data.get("event_types", ["*"])

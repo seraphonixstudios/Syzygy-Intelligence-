@@ -1,6 +1,6 @@
 """Phase implementations for the Syzygy Consensus Engine.
 
-These provide phase-specific prompt templates; the actual orchestration 
+These provide phase-specific prompt templates; the actual orchestration
 and LLM calls happen in the ConsensusEngine.
 """
 

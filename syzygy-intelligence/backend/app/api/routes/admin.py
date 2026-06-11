@@ -181,10 +181,10 @@ async def system_stats(
     total = await db.execute(select(func.count(User.id)))
     total_users = total.scalar() or 0
 
-    active = await db.execute(select(func.count(User.id)).where(User.is_active == True))
+    active = await db.execute(select(func.count(User.id)).where(User.is_active))
     active_users = active.scalar() or 0
 
-    superusers = await db.execute(select(func.count(User.id)).where(User.is_superuser == True))
+    superusers = await db.execute(select(func.count(User.id)).where(User.is_superuser))
     superuser_count = superusers.scalar() or 0
 
     free = await db.execute(

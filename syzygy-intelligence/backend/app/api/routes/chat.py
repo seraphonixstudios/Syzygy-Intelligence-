@@ -76,7 +76,7 @@ async def chat_completion(
 
         # Route "syzygy" model through the consensus engine
         if model == "syzygy" or request.use_consensus:
-            CONSENSUS_TIMEOUT = 600.0
+            CONSENSUS_TIMEOUT = 600.0  # noqa: N806
             try:
                 augmented_task = message
                 if rag_context:
@@ -102,7 +102,10 @@ async def chat_completion(
                     status_code=504,
                     detail={
                         "code": "CONSENSUS_TIMEOUT",
-                        "message": f"Consensus engine took longer than {CONSENSUS_TIMEOUT}s. Try a simpler query or select a specific model.",
+                        "message": (
+                            f"Consensus engine took longer than {CONSENSUS_TIMEOUT}s. "
+                            "Try a simpler query or select a specific model."
+                        ),
                     },
                 )
 
@@ -211,7 +214,8 @@ async def chat_stream(
                 full_response += token
                 yield f"data: {json.dumps({'token': token})}\n\n"
 
-            yield f"data: {json.dumps({'done': True, 'full': full_response, 'rag_context_used': bool(rag_context)})}\n\n"
+            yield f"data: {json.dumps({'done': True, 'full': full_response, 'rag_context_used': bool(rag_context)})}"
+            yield "\n\n"
         except LLMConnectionError as e:
             yield f"data: {json.dumps({'error': e.message})}\n\n"
         except Exception as e:

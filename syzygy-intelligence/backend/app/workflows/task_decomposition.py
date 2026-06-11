@@ -39,7 +39,6 @@ class TaskDecompositionWorkflow:
             self.llm = OllamaClient()
 
     async def decompose(self, task: str, context: dict[str, Any] = None) -> list[Subtask]:
-        ctx = context or {}
         prompt = (
             f"Decompose the following complex task into manageable subtasks:\n\n"
             f"Task: {task}\n\n"

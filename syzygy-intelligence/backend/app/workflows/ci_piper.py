@@ -14,7 +14,10 @@ class CiPiperWorkflow:
     """Generate CI/CD pipeline configurations with caching, matrix builds, and deploy stages."""
 
     name: str = "ci_piper"
-    description: str = "CI/CD pipeline configs — GitHub Actions, GitLab CI, Jenkins with matrix builds and deploy stages"
+    description: str = (
+        "CI/CD pipeline configs — GitHub Actions, GitLab CI, "
+        "Jenkins with matrix builds and deploy stages"
+    )
     required_capabilities: list[str] = field(
         default_factory=lambda: ["ci_cd_design", "config_generation", "deployment_planning"]
     )
