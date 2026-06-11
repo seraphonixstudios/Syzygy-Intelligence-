@@ -12,7 +12,7 @@ Ensures every consensus round:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Awaitable, Callable
 
 from sqlalchemy import select
 
@@ -20,12 +20,12 @@ from app.agents.base import SyzygyAgent
 from app.consensus.engine import ConsensusEngine, ConsensusSession
 from app.db.models import Agent as DBAgent
 from app.db.models import ConsensusRound as DBConsensusRound
-from app.db.models import Session as DBSession, SessionState, ConsensusRoundStatus
+from app.db.models import ConsensusRoundStatus, SessionState
+from app.db.models import Session as DBSession
 from app.db.session import get_db_context
 from app.logging_setup import logger
 from app.memory import MemorySystem
 from app.orchestration.checkpointing import CheckpointManager
-from typing import Any, Awaitable, Callable, Optional
 
 ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
 
@@ -41,7 +41,7 @@ async def run_consensus_with_memory(
     max_rounds: int = 6,
     min_rounds: int = 2,
     convergence_threshold: float = 0.85,
-    on_event: Optional[ConsensusEventCallback] = None,
+    on_event: ConsensusEventCallback | None = None,
     db_session_id: str = "",
 ) -> ConsensusSession:
     """Run consensus with full memory integration and optional streaming events."""

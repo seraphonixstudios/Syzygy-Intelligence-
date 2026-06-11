@@ -1,3 +1,3 @@
 """Plugin system for Syzygy."""
 
-from app.plugins.plugin_system import PluginSystem, PluginBase, PluginManifest, plugin_system
+from app.plugins.plugin_system import PluginBase, PluginManifest, PluginSystem, plugin_system

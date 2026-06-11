@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.config import settings
 
@@ -14,7 +14,7 @@ from app.config import settings
 class LongTermMemory:
     """File-based long-term memory with importance scoring and tagging."""
 
-    def __init__(self, storage_path: Optional[str] = None):
+    def __init__(self, storage_path: str | None = None):
         self.storage_path = Path(storage_path or f"{settings.data_dir}/memories/long_term")
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self._index_path = self.storage_path / "_index.json"
@@ -52,7 +52,7 @@ class LongTermMemory:
             "metadata": metadata or {},
             "memory_type": "long_term",
             "importance": importance,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         file_path = self.storage_path / f"{memory_id}.json"

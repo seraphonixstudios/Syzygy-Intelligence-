@@ -3,23 +3,21 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import (
-    authenticate_api_key,
     check_usage_limit,
     create_access_token,
-    create_refresh_token,
     create_password_reset_token,
+    create_refresh_token,
     create_verification_token,
     decode_token,
     generate_api_key,
-    get_current_user,
     hash_password,
     require_user,
     send_email,
@@ -201,17 +199,17 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    user.verified_at = datetime.now(timezone.utc)
+    user.verified_at = datetime.now(UTC)
     db.add(user)
     await db.commit()
     return {"message": "Email verified successfully."}
 
 
 def _user_to_response(user: User) -> UserResponse:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     trial_ends = user.trial_ends_at
     if trial_ends and trial_ends.tzinfo is None:
-        trial_ends = trial_ends.replace(tzinfo=timezone.utc)
+        trial_ends = trial_ends.replace(tzinfo=UTC)
 
     if user.subscription_tier == SubscriptionTier.PREMIUM or user.subscription_tier == SubscriptionTier.ENTERPRISE:
         limit = settings.premium_monthly_messages
@@ -237,10 +235,10 @@ def _user_to_response(user: User) -> UserResponse:
 
 
 async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     usage_reset = user.usage_reset_at
     if usage_reset and usage_reset.tzinfo is None:
-        usage_reset = usage_reset.replace(tzinfo=timezone.utc)
+        usage_reset = usage_reset.replace(tzinfo=UTC)
 
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0
@@ -259,7 +257,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
         email=req.email,
         hashed_password=hash_password(req.password),
         display_name=req.display_name or req.email.split("@")[0],
-        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=settings.free_tier_days),
+        trial_ends_at=datetime.now(UTC) + timedelta(days=settings.free_tier_days),
         settings={},
     )
     db.add(user)
@@ -405,7 +403,7 @@ async def expire_trial(
         .values(
             trial_ends_at=None,
             message_count=settings.free_tier_monthly_messages,
-            usage_reset_at=datetime.now(timezone.utc),
+            usage_reset_at=datetime.now(UTC),
         )
     )
     await db.commit()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
 import httpx
@@ -12,8 +12,9 @@ from fastapi.responses import RedirectResponse
 
 from app.api.auth import create_access_token, create_refresh_token
 from app.config import settings
-from app.db.models import User, SubscriptionTier
+from app.db.models import User
 from app.db.session import _get_session_factory
+from app.logging_setup import logger
 
 router = APIRouter(prefix="/oauth")
 
@@ -44,7 +45,11 @@ async def oauth_redirect(provider: str, request: Request):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown provider: {provider}")
 
     if not cfg["client_id"]:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=f"OAuth for {provider} is not configured")
+        logger.warning(f"OAuth {provider} requested but not configured (missing client_id)")
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=f"OAuth for {provider} is not configured. Set SYZYGY_{provider.upper()}_CLIENT_ID and SYZYGY_{provider.upper()}_CLIENT_SECRET in your .env file.",
+        )
 
     params = {
         "client_id": cfg["client_id"],
@@ -54,6 +59,7 @@ async def oauth_redirect(provider: str, request: Request):
         "state": str(uuid.uuid4()),
     }
     redirect_url = f"{cfg['authorize_url']}?{urlencode(params)}"
+    logger.info(f"OAuth redirect to {provider}", redirect_uri=params["redirect_uri"])
     return RedirectResponse(url=redirect_url)
 
 
@@ -75,18 +81,32 @@ async def oauth_callback(provider: str, code: str, request: Request):
     async with httpx.AsyncClient() as client:
         token_res = await client.post(cfg["token_url"], data=token_data, headers=headers)
         if token_res.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to exchange authorization code")
+            error_body = token_res.text[:500]
+            logger.error(f"OAuth token exchange failed for {provider}", status=token_res.status_code, body=error_body)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"OAuth token exchange failed: {error_body}",
+            )
 
         token_body = token_res.json()
         access_token = token_body.get("access_token")
         if not access_token:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No access token in provider response")
+            logger.error(f"OAuth {provider} response missing access_token", body=str(token_body)[:500])
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OAuth provider did not return an access token",
+            )
 
         # Fetch user info
         userinfo_headers = {"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
         userinfo_res = await client.get(cfg["userinfo_url"], headers=userinfo_headers)
         if userinfo_res.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch user info from provider")
+            error_body = userinfo_res.text[:500]
+            logger.error(f"OAuth userinfo fetch failed for {provider}", status=userinfo_res.status_code, body=error_body)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to fetch user info: {error_body}",
+            )
 
         userinfo = userinfo_res.json()
 
@@ -127,15 +147,15 @@ async def oauth_callback(provider: str, code: str, request: Request):
                 email=email,
                 hashed_password="",  # OAuth users have no password
                 display_name=display_name or email.split("@")[0],
-                verified_at=datetime.now(timezone.utc),  # Auto-verify OAuth users
-                trial_ends_at=datetime.now(timezone.utc) + timedelta(days=settings.free_tier_days),
+                verified_at=datetime.now(UTC),  # Auto-verify OAuth users
+                trial_ends_at=datetime.now(UTC) + timedelta(days=settings.free_tier_days),
                 settings={},
             )
             db.add(user)
             await db.commit()
             await db.refresh(user)
         elif not user.verified_at:
-            user.verified_at = datetime.now(timezone.utc)
+            user.verified_at = datetime.now(UTC)
             db.add(user)
             await db.commit()
 

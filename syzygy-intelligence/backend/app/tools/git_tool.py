@@ -20,7 +20,6 @@ class GitTool:
         branch: str = "",
     ) -> dict[str, Any]:
         import subprocess
-        import os
 
         def run_git(*args: str) -> str:
             result = subprocess.run(

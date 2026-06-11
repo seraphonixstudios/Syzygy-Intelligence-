@@ -12,8 +12,9 @@ WORKDIR /app
 # Copy only package files for better layer caching
 COPY package*.json ./
 
-# Use npm ci for reproducible installs with minimal logging
-RUN npm ci --frozen-lockfile --prefer-offline --no-audit
+# Use npm ci for reproducible installs with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --frozen-lockfile --prefer-offline --no-audit
 
 # ─── Builder Stage ────────────────────────────────────────────
 FROM base AS builder
@@ -36,7 +37,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     PORT=3000 \
-    NODE_OPTIONS="--max-old-space-size=256"
+    NODE_OPTIONS="--max-old-space-size=256" \
+    NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -53,5 +55,10 @@ EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
+
+# Labels for metadata
+LABEL org.opencontainers.image.description="Syzygy Intelligence Frontend" \
+      org.opencontainers.image.vendor="syzygy" \
+      org.opencontainers.image.version="1.0.0"
 
 CMD ["node", "--no-warnings", "server.js"]

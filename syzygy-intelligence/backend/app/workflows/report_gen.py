@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class ReportGenWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["research", "writing", "data_visualization", "formatting"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -98,7 +98,7 @@ class ReportGenWorkflow:
         sections_list = ctx.get("sections", [])
         output_format = ctx.get("format", "markdown")
 
-        logger.info(f"Report Generator workflow started", format=output_format)
+        logger.info("Report Generator workflow started", format=output_format)
         research = await self.research_topic(topic)
         outline = await self.outline_report(topic, research, sections_list)
 
@@ -127,7 +127,7 @@ class ReportGenWorkflow:
             "report": report,
             "status": "completed",
         }
-        logger.info(f"Report Generator workflow completed")
+        logger.info("Report Generator workflow completed")
         return result
 
 

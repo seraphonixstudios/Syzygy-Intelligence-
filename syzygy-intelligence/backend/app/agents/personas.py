@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class PersonaStyle(str, Enum):
@@ -201,7 +200,7 @@ PERSONA_REGISTRY: dict[str, Persona] = {
 }
 
 
-def get_persona(archetype_key: str) -> Optional[Persona]:
+def get_persona(archetype_key: str) -> Persona | None:
     return PERSONA_REGISTRY.get(archetype_key)
 
 

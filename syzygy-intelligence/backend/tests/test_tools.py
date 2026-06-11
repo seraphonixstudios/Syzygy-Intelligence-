@@ -1,9 +1,11 @@
 """Unit tests for Syzygy Tools."""
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from app.tools.filesystem import FileSystemTool
+
 from app.tools.code_execution import CodeExecutionTool
+from app.tools.filesystem import FileSystemTool
 from app.tools.search import SearchTool
 
 

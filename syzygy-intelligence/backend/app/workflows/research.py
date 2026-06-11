@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
-from app.tools.search import SearchTool
-from app.tools.browser import BrowserTool
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
+from app.tools.browser import BrowserTool
+from app.tools.search import SearchTool
 
 
 @dataclass
@@ -61,7 +61,7 @@ class ResearchWorkflow:
                 seen_urls.add(url)
                 unique_results.append(r)
 
-        logger.info(f"Research search complete", query=query, results_found=len(unique_results), sub_queries=len(sub_queries))
+        logger.info("Research search complete", query=query, results_found=len(unique_results), sub_queries=len(sub_queries))
         return unique_results[:15]
 
     async def validate(self, findings: list[dict]) -> list[dict]:
@@ -110,7 +110,7 @@ class ResearchWorkflow:
 
     async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
         """Execute full research workflow."""
-        logger.info(f"Research workflow started", task=task[:100])
+        logger.info("Research workflow started", task=task[:100])
 
         findings = await self.search(task)
         validated = await self.validate(findings)
@@ -123,7 +123,7 @@ class ResearchWorkflow:
             "synthesis": synthesis,
             "status": "completed",
         }
-        logger.info(f"Research workflow completed", sources=len(validated))
+        logger.info("Research workflow completed", sources=len(validated))
         return result
 
 

@@ -3,8 +3,8 @@
 import httpx
 
 from app.config import settings
-from app.logging_setup import logger
 from app.errors import LLMConnectionError
+from app.logging_setup import logger
 
 _EMBEDDED_ENDPOINTS = ["/api/embed", "/api/embeddings"]
 

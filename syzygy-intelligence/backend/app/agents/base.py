@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.agents.archetypes import (
     Archetype,
@@ -20,7 +20,7 @@ from app.agents.archetypes import (
     get_shadow,
 )
 from app.agents.personas import Persona, get_persona
-from app.agents.polarity import PolarityType, POLARITY_CONFIGS
+from app.agents.polarity import POLARITY_CONFIGS, PolarityType
 
 
 @dataclass
@@ -33,13 +33,13 @@ class SyzygyAgent:
     shadow_active: bool = False
     model: str = ""
     custom_system_prompt: str = ""
-    custom_persona: Optional[Persona] = None
+    custom_persona: Persona | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     # Derived / cached
-    _archetype: Optional[Archetype] = None
-    _shadow: Optional[ShadowArchetype] = None
-    _persona: Optional[Persona] = None
+    _archetype: Archetype | None = None
+    _shadow: ShadowArchetype | None = None
+    _persona: Persona | None = None
 
     def __post_init__(self):
         if not self.name:
@@ -49,15 +49,15 @@ class SyzygyAgent:
         self._persona = self.custom_persona or get_persona(self.archetype_key)
 
     @property
-    def archetype(self) -> Optional[Archetype]:
+    def archetype(self) -> Archetype | None:
         return self._archetype
 
     @property
-    def shadow(self) -> Optional[ShadowArchetype]:
+    def shadow(self) -> ShadowArchetype | None:
         return self._shadow if self.shadow_active else None
 
     @property
-    def persona(self) -> Optional[Persona]:
+    def persona(self) -> Persona | None:
         return self._persona
 
     @property

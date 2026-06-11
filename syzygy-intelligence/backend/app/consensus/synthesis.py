@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 from app.agents.base import SyzygyAgent
 from app.llm.ollama_client import OllamaClient
 
@@ -11,7 +9,7 @@ from app.llm.ollama_client import OllamaClient
 class SynthesisGenerator:
     """Generates unified synthesis from consensus rounds using Rebis perspective."""
 
-    def __init__(self, llm: Optional[OllamaClient] = None):
+    def __init__(self, llm: OllamaClient | None = None):
         self.llm = llm or OllamaClient()
 
     async def generate_synthesis(

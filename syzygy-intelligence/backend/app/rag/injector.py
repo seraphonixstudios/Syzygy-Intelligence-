@@ -3,7 +3,6 @@
 from app.logging_setup import logger
 from app.rag.retriever import query
 
-
 CONTEXT_TEMPLATE = """You have access to the following knowledge base documents. Use them to ground your response:
 {chunks}"""
 

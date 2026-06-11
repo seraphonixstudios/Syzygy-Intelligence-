@@ -29,8 +29,8 @@ class ImprovementProposal:
     expected_impact: float
     status: str = "proposed"  # proposed, applied, rejected
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    applied_at: Optional[str] = None
-    result_score: Optional[float] = None
+    applied_at: str | None = None
+    result_score: float | None = None
 
 
 class MetaCognitionEngine:
@@ -97,7 +97,7 @@ class MetaCognitionEngine:
 
         return proposals
 
-    def apply_proposal(self, proposal_id: str) -> Optional[ImprovementProposal]:
+    def apply_proposal(self, proposal_id: str) -> ImprovementProposal | None:
         """Mark a proposal as applied."""
         for p in self._proposals:
             if p.id == proposal_id and p.status == "proposed":
@@ -109,7 +109,7 @@ class MetaCognitionEngine:
     def get_history(self) -> list[EvaluationResult]:
         return self._history
 
-    def get_proposals(self, status: Optional[str] = None) -> list[ImprovementProposal]:
+    def get_proposals(self, status: str | None = None) -> list[ImprovementProposal]:
         if status:
             return [p for p in self._proposals if p.status == status]
         return self._proposals

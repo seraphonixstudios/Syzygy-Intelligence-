@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class DataAnalyzerWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["statistical_analysis", "anomaly_detection", "visualization"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -89,7 +89,7 @@ class DataAnalyzerWorkflow:
         data = ctx.get("data", task)
         format = ctx.get("format", "CSV")
 
-        logger.info(f"Data Analyzer workflow started", format=format)
+        logger.info("Data Analyzer workflow started", format=format)
         summary = await self.describe_data(data, format)
         anomalies = await self.detect_anomalies(data, format)
         correlations = await self.find_correlations(data, format)
@@ -104,7 +104,7 @@ class DataAnalyzerWorkflow:
             "visualization_recommendations": viz,
             "status": "completed",
         }
-        logger.info(f"Data Analyzer workflow completed")
+        logger.info("Data Analyzer workflow completed")
         return result
 
 

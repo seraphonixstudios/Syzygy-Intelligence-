@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class PolarityType(str, Enum):
@@ -104,7 +103,7 @@ def is_balanced(score: float, threshold: float = 0.6) -> bool:
     return score >= threshold
 
 
-def get_dominant_polarity(polarities: list[PolarityType]) -> Optional[PolarityType]:
+def get_dominant_polarity(polarities: list[PolarityType]) -> PolarityType | None:
     """Determine the dominant polarity in a set."""
     if not polarities:
         return None

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class InterviewCoachWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["question_generation", "answer_evaluation", "feedback_scoring"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -77,7 +77,7 @@ class InterviewCoachWorkflow:
         count = ctx.get("question_count", 5)
         answers = ctx.get("answers", [])
 
-        logger.info(f"Interview Coach workflow started", role=role, difficulty=difficulty)
+        logger.info("Interview Coach workflow started", role=role, difficulty=difficulty)
         questions = await self.generate_questions(role, difficulty, count)
 
         evaluations = []
@@ -102,7 +102,7 @@ class InterviewCoachWorkflow:
             "feedback": feedback,
             "status": "completed",
         }
-        logger.info(f"Interview Coach workflow completed")
+        logger.info("Interview Coach workflow completed")
         return result
 
 

@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.memory.short_term import ShortTermMemory
-from app.memory.long_term import LongTermMemory
-from app.memory.vector_store import VectorMemory
 from app.memory.graph_memory import GraphMemory
+from app.memory.long_term import LongTermMemory
+from app.memory.short_term import ShortTermMemory
 from app.memory.team_memory import TeamMemory
+from app.memory.vector_store import VectorMemory
 
 
 class MemorySystem:

@@ -7,11 +7,11 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import check_usage_limit, get_current_user
 from app.consensus.engine import ConsensusEngine
-from app.agents.registry import agent_registry
 from app.db.models import User
 from app.db.session import get_db
 from app.errors import LLMConnectionError
@@ -19,6 +19,27 @@ from app.llm.model_manager import ModelManager
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
 from app.rag.injector import build_rag_context
+
+
+# Request validation models
+class ChatCompletionRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=10000, description="User message")
+    model: str = Field(default="", description="Target model name")
+    use_rag: bool = Field(default=False, description="Inject RAG context")
+    use_consensus: bool = Field(default=False, description="Use consensus engine")
+    consensus_rounds: int = Field(default=2, ge=1, le=20, description="Max consensus rounds")
+
+
+class ChatMultiModelRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=10000, description="User message")
+    models: list[str] = Field(default_factory=list, description="Model names to query")
+
+
+class ChatStreamRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=10000, description="User message")
+    model: str = Field(default="", description="Target model name")
+    use_rag: bool = Field(default=False, description="Inject RAG context")
+
 
 router = APIRouter()
 llm = OllamaClient()
@@ -35,13 +56,14 @@ async def _track_usage(user: User | None, db: AsyncSession):
 
 @router.post("/completions")
 async def chat_completion(
-    data: dict,
+    request: ChatCompletionRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    message = data.get("message", "")
-    model = data.get("model", "")
-    use_rag = data.get("use_rag", False)
+    """Chat completion with optional RAG and consensus."""
+    message = request.message
+    model = request.model
+    use_rag = request.use_rag
 
     if user is not None:
         await check_usage_limit(user, db)
@@ -53,7 +75,7 @@ async def chat_completion(
             rag_context = await build_rag_context(message)
 
         # Route "syzygy" model through the consensus engine
-        if model == "syzygy" or data.get("use_consensus", False):
+        if model == "syzygy" or request.use_consensus:
             CONSENSUS_TIMEOUT = 600.0
             try:
                 augmented_task = message
@@ -62,7 +84,7 @@ async def chat_completion(
                 session = await asyncio.wait_for(
                     engine.run_consensus(
                         task=augmented_task,
-                        max_rounds=data.get("consensus_rounds", 2),
+                        max_rounds=request.consensus_rounds,
                     ),
                     timeout=CONSENSUS_TIMEOUT,
                 )
@@ -74,7 +96,7 @@ async def chat_completion(
                     "fusion_report": session.polarity_fusion_report,
                     "rag_context_used": bool(rag_context),
                 }
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error("Consensus timed out", timeout=CONSENSUS_TIMEOUT)
                 raise HTTPException(
                     status_code=504,
@@ -111,16 +133,14 @@ async def chat_completion(
 
 @router.post("/multi-model")
 async def chat_multi_model(
-    data: dict,
+    request: ChatMultiModelRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Query multiple models in parallel and return all responses."""
-    message = data.get("message", "")
-    models = data.get("models", [])
+    message = request.message
+    models = request.models
 
-    if not message:
-        raise HTTPException(400, "Message is required")
     if not models:
         models = model_manager.get_all_model_names()
 
@@ -157,49 +177,46 @@ async def list_configured_models():
 
 @router.post("/stream")
 async def chat_stream(
-    data: dict,
+    request: ChatStreamRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """SSE streaming chat completion with optional RAG context injection."""
-    message = data.get("message", "")
-    model = data.get("model", "")
-    use_rag = data.get("use_rag", False)
-    
-    if not message:
-        raise HTTPException(400, "Message is required")
+    message = request.message
+    model = request.model
+    use_rag = request.use_rag
 
     if user is not None:
         await check_usage_limit(user, db)
         await _track_usage(user, db)
-    
+
     async def event_generator():
         try:
             full_response = ""
             rag_context = ""
-            
+
             if use_rag:
                 rag_context = await build_rag_context(message)
                 if rag_context:
                     yield f"data: {json.dumps({'rag_context': True})}\n\n"
-            
+
             augmented_prompt = message
             if rag_context:
                 augmented_prompt = f"{rag_context}\n\nUser question: {message}"
-            
+
             async for token in llm.generate_stream(
                 prompt=augmented_prompt,
                 model=model or llm.default_model,
             ):
                 full_response += token
                 yield f"data: {json.dumps({'token': token})}\n\n"
-            
+
             yield f"data: {json.dumps({'done': True, 'full': full_response, 'rag_context_used': bool(rag_context)})}\n\n"
         except LLMConnectionError as e:
             yield f"data: {json.dumps({'error': e.message})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",

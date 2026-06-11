@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -31,7 +32,7 @@ class TaskDecompositionWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["analysis", "planning"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -58,7 +59,7 @@ class TaskDecompositionWorkflow:
         if not subtasks:
             subtasks = self._get_fallback_subtasks(task)
         subtasks.sort(key=lambda s: (-s.priority, len(s.dependencies)))
-        logger.info(f"Task decomposed", task=task[:80], subtask_count=len(subtasks))
+        logger.info("Task decomposed", task=task[:80], subtask_count=len(subtasks))
         return subtasks
 
     def _parse_subtasks(self, text: str) -> list[Subtask]:
@@ -103,7 +104,7 @@ class TaskDecompositionWorkflow:
         self,
         task: str,
         context: dict[str, Any] = None,
-        on_subtask_complete: Optional[Callable] = None,
+        on_subtask_complete: Callable | None = None,
     ) -> list[Subtask]:
         subtasks = await self.decompose(task, context)
         completed = set()

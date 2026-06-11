@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -31,7 +31,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(user_id: str, email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {
         "sub": user_id,
         "email": email,
@@ -42,7 +42,7 @@ def create_access_token(user_id: str, email: str) -> str:
 
 
 def create_refresh_token(user_id: str, email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     payload = {
         "sub": user_id,
         "email": email,
@@ -53,7 +53,7 @@ def create_refresh_token(user_id: str, email: str) -> str:
 
 
 def create_password_reset_token(user_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    expire = datetime.now(UTC) + timedelta(minutes=15)
     payload = {
         "sub": user_id,
         "type": "password_reset",
@@ -63,7 +63,7 @@ def create_password_reset_token(user_id: str) -> str:
 
 
 def create_verification_token(user_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    expire = datetime.now(UTC) + timedelta(hours=24)
     payload = {
         "sub": user_id,
         "type": "email_verification",
@@ -95,7 +95,7 @@ async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
     )
     for api_key in result.scalars().all():
         if verify_password(token, api_key.hashed_key):
-            api_key.last_used_at = datetime.now(timezone.utc)
+            api_key.last_used_at = datetime.now(UTC)
             db.add(api_key)
             await db.commit()
             return api_key.user
@@ -134,11 +134,11 @@ async def check_usage_limit(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     usage_reset = user.usage_reset_at
     if usage_reset and usage_reset.tzinfo is None:
-        usage_reset = usage_reset.replace(tzinfo=timezone.utc)
+        usage_reset = usage_reset.replace(tzinfo=UTC)
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0
         user.usage_reset_at = now
@@ -150,7 +150,7 @@ async def check_usage_limit(
 
     trial_ends = user.trial_ends_at
     if trial_ends and trial_ends.tzinfo is None:
-        trial_ends = trial_ends.replace(tzinfo=timezone.utc)
+        trial_ends = trial_ends.replace(tzinfo=UTC)
     if trial_ends and trial_ends > now:
         return user
 

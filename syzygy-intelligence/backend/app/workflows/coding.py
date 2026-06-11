@@ -6,10 +6,9 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
-from app.logging_setup import logger
 
 
 @dataclass
@@ -21,7 +20,7 @@ class CodingWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["code_generation", "code_review", "testing", "debugging"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:

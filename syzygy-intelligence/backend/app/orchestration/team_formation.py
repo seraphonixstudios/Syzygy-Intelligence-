@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
+from app.agents.polarity import compute_polarity_balance, is_balanced
 from app.agents.registry import agent_registry
-from app.agents.polarity import PolarityType, compute_polarity_balance, is_balanced
 
 
 @dataclass

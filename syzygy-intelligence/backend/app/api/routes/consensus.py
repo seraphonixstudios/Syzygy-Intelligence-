@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.registry import agent_registry
 from app.api.auth import check_usage_limit, require_user
 from app.api.websockets import manager as ws_manager
-from app.agents.registry import agent_registry
 from app.consensus.engine import ConsensusEngine
 from app.db.models import User
 from app.db.session import get_db

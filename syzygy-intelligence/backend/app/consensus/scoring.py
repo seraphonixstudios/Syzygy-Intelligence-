@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
 
 from app.agents.base import SyzygyAgent
 from app.llm.ollama_client import OllamaClient
@@ -29,7 +28,7 @@ class ConsensusScorer:
         "polarity_balance": 0.15,
     }
 
-    def __init__(self, llm: Optional[OllamaClient] = None):
+    def __init__(self, llm: OllamaClient | None = None):
         self.llm = llm or OllamaClient()
 
     async def evaluate_all(
@@ -37,7 +36,7 @@ class ConsensusScorer:
         task: str,
         contents: dict[str, str],
         agents: list[SyzygyAgent],
-        llm: Optional[OllamaClient] = None,
+        llm: OllamaClient | None = None,
     ) -> dict[str, dict[str, float]]:
         """Evaluate all proposals/refinements across all dimensions with LLM."""
         evaluations = {}
@@ -66,7 +65,7 @@ class ConsensusScorer:
         task: str,
         content: str,
         agent: SyzygyAgent,
-        llm: Optional[OllamaClient] = None,
+        llm: OllamaClient | None = None,
     ) -> dict[str, float]:
         """Evaluate a single agent's contribution across all dimensions using LLM."""
         scorer = llm or self.llm
@@ -102,7 +101,7 @@ class ConsensusScorer:
 
         return scores
 
-    def _parse_scores(self, text: str) -> Optional[dict[str, float]]:
+    def _parse_scores(self, text: str) -> dict[str, float] | None:
         """Parse JSON scores from LLM response."""
         try:
             # Find JSON object in response

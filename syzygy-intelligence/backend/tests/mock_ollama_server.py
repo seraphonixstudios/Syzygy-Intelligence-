@@ -1,7 +1,7 @@
 """Lightweight Ollama API mock for CI — responds with plausible JSON to keep tests happy."""
 
-from fastapi import FastAPI
 import uvicorn
+from fastapi import FastAPI
 
 app = FastAPI()
 

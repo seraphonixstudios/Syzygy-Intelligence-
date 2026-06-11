@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.config import settings
 
@@ -36,7 +36,7 @@ class TeamMemory:
             "memory_type": memory_type,
             "tags": tags or [],
             "metadata": metadata or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         file_path = self.storage_path / f"{memory_id}.json"

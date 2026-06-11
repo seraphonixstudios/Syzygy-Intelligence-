@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import httpx
 
@@ -17,7 +18,7 @@ class OllamaClient:
     def __init__(self, base_url: str = "", default_model: str = ""):
         self.base_url = (base_url or settings.ollama_base_url).rstrip("/")
         self.default_model = default_model or settings.default_model
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:

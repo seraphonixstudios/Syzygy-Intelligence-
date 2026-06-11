@@ -7,10 +7,26 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agents, sessions, consensus, memory, tools, workflows, chat, audit, meta, uploads, rag as rag_route, auth, admin, oauth, payments
+from app.api.routes import (
+    admin,
+    agents,
+    audit,
+    auth,
+    chat,
+    consensus,
+    memory,
+    meta,
+    oauth,
+    payments,
+    sessions,
+    tools,
+    uploads,
+    workflows,
+)
+from app.api.routes import rag as rag_route
 from app.api.websockets import ws_handler
 from app.config import settings
-from app.db.session import init_db, close_db
+from app.db.session import close_db, init_db
 from app.errors import setup_error_handlers
 from app.logging_setup import logger
 from app.middleware.rate_limiter import setup_rate_limiter
@@ -18,7 +34,14 @@ from app.middleware.rate_limiter import setup_rate_limiter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Syzygy Intelligence starting", env=settings.env, version="0.1.0")
+    db_type = "SQLite" if settings.db_is_sqlite else "PostgreSQL"
+    logger.info(
+        "Syzygy Intelligence starting",
+        env=settings.env,
+        db=db_type,
+        db_url=settings.database_url.replace(settings.db_password, "****"),
+        version="0.1.0",
+    )
 
     # Check critical dependencies
     missing = []
@@ -111,3 +134,22 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy", "env": settings.env}
+
+@app.get("/debug/config")
+async def debug_config():
+    """Expose non-sensitive config for debugging (only in dev/testing)."""
+    if settings.env == "production":
+        return {"error": "Not available in production"}
+    return {
+        "env": settings.env,
+        "db_type": "SQLite" if settings.db_is_sqlite else "PostgreSQL",
+        "db_host": settings.db_host,
+        "db_port": settings.db_port,
+        "db_name": settings.db_name,
+        "db_user": settings.db_user,
+        "db_is_sqlite": settings.db_is_sqlite,
+        "ollama_base_url": settings.ollama_base_url,
+        "rate_limit_enabled": settings.rate_limit_enabled,
+        "litellm_enabled": settings.litellm_enabled,
+        "cors_origins": settings.cors_origins,
+    }

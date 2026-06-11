@@ -1,7 +1,7 @@
 """RAG document storage and retrieval via ChromaDB with Ollama embeddings."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import chromadb
@@ -10,7 +10,6 @@ from app.config import settings
 from app.logging_setup import logger
 from app.rag.embeddings import embed
 from app.rag.ingester import chunk_text, parse_document
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -64,7 +63,7 @@ async def ingest_text(
 
     ids: list[str] = []
     metadatas: list[dict[str, Any]] = []
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     base_meta = {**(metadata or {})}
 
     for i, chunk in enumerate(chunks):

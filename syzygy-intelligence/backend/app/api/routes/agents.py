@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.agents.base import SyzygyAgent
 from app.agents.registry import agent_registry
 
 router = APIRouter()

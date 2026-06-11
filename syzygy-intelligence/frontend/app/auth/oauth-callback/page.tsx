@@ -29,12 +29,12 @@ export default function OAuthCallbackPage() {
       rememberMe: true,
     });
 
-    store.fetchMe().catch(() => {
-      setMessage("Session expired. Redirecting to login...");
-      setTimeout(() => router.push("/auth/login"), 2000);
-    });
-
-    router.push("/");
+    store.fetchMe()
+      .then(() => router.push("/"))
+      .catch(() => {
+        setMessage("Session expired. Redirecting to login...");
+        setTimeout(() => router.push("/auth/login"), 2000);
+      });
   }, [router]);
 
   return (

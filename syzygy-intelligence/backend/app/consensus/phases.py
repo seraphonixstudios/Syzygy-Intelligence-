@@ -6,8 +6,6 @@ and LLM calls happen in the ConsensusEngine.
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.agents.base import SyzygyAgent
 
 

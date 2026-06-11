@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class DataPipelineWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["data_ingestion", "data_cleaning", "schema_validation", "transformation"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -104,7 +104,7 @@ class DataPipelineWorkflow:
         target_schema = ctx.get("target_schema", "")
         target = ctx.get("target", "database")
 
-        logger.info(f"Data Pipeline workflow started", source_type=source_type, target=target)
+        logger.info("Data Pipeline workflow started", source_type=source_type, target=target)
         ingestion = await self.ingest(source, source_type)
         cleaning = await self.clean(source, issues)
         transformation = await self.transform(source, transformations)
@@ -124,7 +124,7 @@ class DataPipelineWorkflow:
             "load_plan": load,
             "status": "completed",
         }
-        logger.info(f"Data Pipeline workflow completed")
+        logger.info("Data Pipeline workflow completed")
         return result
 
 

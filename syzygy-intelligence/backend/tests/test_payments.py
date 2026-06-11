@@ -1,11 +1,10 @@
 """Unit tests for Stripe payment integration."""
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 
 class TestStripeConfig:
@@ -192,8 +191,9 @@ class TestWebhookHandlers:
 
 class TestPaymentRoutes:
     def test_require_user_rejects_unauthenticated(self):
-        from app.api.auth import require_user
         import asyncio
+
+        from app.api.auth import require_user
         with pytest.raises(HTTPException) as exc:
             asyncio.run(require_user(user=None))
         assert exc.value.status_code == 401

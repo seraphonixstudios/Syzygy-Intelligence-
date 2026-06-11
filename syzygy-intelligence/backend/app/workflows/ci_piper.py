@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class CiPiperWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["ci_cd_design", "config_generation", "deployment_planning"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -106,7 +106,7 @@ class CiPiperWorkflow:
         framework = ctx.get("framework", "")
         platforms = ctx.get("platforms", ["github_actions"])
 
-        logger.info(f"CI Piper workflow started", language=language, platforms=platforms)
+        logger.info("CI Piper workflow started", language=language, platforms=platforms)
         analysis = await self.analyze_project(project_description, language, framework)
 
         configs = []
@@ -125,7 +125,7 @@ class CiPiperWorkflow:
             "configs": configs,
             "status": "completed",
         }
-        logger.info(f"CI Piper workflow completed", config_count=len(configs))
+        logger.info("CI Piper workflow completed", config_count=len(configs))
         return result
 
 

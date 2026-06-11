@@ -1,11 +1,10 @@
 """Unit tests for usage gating and authentication utilities."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
-
-import jwt
-import pytest
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.db.models import SubscriptionTier
 
@@ -70,7 +69,7 @@ class TestApiKeyAuth:
 
     @pytest.mark.asyncio
     async def test_authenticate_api_key_valid(self):
-        from app.api.auth import generate_api_key, hash_password, authenticate_api_key
+        from app.api.auth import authenticate_api_key, generate_api_key
         raw, hashed = generate_api_key()
         user = MagicMock()
         user.id = uuid.uuid4()
@@ -92,7 +91,7 @@ class TestApiKeyAuth:
 
     @pytest.mark.asyncio
     async def test_authenticate_api_key_invalid(self):
-        from app.api.auth import generate_api_key, hash_password, authenticate_api_key
+        from app.api.auth import authenticate_api_key, generate_api_key, hash_password
         raw, _ = generate_api_key()
         different_hashed = hash_password("some_other_key_value_12345")
         other_key = MagicMock()
@@ -120,7 +119,7 @@ class TestApiKeyAuth:
 
 class TestCheckUsageLimit:
     def _make_user(self, **overrides):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         defaults = dict(
             subscription_tier=SubscriptionTier.FREE,
             trial_ends_at=now - timedelta(days=1),
@@ -137,7 +136,7 @@ class TestCheckUsageLimit:
     async def test_returns_user_on_active_trial(self):
         from app.api.auth import check_usage_limit
         user = self._make_user(
-            trial_ends_at=datetime.now(timezone.utc) + timedelta(days=7),
+            trial_ends_at=datetime.now(UTC) + timedelta(days=7),
             message_count=9999,
         )
         result = await check_usage_limit(user=user, db=AsyncMock())
@@ -165,8 +164,9 @@ class TestCheckUsageLimit:
 
     @pytest.mark.asyncio
     async def test_raises_429_when_exceeded(self):
-        from app.api.auth import check_usage_limit, settings
         from fastapi import HTTPException
+
+        from app.api.auth import check_usage_limit, settings
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(message_count=limit + 1)
@@ -180,7 +180,7 @@ class TestCheckUsageLimit:
         from app.api.auth import check_usage_limit
 
         user = self._make_user(
-            usage_reset_at=datetime.now(timezone.utc) - timedelta(days=40),
+            usage_reset_at=datetime.now(UTC) - timedelta(days=40),
             message_count=50,
         )
         result = await check_usage_limit(user=user, db=AsyncMock())
@@ -188,8 +188,9 @@ class TestCheckUsageLimit:
 
     @pytest.mark.asyncio
     async def test_trial_ends_at_none_still_limited(self):
-        from app.api.auth import check_usage_limit, settings
         from fastapi import HTTPException
+
+        from app.api.auth import check_usage_limit, settings
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(trial_ends_at=None, message_count=limit + 1)
@@ -199,8 +200,9 @@ class TestCheckUsageLimit:
 
     @pytest.mark.asyncio
     async def test_expired_trial_still_limited(self):
-        from app.api.auth import check_usage_limit, settings
         from fastapi import HTTPException
+
+        from app.api.auth import check_usage_limit, settings
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(message_count=limit + 1)

@@ -172,7 +172,13 @@ npm install
 npm run dev
 ```
 
-> The backend auto-detects development mode and uses SQLite (`sqlite+aiosqlite:///data/syzygy.db`) by default — no PostgreSQL needed for local dev. Set `SYZYGY_ENV=production` to use PostgreSQL.
+> **Port note:** On Windows, Docker Desktop may occupy port 8000. If you get `address already in use`, use port 8001 instead:
+> ```
+> uvicorn app.main:app --host 0.0.0.0 --port 8001
+> ```
+> The OAuth redirect URL defaults to `http://localhost:8001/api/auth/oauth` when running locally (set `SYZYGY_OAUTH_REDIRECT_URL` to override).
+>
+> The backend auto-detects development mode and uses SQLite (`sqlite+aiosqlite:///data/syzygy.db`) by default — no PostgreSQL needed for local dev. Set `SYZYGY_ENV=production` to use PostgreSQL. You can also set `DATABASE_URL` (no `SYZYGY_` prefix) for CI simplicity.
 
 ### Run Tests
 
@@ -202,7 +208,7 @@ Tests use `addInitScript` to set auth state before page JavaScript runs, avoidin
 
 ### Configure Models
 
-Edit `backend/app/config/settings.yaml` or set via `.env`:
+Set model preferences via `.env`:
 
 ```env
 SYZYGY_DEFAULT_MODEL=qwen3:8b-gpu
@@ -251,6 +257,12 @@ User → /auth/login or /auth/register
   → On 401, useApi hook auto-calls refreshAuth() and retries the request
   → Sidebar shows user info, message usage bar, and logout button
 ```
+
+### Debug Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/debug/config` | Current configuration (sanitized) — useful for troubleshooting |
 
 ### API Endpoints
 

@@ -5,8 +5,6 @@ This module exposes an OpenAI-compatible API endpoint.
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -62,7 +60,7 @@ async def chat_completions(request: ChatCompletionRequest):
         )
 
         content = session.final_synthesis
-        content += f"\n\n---\n*Syzygy Polarity Fusion Report:*\n"
+        content += "\n\n---\n*Syzygy Polarity Fusion Report:*\n"
         content += f"Rounds completed: {session.current_round}\n"
         content += f"Polarity balance: {session.polarity_fusion_report.get('individuation_notes', '')}"
     else:

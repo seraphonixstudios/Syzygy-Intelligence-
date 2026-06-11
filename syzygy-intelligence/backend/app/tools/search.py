@@ -17,8 +17,9 @@ class SearchTool:
         num_results: int = 5,
     ) -> dict[str, Any]:
         try:
-            import httpx
             from urllib.parse import quote
+
+            import httpx
 
             # Use DuckDuckGo as a free search option
             url = f"https://html.duckduckgo.com/html/?q={quote(query)}"

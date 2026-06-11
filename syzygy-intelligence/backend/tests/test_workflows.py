@@ -3,11 +3,12 @@
 import asyncio
 
 import pytest
+
 from app.workflows.coding import CodingWorkflow
-from app.workflows.research import ResearchWorkflow
 from app.workflows.content import ContentWorkflow
 from app.workflows.debate import DebateWorkflow
-from app.workflows.task_decomposition import TaskDecompositionWorkflow, Subtask
+from app.workflows.research import ResearchWorkflow
+from app.workflows.task_decomposition import Subtask, TaskDecompositionWorkflow
 
 EXECUTE_TIMEOUT = 300.0
 

@@ -1,7 +1,8 @@
 """Tests for GraphMemory (Neo4j knowledge graph)."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 
 def _make_mock_driver(session_run=None):

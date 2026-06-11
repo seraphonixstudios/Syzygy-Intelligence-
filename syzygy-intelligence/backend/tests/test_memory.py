@@ -1,8 +1,9 @@
 """Unit tests for Syzygy Memory System."""
 
 import pytest
-from app.memory.short_term import ShortTermMemory
+
 from app.memory.long_term import LongTermMemory
+from app.memory.short_term import ShortTermMemory
 from app.memory.team_memory import TeamMemory
 from app.memory.vector_store import VectorMemory
 

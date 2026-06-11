@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from app.orchestration.team_formation import TeamFormation
-from app.orchestration.task_queue import TaskQueue
 from app.orchestration.checkpointing import CheckpointManager
+from app.orchestration.task_queue import TaskQueue
+from app.orchestration.team_formation import TeamFormation
 
 
 class Orchestrator:

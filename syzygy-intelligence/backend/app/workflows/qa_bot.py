@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class QABotWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["document_qa", "retrieval", "information_synthesis"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
     knowledge_base: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -93,7 +93,7 @@ class QABotWorkflow:
         query = ctx.get("query", task)
         action = ctx.get("action", "ask")
 
-        logger.info(f"Q&A Bot workflow started", action=action, query=query[:100])
+        logger.info("Q&A Bot workflow started", action=action, query=query[:100])
 
         if action == "ingest":
             doc_id = ctx.get("doc_id", f"doc_{len(self.knowledge_base) + 1}")
@@ -113,7 +113,7 @@ class QABotWorkflow:
             "suggested_follow_ups": follow_ups,
             "status": "completed",
         }
-        logger.info(f"Q&A Bot workflow completed")
+        logger.info("Q&A Bot workflow completed")
         return result
 
 

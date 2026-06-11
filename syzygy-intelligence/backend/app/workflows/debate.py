@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -20,7 +20,7 @@ class DebateWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["argumentation", "critique", "synthesis"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -91,7 +91,7 @@ class DebateWorkflow:
             "neutral": {"archetype": "self", "position": "Balanced perspective"},
         })
 
-        logger.info(f"Debate workflow started", task=task[:100], positions=list(positions.keys()))
+        logger.info("Debate workflow started", task=task[:100], positions=list(positions.keys()))
 
         openings = {}
         for side, config in positions.items():
@@ -120,7 +120,7 @@ class DebateWorkflow:
             "synthesis": synthesis,
             "status": "completed",
         }
-        logger.info(f"Debate workflow completed", positions=len(positions))
+        logger.info("Debate workflow completed", positions=len(positions))
         return result
 
 

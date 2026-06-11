@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
@@ -15,11 +16,13 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    JSON,
-    Enum as SAEnum,
     TypeDecorator,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, ARRAY as PG_ARRAY
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
 try:
     from sqlalchemy.dialects.postgresql import VECTOR
@@ -73,10 +76,11 @@ class ARRAY(TypeDecorator):
             import json
             return json.loads(value)
         return value or []
+import enum
+
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
-import enum
 
 
 class Polarity(str, enum.Enum):
@@ -145,14 +149,14 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     verified_at = Column(DateTime(timezone=True), nullable=True)
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
-    usage_reset_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    usage_reset_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     message_count = Column(Integer, default=0)
     subscription_tier = Column(SAEnum(SubscriptionTier), default=SubscriptionTier.FREE)
     stripe_customer_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)
     settings = Column(JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index("idx_user_email", "email"),
@@ -169,7 +173,7 @@ class ApiKey(Base):
     hashed_key = Column(String(255), nullable=False, unique=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     user = relationship("User", backref="api_keys")
 
@@ -192,8 +196,8 @@ class Agent(Base):
     system_prompt = Column(Text, nullable=True)
     capabilities = Column(ARRAY(String), default=[])
     metadata_ = Column("metadata", JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Relationships
     sessions = relationship("Session", back_populates="agent")
@@ -218,8 +222,8 @@ class Session(Base):
     polarity_balance_score = Column(Float, nullable=True)
     final_synthesis = Column(Text, nullable=True)
     metadata_ = Column("metadata", JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     agent = relationship("Agent", back_populates="sessions")
     consensus_rounds = relationship("ConsensusRound", back_populates="session")
@@ -248,8 +252,8 @@ class ConsensusRound(Base):
     polarity_balance = Column(Float, nullable=True)
     synthesis = Column(Text, nullable=True)
     metadata_ = Column("metadata", JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     session = relationship("Session", back_populates="consensus_rounds")
 
@@ -274,7 +278,7 @@ class Memory(Base):
     tags = Column(ARRAY(String), default=[])
     source = Column(String(255), nullable=True)
     metadata_ = Column("metadata", JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
     agent = relationship("Agent", back_populates="memories")
@@ -304,7 +308,7 @@ class TaskResult(Base):
     execution_time_ms = Column(Integer, nullable=True)
     priority = Column(Integer, default=0)
     metadata_ = Column("metadata", JSON, default=dict)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="task_results")
@@ -320,7 +324,7 @@ class AuditLog(Base):
     action = Column(String(255), nullable=False)
     details = Column(JSON, default=dict)
     ip_address = Column(String(45), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         Index("idx_audit_event", "event_type"),

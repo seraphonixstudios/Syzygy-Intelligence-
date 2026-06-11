@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.auth import require_user
-from app.db.models import Agent, Session as DBSession, SessionState
-from app.db.models import User
+from app.db.models import Agent, SessionState, User
+from app.db.models import Session as DBSession
 from app.db.session import get_db
 
 router = APIRouter()

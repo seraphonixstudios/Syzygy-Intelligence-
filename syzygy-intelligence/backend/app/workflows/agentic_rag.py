@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class AgenticRagWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["query_planning", "retrieval", "synthesis", "source_tracking"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -95,7 +95,7 @@ class AgenticRagWorkflow:
         knowledge_base = ctx.get("knowledge_base", "")
         additional_context = ctx.get("additional_context", [])
 
-        logger.info(f"Agentic RAG workflow started", query=query[:80])
+        logger.info("Agentic RAG workflow started", query=query[:80])
         decomposed = await self.decompose_query(query)
 
         sub_query_results = []
@@ -121,7 +121,7 @@ class AgenticRagWorkflow:
             "validation": validation,
             "status": "completed",
         }
-        logger.info(f"Agentic RAG workflow completed")
+        logger.info("Agentic RAG workflow completed")
         return result
 
 

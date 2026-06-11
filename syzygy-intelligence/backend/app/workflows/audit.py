@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class AuditWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["code_review", "vulnerability_scanning", "compliance_checking"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -89,7 +89,7 @@ class AuditWorkflow:
         language = ctx.get("language", "python")
         standards = ctx.get("standards", ["owasp", "pci-dss"])
 
-        logger.info(f"Audit workflow started", language=language, standards=standards)
+        logger.info("Audit workflow started", language=language, standards=standards)
         vulnerabilities = await self.scan_vulnerabilities(code, language)
         quality = await self.review_code_quality(code, language)
         compliance = await self.check_compliance(code, standards, language)
@@ -104,7 +104,7 @@ class AuditWorkflow:
             "report": report,
             "status": "completed",
         }
-        logger.info(f"Audit workflow completed")
+        logger.info("Audit workflow completed")
         return result
 
 

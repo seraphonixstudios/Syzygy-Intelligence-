@@ -1,16 +1,28 @@
 """Unit tests for Syzygy Intelligence Agent System."""
 
 import pytest
+
 from app.agents.archetypes import (
-    ARCHETYPE_REGISTRY, SHADOWS, get_archetype, get_shadow,
-    get_archetypes_by_polarity, Polarity, HERO, SAGE, GREAT_MOTHER, SELF
+    ARCHETYPE_REGISTRY,
+    GREAT_MOTHER,
+    HERO,
+    SAGE,
+    SELF,
+    SHADOWS,
+    Polarity,
+    get_archetype,
+    get_archetypes_by_polarity,
+    get_shadow,
 )
-from app.agents.polarity import (
-    PolarityType, POLARITY_CONFIGS, compute_polarity_balance,
-    is_balanced, get_dominant_polarity
-)
-from app.agents.personas import PERSONA_REGISTRY, get_persona, PersonaStyle
 from app.agents.base import SyzygyAgent
+from app.agents.personas import PERSONA_REGISTRY, get_persona
+from app.agents.polarity import (
+    POLARITY_CONFIGS,
+    PolarityType,
+    compute_polarity_balance,
+    get_dominant_polarity,
+    is_balanced,
+)
 from app.agents.registry import AgentRegistry
 
 

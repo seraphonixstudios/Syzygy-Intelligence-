@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class SummaryWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["summarization", "information_extraction", "synthesis"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -86,7 +86,7 @@ class SummaryWorkflow:
         ctx = context or {}
         documents = ctx.get("documents", [task])
 
-        logger.info(f"Summary workflow started", documents=len(documents))
+        logger.info("Summary workflow started", documents=len(documents))
         key_points = await self.extract_key_points(documents)
         themes = await self.identify_themes(documents)
         insights = await self.generate_insights(key_points, themes)
@@ -101,7 +101,7 @@ class SummaryWorkflow:
             "summary": summary,
             "status": "completed",
         }
-        logger.info(f"Summary workflow completed")
+        logger.info("Summary workflow completed")
         return result
 
 

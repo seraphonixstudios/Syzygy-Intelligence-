@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import importlib
 import inspect
-import pkgutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -66,7 +65,7 @@ class PluginSystem:
 
         return manifests
 
-    async def load_plugin(self, name: str) -> Optional[PluginBase]:
+    async def load_plugin(self, name: str) -> PluginBase | None:
         """Load a plugin by name."""
         if name in self._plugins:
             return self._plugins[name]

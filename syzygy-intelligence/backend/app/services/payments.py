@@ -111,7 +111,7 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
 
 async def _handle_checkout_completed(session: dict) -> None:
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.db.models import User
     from app.db.session import get_db_context
 
@@ -141,7 +141,7 @@ async def _handle_checkout_completed(session: dict) -> None:
 
 async def _handle_subscription_updated(sub: dict) -> None:
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.db.models import User
     from app.db.session import get_db_context
 
@@ -166,12 +166,12 @@ async def _handle_subscription_updated(sub: dict) -> None:
                     user.subscription_tier = "premium"
             db.add(user)
             await db.commit()
-            logger.info(f"User subscription updated", tier=user.subscription_tier, status=status, source="payments")
+            logger.info("User subscription updated", tier=user.subscription_tier, status=status, source="payments")
 
 
 async def _handle_subscription_deleted(sub: dict) -> None:
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.db.models import User
     from app.db.session import get_db_context
 
@@ -187,7 +187,7 @@ async def _handle_subscription_deleted(sub: dict) -> None:
             user.stripe_subscription_id = None
             db.add(user)
             await db.commit()
-            logger.info(f"User subscription cancelled", user_id=user.id, source="payments")
+            logger.info("User subscription cancelled", user_id=user.id, source="payments")
 
 
 async def _handle_invoice_paid(invoice: dict) -> None:
@@ -195,10 +195,10 @@ async def _handle_invoice_paid(invoice: dict) -> None:
 
 
 async def _handle_invoice_failed(invoice: dict) -> None:
-    from app.db.session import get_db_context
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.db.models import User
+    from app.db.session import get_db_context
 
     customer_id = invoice.get("customer")
     if not customer_id:

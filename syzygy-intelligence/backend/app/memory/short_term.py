@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 
 class ShortTermMemory:
@@ -36,8 +36,8 @@ class ShortTermMemory:
             "metadata": metadata or {},
             "memory_type": "short_term",
             "importance": 0.3,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (datetime.now(timezone.utc) + self.ttl).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "expires_at": (datetime.now(UTC) + self.ttl).isoformat(),
         }
         return memory_id
 
@@ -49,7 +49,7 @@ class ShortTermMemory:
         session_id: str = "",
         limit: int = 10,
     ) -> list[dict[str, Any]]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         results = []
 
         for mem in self._store.values():
@@ -94,7 +94,7 @@ class ShortTermMemory:
             self._store.clear()
 
     async def cleanup_expired(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         self._store = {
             k: v for k, v in self._store.items()
             if "expires_at" not in v or datetime.fromisoformat(v["expires_at"]) >= now

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.config import settings
 from app.logging_setup import logger
@@ -70,7 +70,7 @@ class GraphMemory:
                         polarity=polarity or "unknown",
                         archetype=archetype or "unknown",
                         tags=tags or [],
-                        created_at=datetime.now(timezone.utc).isoformat(),
+                        created_at=datetime.now(UTC).isoformat(),
                     )
 
                     # Create relationships to agent if provided

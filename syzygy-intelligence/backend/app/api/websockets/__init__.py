@@ -10,10 +10,10 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from app.consensus.engine import ConsensusEngine
 from app.agents.registry import agent_registry
+from app.consensus.engine import ConsensusEngine
 from app.logging_setup import logger
-from app.notifications import notification_manager, NotificationType, NotificationSeverity
+from app.notifications import NotificationSeverity, NotificationType, notification_manager
 from app.orchestration.consensus_integration import run_consensus_with_memory
 
 
@@ -34,14 +34,14 @@ class ConnectionManager:
             await websocket.send_json(data)
 
         notification_manager.register_ws(cid, send_json)
-        logger.info(f"WebSocket client connected", client_id=cid, active_connections=len(self.active_connections))
+        logger.info("WebSocket client connected", client_id=cid, active_connections=len(self.active_connections))
         return cid
 
     def disconnect(self, client_id: str):
         self.active_connections.pop(client_id, None)
         self._connection_health.pop(client_id, None)
         notification_manager.unregister_ws(client_id)
-        logger.info(f"WebSocket client disconnected", client_id=client_id, active_connections=len(self.active_connections))
+        logger.info("WebSocket client disconnected", client_id=client_id, active_connections=len(self.active_connections))
 
     async def send_to(self, client_id: str, message: dict):
         ws = self.active_connections.get(client_id)
@@ -89,7 +89,7 @@ async def ws_handler(websocket: WebSocket):
 
             elif action == "subscribe":
                 event_types = data.get("event_types", ["*"])
-                logger.info(f"Client subscribed to events", client_id=client_id, events=event_types)
+                logger.info("Client subscribed to events", client_id=client_id, events=event_types)
                 await manager.send_to(client_id, {"type": "subscribed", "event_types": event_types})
 
             elif action == "run_consensus":
@@ -149,10 +149,10 @@ async def ws_handler(websocket: WebSocket):
                 })
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket client disconnected normally", client_id=client_id)
+        logger.info("WebSocket client disconnected normally", client_id=client_id)
     except json.JSONDecodeError:
-        logger.warning(f"Invalid JSON from WebSocket client", client_id=client_id)
+        logger.warning("Invalid JSON from WebSocket client", client_id=client_id)
     except Exception as e:
-        logger.error(f"WebSocket error", client_id=client_id, error=str(e))
+        logger.error("WebSocket error", client_id=client_id, error=str(e))
     finally:
         manager.disconnect(client_id)

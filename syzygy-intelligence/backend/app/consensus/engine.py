@@ -13,23 +13,17 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
 
-from app.agents.archetypes import get_shadow
 from app.agents.base import SyzygyAgent
 from app.agents.polarity import PolarityType, compute_polarity_balance
 from app.agents.registry import agent_registry
 from app.config import settings
-from app.consensus.phases import (
-    ProposalPhase,
-    CritiquePhase,
-    RefinementPhase,
-    EvaluationPhase,
-)
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
 from app.llm.ollama_client import OllamaClient
@@ -67,8 +61,8 @@ class ConsensusSession:
     final_synthesis: str = ""
     polarity_fusion_report: dict = field(default_factory=dict)
     status: str = "pending"
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -77,7 +71,7 @@ class ConsensusEngine:
 
     def __init__(
         self,
-        llm_client: Optional[OllamaClient] = None,
+        llm_client: OllamaClient | None = None,
     ):
         self.llm = llm_client or OllamaClient()
         self.scorer = ConsensusScorer()
@@ -87,12 +81,12 @@ class ConsensusEngine:
     async def run_consensus(
         self,
         task: str,
-        agents: Optional[list[SyzygyAgent]] = None,
+        agents: list[SyzygyAgent] | None = None,
         max_rounds: int = 6,
         min_rounds: int = 2,
         convergence_threshold: float = 0.85,
         timeout: float = 0,
-        on_event: Optional[ConsensusEventCallback] = None,
+        on_event: ConsensusEventCallback | None = None,
     ) -> ConsensusSession:
         """Run the full consensus process with all phases."""
 
@@ -189,7 +183,7 @@ class ConsensusEngine:
         session.polarity_fusion_report = self._generate_fusion_report(session)
 
         session.status = "completed"
-        session.completed_at = datetime.now(timezone.utc)
+        session.completed_at = datetime.now(UTC)
         return session
 
     async def _proposal_phase(self, session: ConsensusSession, round_data: ConsensusRound):
@@ -356,7 +350,7 @@ class ConsensusEngine:
         agent: SyzygyAgent,
         task: str,
         target_proposals: dict[str, str],
-        previous_critiques: Optional[dict[str, str]] = None,
+        previous_critiques: dict[str, str] | None = None,
     ) -> str:
         shadow = agent.shadow
         targets_text = "\n\n".join(

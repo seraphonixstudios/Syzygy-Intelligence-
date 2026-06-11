@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
-from sqlalchemy import select, func, case
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_admin
-from app.db.models import User, SubscriptionTier
+from app.db.models import SubscriptionTier, User
 from app.db.session import get_db
 
 router = APIRouter()
@@ -56,7 +56,7 @@ async def list_users(
     )
     users = result.scalars().all()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     items = []
     for u in users:
         if u.subscription_tier in (SubscriptionTier.PREMIUM, SubscriptionTier.ENTERPRISE):
@@ -94,7 +94,7 @@ async def get_user(
     if not u:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if u.subscription_tier in (SubscriptionTier.PREMIUM, SubscriptionTier.ENTERPRISE):
         limit = 10000
     elif u.trial_ends_at and u.trial_ends_at > now:
@@ -176,7 +176,7 @@ async def system_stats(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     total = await db.execute(select(func.count(User.id)))
     total_users = total.scalar() or 0

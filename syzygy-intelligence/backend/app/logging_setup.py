@@ -12,12 +12,10 @@ from __future__ import annotations
 import contextvars
 import json
 import logging
-import os
 import sys
-from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.config import settings
 
@@ -41,8 +39,8 @@ class SyzygyLogger:
     def __init__(
         self,
         name: str = "syzygy",
-        log_dir: Optional[str] = None,
-        level: Optional[str] = None,
+        log_dir: str | None = None,
+        level: str | None = None,
     ):
         self.name = name
         self.log_dir = Path(log_dir or f"{settings.data_dir}/logs")

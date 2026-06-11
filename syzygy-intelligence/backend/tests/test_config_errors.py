@@ -1,11 +1,14 @@
 """Unit tests for Syzygy Configuration and Error Handling."""
 
-import os
-import pytest
 from app.config import SyzygyConfig
 from app.errors import (
-    SyzygyError, AgentNotFoundError, SessionNotFoundError,
-    ConsensusError, LLMConnectionError, ToolExecutionError, ValidationError
+    AgentNotFoundError,
+    ConsensusError,
+    LLMConnectionError,
+    SessionNotFoundError,
+    SyzygyError,
+    ToolExecutionError,
+    ValidationError,
 )
 
 

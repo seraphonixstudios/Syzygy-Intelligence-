@@ -4,25 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.workflows.coding import CodingWorkflow, CODING_WORKFLOW
-from app.workflows.research import ResearchWorkflow, RESEARCH_WORKFLOW
-from app.workflows.content import ContentWorkflow, CONTENT_WORKFLOW
-from app.workflows.debate import DebateWorkflow, DEBATE_WORKFLOW
-from app.workflows.task_decomposition import TaskDecompositionWorkflow, TASK_DECOMPOSITION_WORKFLOW
-from app.workflows.audit import AuditWorkflow, AUDIT_WORKFLOW
-from app.workflows.test_gen import TestGenWorkflow, TEST_GEN_WORKFLOW
-from app.workflows.summary import SummaryWorkflow, SUMMARY_WORKFLOW
-from app.workflows.compliance import ComplianceWorkflow, COMPLIANCE_WORKFLOW
-from app.workflows.qa_bot import QABotWorkflow, QA_BOT_WORKFLOW
-from app.workflows.translate import TranslateWorkflow, TRANSLATE_WORKFLOW
-from app.workflows.interview_coach import InterviewCoachWorkflow, INTERVIEW_COACH_WORKFLOW
-from app.workflows.data_analyzer import DataAnalyzerWorkflow, DATA_ANALYZER_WORKFLOW
-from app.workflows.api_designer import ApiDesignerWorkflow, API_DESIGNER_WORKFLOW
-from app.workflows.agentic_rag import AgenticRagWorkflow, AGENTIC_RAG_WORKFLOW
-from app.workflows.report_gen import ReportGenWorkflow, REPORT_GEN_WORKFLOW
-from app.workflows.data_pipeline import DataPipelineWorkflow, DATA_PIPELINE_WORKFLOW
-from app.workflows.ci_piper import CiPiperWorkflow, CI_PIPER_WORKFLOW
-
+from app.workflows.agentic_rag import AGENTIC_RAG_WORKFLOW, AgenticRagWorkflow
+from app.workflows.api_designer import API_DESIGNER_WORKFLOW, ApiDesignerWorkflow
+from app.workflows.audit import AUDIT_WORKFLOW, AuditWorkflow
+from app.workflows.ci_piper import CI_PIPER_WORKFLOW, CiPiperWorkflow
+from app.workflows.coding import CODING_WORKFLOW, CodingWorkflow
+from app.workflows.compliance import COMPLIANCE_WORKFLOW, ComplianceWorkflow
+from app.workflows.content import CONTENT_WORKFLOW, ContentWorkflow
+from app.workflows.data_analyzer import DATA_ANALYZER_WORKFLOW, DataAnalyzerWorkflow
+from app.workflows.data_pipeline import DATA_PIPELINE_WORKFLOW, DataPipelineWorkflow
+from app.workflows.debate import DEBATE_WORKFLOW, DebateWorkflow
+from app.workflows.interview_coach import INTERVIEW_COACH_WORKFLOW, InterviewCoachWorkflow
+from app.workflows.qa_bot import QA_BOT_WORKFLOW, QABotWorkflow
+from app.workflows.report_gen import REPORT_GEN_WORKFLOW, ReportGenWorkflow
+from app.workflows.research import RESEARCH_WORKFLOW, ResearchWorkflow
+from app.workflows.summary import SUMMARY_WORKFLOW, SummaryWorkflow
+from app.workflows.task_decomposition import TASK_DECOMPOSITION_WORKFLOW, TaskDecompositionWorkflow
+from app.workflows.test_gen import TEST_GEN_WORKFLOW, TestGenWorkflow
+from app.workflows.translate import TRANSLATE_WORKFLOW, TranslateWorkflow
 
 WORKFLOW_REGISTRY: dict[str, Any] = {
     "coding": CODING_WORKFLOW,

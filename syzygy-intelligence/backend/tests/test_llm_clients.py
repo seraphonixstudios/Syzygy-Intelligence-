@@ -1,7 +1,8 @@
 """Tests for OllamaClient and LiteLLMClient."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestOllamaClient:
@@ -56,6 +57,7 @@ class TestOllamaClient:
     @pytest.mark.asyncio
     async def test_generate_http_error(self, client):
         import httpx
+
         from app.errors import LLMConnectionError
         mock_resp = MagicMock(spec=httpx.Response)
         mock_resp.raise_for_status = MagicMock(
@@ -74,6 +76,7 @@ class TestOllamaClient:
     @pytest.mark.asyncio
     async def test_generate_connection_error(self, client):
         import httpx
+
         from app.errors import LLMConnectionError
         mock_http = AsyncMock()
         mock_http.post = AsyncMock(side_effect=httpx.RequestError("Connection refused"))

@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
+from app.agents.archetypes import ARCHETYPE_REGISTRY
 from app.agents.base import SyzygyAgent
-from app.agents.archetypes import ARCHETYPE_REGISTRY, get_archetypes_by_polarity
 from app.agents.polarity import PolarityType
-from app.agents.personas import PERSONA_REGISTRY
 
 # Default models for each archetype (can be overridden)
 DEFAULT_AGENT_MODELS: dict[str, str] = {
@@ -37,7 +34,7 @@ class AgentRegistry:
         self._agents[agent.id] = agent
         return agent.id
 
-    def get(self, agent_id: str) -> Optional[SyzygyAgent]:
+    def get(self, agent_id: str) -> SyzygyAgent | None:
         return self._agents.get(agent_id)
 
     def remove(self, agent_id: str) -> bool:
@@ -46,7 +43,7 @@ class AgentRegistry:
             return True
         return False
 
-    def list(self, polarity: Optional[PolarityType] = None) -> list[SyzygyAgent]:
+    def list(self, polarity: PolarityType | None = None) -> list[SyzygyAgent]:
         if polarity:
             return [a for a in self._agents.values() if a.polarity == polarity]
         return list(self._agents.values())

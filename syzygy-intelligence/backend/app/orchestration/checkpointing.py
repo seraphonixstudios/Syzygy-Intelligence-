@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.config import settings
 
@@ -33,7 +33,7 @@ class CheckpointManager:
             "round_number": round_number,
             "state": state,
             "metadata": metadata or {},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         path = self.storage_path / session_id
@@ -48,7 +48,7 @@ class CheckpointManager:
         self,
         session_id: str,
         round_number: int,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Load the latest checkpoint for a session at a given round."""
         path = self.storage_path / session_id
         if not path.exists():
@@ -82,6 +82,6 @@ class CheckpointManager:
         self,
         session_id: str,
         target_round: int,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Replay to a specific round (time-travel debugging)."""
         return await self.load_checkpoint(session_id, target_round)

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from typing import Callable
 
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.config import settings

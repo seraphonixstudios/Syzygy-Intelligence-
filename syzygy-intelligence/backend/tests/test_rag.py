@@ -1,7 +1,8 @@
+
 import pytest
-from pathlib import Path
-from app.rag.ingester import parse_document, chunk_text
+
 from app.rag.embeddings import embed
+from app.rag.ingester import chunk_text, parse_document
 
 SAMPLE_TEXT = "Syzygy Intelligence is an AI orchestration platform. It uses multiple agents. The consensus engine produces well-reasoned answers."
 
@@ -62,8 +63,8 @@ class TestEmbed:
 
     @pytest.mark.asyncio
     async def test_embed_raises_on_unsupported_server(self):
-        from app.errors import LLMConnectionError
         import app.config
+        from app.errors import LLMConnectionError
 
         original = app.config.settings.ollama_base_url
         app.config.settings.ollama_base_url = "http://nonexistent.invalid:9999"
@@ -77,7 +78,7 @@ class TestEmbed:
 class TestRetriever:
     @pytest.mark.asyncio
     async def test_import_retriever(self):
-        from app.rag.retriever import ingest_document, query, list_documents, delete_document
+        from app.rag.retriever import delete_document, ingest_document, list_documents, query
         assert callable(ingest_document)
         assert callable(query)
         assert callable(list_documents)

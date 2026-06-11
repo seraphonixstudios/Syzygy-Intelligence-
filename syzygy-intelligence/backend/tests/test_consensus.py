@@ -1,11 +1,11 @@
 """Unit tests for Syzygy Consensus Engine."""
 
 import pytest
+
+from app.agents.registry import AgentRegistry
 from app.consensus.engine import ConsensusEngine, ConsensusRound, ConsensusSession
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
-from app.agents.registry import AgentRegistry
-from app.agents.base import SyzygyAgent
 
 
 class TestConsensusRound:

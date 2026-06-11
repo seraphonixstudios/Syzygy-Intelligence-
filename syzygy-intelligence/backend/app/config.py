@@ -50,6 +50,10 @@ class SyzygyConfig(BaseSettings):
                 if m.group("port"):
                     self.db_port = int(m.group("port"))
                 self.db_name = m.group("db")
+                print(f"[config] Parsed DATABASE_URL → {self.db_user}@{self.db_host}:{self.db_port}/{self.db_name}")
+            else:
+                print(f"[config] WARNING: DATABASE_URL set but could not parse: {raw_url}")
+
         if self.env == "production" and self.secret_key == "change-me-to-a-random-secret":
             raise ValueError(
                 "SYZYGY_SECRET_KEY must be set to a secure random value in production. "
@@ -97,7 +101,7 @@ class SyzygyConfig(BaseSettings):
     google_client_secret: str = ""
     github_client_id: str = ""
     github_client_secret: str = ""
-    oauth_redirect_url: str = "http://localhost:8000/api/auth/oauth"
+    oauth_redirect_url: str = "http://localhost:8001/api/auth/oauth"
 
     # Free tier & trial
     free_tier_days: int = 14

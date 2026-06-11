@@ -1,9 +1,13 @@
 """Unit tests for Syzygy Notifications and Audit System."""
 
 import pytest
+
 from app.notifications import (
-    Notification, NotificationType, NotificationSeverity,
-    MessageBus, NotificationManager
+    MessageBus,
+    Notification,
+    NotificationManager,
+    NotificationSeverity,
+    NotificationType,
 )
 
 

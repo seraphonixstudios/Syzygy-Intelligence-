@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_user
 from app.config import settings
 from app.db.models import User
-from app.db.session import get_db
 from app.logging_setup import logger
 from app.services.payments import (
     create_checkout_session,

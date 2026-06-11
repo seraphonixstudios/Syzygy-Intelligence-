@@ -158,7 +158,6 @@ export default function ChatPage() {
           },
         ]);
         setReasoning([{ agent: "Multi-Model", thought: `Queried ${models.length} models in parallel.`, model: models.join(", ") }]);
-        setSending(false);
       } else if (selectedModel !== "syzygy" && selectedModel !== "__all__") {
         // SSE streaming for direct model queries with optional RAG
         setStreamingContent("");
@@ -175,13 +174,11 @@ export default function ChatPage() {
               setMessages((prev) => [...prev, { role: "assistant", content: full, modelName: selectedModel }]);
               setStreamingContent("");
               setReasoning([{ agent: selectedModel, thought: "Streaming complete. Response generated.", model: selectedModel }]);
-              setSending(false);
             },
             onError: (errMsg) => {
               toast.error(errMsg);
               setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errMsg}`, modelName: selectedModel }]);
               setStreamingContent("");
-              setSending(false);
             },
           }
         );
@@ -221,11 +218,7 @@ export default function ChatPage() {
         { role: "assistant", content: "Error: Could not reach the backend. Ensure Docker containers are running." },
       ]);
     } finally {
-      if (selectedModel !== "__all__" && selectedModel !== "syzygy") {
-        // streaming sets sending=false in callbacks already
-      } else {
-        setSending(false);
-      }
+      setSending(false);
     }
   };
 

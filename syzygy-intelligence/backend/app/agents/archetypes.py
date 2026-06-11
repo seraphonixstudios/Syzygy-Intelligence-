@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class Polarity(str, Enum):
@@ -318,11 +317,11 @@ ARCHETYPE_REGISTRY: dict[str, Archetype] = {
 }
 
 
-def get_archetype(name: str) -> Optional[Archetype]:
+def get_archetype(name: str) -> Archetype | None:
     return ARCHETYPE_REGISTRY.get(name)
 
 
-def get_shadow(archetype_name: str) -> Optional[ShadowArchetype]:
+def get_shadow(archetype_name: str) -> ShadowArchetype | None:
     return SHADOWS.get(archetype_name)
 
 

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from app.tools.browser import BrowserTool
+from app.tools.code_execution import CodeExecutionTool
 from app.tools.filesystem import FileSystemTool
 from app.tools.git_tool import GitTool
-from app.tools.code_execution import CodeExecutionTool
 from app.tools.search import SearchTool
 
 

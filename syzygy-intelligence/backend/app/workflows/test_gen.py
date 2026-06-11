@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class TestGenWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["test_generation", "code_analysis", "edge_case_detection"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -86,7 +86,7 @@ class TestGenWorkflow:
         code = ctx.get("code", task)
         language = ctx.get("language", "python")
 
-        logger.info(f"Test generation workflow started", language=language)
+        logger.info("Test generation workflow started", language=language)
         analysis = await self.analyze_code(code, language)
         unit_result = await self.generate_unit_tests(code, language)
         edge_result = await self.generate_edge_cases(code, language)
@@ -101,7 +101,7 @@ class TestGenWorkflow:
             "validation": validation,
             "status": "completed",
         }
-        logger.info(f"Test generation workflow completed")
+        logger.info("Test generation workflow completed")
         return result
 
 

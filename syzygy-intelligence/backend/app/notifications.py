@@ -12,10 +12,11 @@ from __future__ import annotations
 import inspect
 import json
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from app.audit import audit_service
 from app.logging_setup import logger
@@ -60,7 +61,7 @@ class Notification:
     target_agent_id: str = ""
     target_session_id: str = ""
     data: dict[str, Any] = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -126,7 +127,7 @@ class MessageBus:
 class NotificationManager:
     """Manages notifications — creation, persistence, WebSocket broadcast."""
 
-    def __init__(self, bus: Optional[MessageBus] = None):
+    def __init__(self, bus: MessageBus | None = None):
         self.bus = bus or MessageBus()
         self._ws_connections: dict[str, Any] = {}
 

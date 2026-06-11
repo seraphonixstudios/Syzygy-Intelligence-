@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Optional
 
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import event, text
 
 from app.config import settings
 from app.logging_setup import logger
@@ -82,10 +81,11 @@ def _get_session_factory():
 
 
 # Re-export for modules that need direct session creation outside DI
-async def get_standalone_session() -> AsyncSession:
-    factory = _get_session_factory()
-    async with factory() as session:
-        return session
+def get_session_factory():
+    """Return the async session factory for manual session creation.
+    Caller is responsible for cleanup with context manager or explicit close.
+    """
+    return _get_session_factory()
 
 
 @asynccontextmanager
@@ -118,6 +118,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db():
     """Initialize database — create all tables if they don't exist. Returns True on success, False if skipped."""
+    safe_url = settings.database_url.replace(settings.db_password, "****") if settings.db_password else settings.database_url
+    logger.info("Initializing database", url=safe_url, env=settings.env)
     try:
         engine = _get_engine()
         async with engine.begin() as conn:
@@ -128,7 +130,7 @@ async def init_db():
         logger.info("Database initialized successfully")
         return True
     except Exception as e:
-        logger.warning(f"Database initialization skipped: {e}")
+        logger.warning(f"Database initialization failed: {e}. App will start without database features.")
         return False
 
 

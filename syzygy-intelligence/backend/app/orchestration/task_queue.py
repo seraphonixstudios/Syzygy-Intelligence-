@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.logging_setup import logger
 
@@ -21,14 +21,14 @@ class QueueItem:
     status: str = "pending"
     result: Any = None
     error: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     execution_time_ms: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
     retry_count: int = 0
     max_retries: int = 3
-    handler: Optional[Callable] = None
+    handler: Callable | None = None
 
 
 class TaskQueue:
@@ -50,7 +50,7 @@ class TaskQueue:
         task_type: str = "generic",
         priority: int = 0,
         metadata: dict[str, Any] = None,
-        handler: Optional[Callable] = None,
+        handler: Callable | None = None,
     ) -> str:
         """Enqueue a task with priority (higher = more important)."""
         item = QueueItem(
@@ -63,16 +63,16 @@ class TaskQueue:
         async with self._lock:
             self._items.append(item)
             self._items.sort(key=lambda x: (x.priority, x.created_at.timestamp()), reverse=True)
-        logger.debug(f"Task enqueued", task_id=item.id, task_type=task_type, priority=priority)
+        logger.debug("Task enqueued", task_id=item.id, task_type=task_type, priority=priority)
         return item.id
 
-    async def dequeue(self) -> Optional[QueueItem]:
+    async def dequeue(self) -> QueueItem | None:
         """Dequeue the highest-priority pending task."""
         async with self._lock:
             for item in self._items:
                 if item.status == "pending" and item.retry_count < item.max_retries:
                     item.status = "running"
-                    item.started_at = datetime.now(timezone.utc)
+                    item.started_at = datetime.now(UTC)
                     self._running.add(item.id)
                     return item
         return None
@@ -82,7 +82,7 @@ class TaskQueue:
         async with self._lock:
             for item in self._items:
                 if item.id == item_id:
-                    item.completed_at = datetime.now(timezone.utc)
+                    item.completed_at = datetime.now(UTC)
                     if item.started_at:
                         item.execution_time_ms = (
                             item.completed_at - item.started_at
@@ -91,7 +91,7 @@ class TaskQueue:
                         item.retry_count += 1
                         item.status = "pending"
                         item.error = error
-                        logger.warning(f"Task will retry", task_id=item_id, retry=item.retry_count)
+                        logger.warning("Task will retry", task_id=item_id, retry=item.retry_count)
                     else:
                         item.status = "completed" if not error else "failed"
                         item.result = result
@@ -101,7 +101,7 @@ class TaskQueue:
                                    task_id=item_id, time_ms=item.execution_time_ms)
                     break
 
-    async def execute_next(self) -> Optional[Any]:
+    async def execute_next(self) -> Any | None:
         """Execute the next available task."""
         item = await self.dequeue()
         if not item:
@@ -174,7 +174,7 @@ class TaskQueue:
         results = await asyncio.gather(*[_run(t) for t in tasks], return_exceptions=True)
         return [r for r in results if r is not None]
 
-    async def get_status(self, item_id: str) -> Optional[dict[str, Any]]:
+    async def get_status(self, item_id: str) -> dict[str, Any] | None:
         """Get the status of a specific task."""
         for item in self._items:
             if item.id == item_id:

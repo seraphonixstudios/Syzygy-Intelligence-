@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
-
 
 REGULATORY_FRAMEWORKS = {
     "gdpr": "General Data Protection Regulation — data privacy, consent, right to erasure, breach notification",
@@ -27,7 +26,7 @@ class ComplianceWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["compliance_analysis", "policy_mapping", "risk_assessment"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -95,7 +94,7 @@ class ComplianceWorkflow:
         document = ctx.get("document", task)
         frameworks = ctx.get("frameworks", ["gdpr", "hipaa", "soc2"])
 
-        logger.info(f"Compliance workflow started", frameworks=frameworks)
+        logger.info("Compliance workflow started", frameworks=frameworks)
         analyses = []
         for fw in frameworks:
             analysis = await self.analyze_policy(document, fw)
@@ -113,7 +112,7 @@ class ComplianceWorkflow:
             "remediation_plan": remediation,
             "status": "completed",
         }
-        logger.info(f"Compliance workflow completed", frameworks_checked=len(frameworks))
+        logger.info("Compliance workflow completed", frameworks_checked=len(frameworks))
         return result
 
 

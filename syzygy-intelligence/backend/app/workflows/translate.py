@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class TranslateWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["translation", "cultural_adaptation", "language_review"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -81,7 +81,7 @@ class TranslateWorkflow:
         source = ctx.get("source_language", None)
         target = ctx.get("target_language", "spanish")
 
-        logger.info(f"Translation workflow started", target=target, source=source or "auto-detect")
+        logger.info("Translation workflow started", target=target, source=source or "auto-detect")
 
         if not source:
             detected = await self.detect_language(text)
@@ -103,7 +103,7 @@ class TranslateWorkflow:
             "quality_review": quality,
             "status": "completed",
         }
-        logger.info(f"Translation workflow completed", source=source, target=target)
+        logger.info("Translation workflow completed", source=source, target=target)
         return result
 
 

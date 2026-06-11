@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.llm.ollama_client import OllamaClient
 from app.llm.litellm_client import LiteLLMClient
 from app.llm.model_manager import ModelManager
+from app.llm.ollama_client import OllamaClient
 
 
 class LLMFactory:

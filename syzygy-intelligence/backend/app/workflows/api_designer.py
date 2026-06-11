@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class ApiDesignerWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["api_design", "openapi_generation", "code_generation", "test_generation"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -88,7 +88,7 @@ class ApiDesignerWorkflow:
         style = ctx.get("api_style", "REST")
         language = ctx.get("language", "python")
 
-        logger.info(f"API Designer workflow started", style=style, language=language)
+        logger.info("API Designer workflow started", style=style, language=language)
         design = await self.design_endpoints(description, style)
         spec = await self.generate_openapi_spec(description, design, style)
         stubs = await self.generate_stubs(spec, language)
@@ -104,7 +104,7 @@ class ApiDesignerWorkflow:
             "validation_tests": tests,
             "status": "completed",
         }
-        logger.info(f"API Designer workflow completed")
+        logger.info("API Designer workflow completed")
         return result
 
 

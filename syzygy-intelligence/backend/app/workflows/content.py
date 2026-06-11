@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
@@ -18,7 +18,7 @@ class ContentWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["writing", "editing", "storytelling"]
     )
-    llm: Optional[OllamaClient] = None
+    llm: OllamaClient | None = None
 
     def __post_init__(self):
         if self.llm is None:
@@ -102,7 +102,7 @@ class ContentWorkflow:
         ctx = context or {}
         polarity = ctx.get("polarity", "balanced")
 
-        logger.info(f"Content workflow started", task=task[:100], polarity=polarity)
+        logger.info("Content workflow started", task=task[:100], polarity=polarity)
 
         r = await self.research(task)
         o = await self.outline(task, r, polarity)
@@ -120,7 +120,7 @@ class ContentWorkflow:
             "final": p,
             "status": "completed",
         }
-        logger.info(f"Content workflow completed", word_count=p.get("word_count", 0))
+        logger.info("Content workflow completed", word_count=p.get("word_count", 0))
         return result
 
 

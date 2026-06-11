@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from app.config import settings
 from app.errors import LLMConnectionError
-from app.llm.ollama_client import OllamaClient
 from app.llm.litellm_client import LiteLLMClient
+from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
 
 

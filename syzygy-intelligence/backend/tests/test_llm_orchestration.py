@@ -1,11 +1,12 @@
 """Unit tests for Syzygy LLM Layer and Orchestration."""
 
 import pytest
+
 from app.llm.model_manager import ModelManager
-from app.orchestration.team_formation import TeamFormation
-from app.orchestration.task_queue import TaskQueue, QueueItem
 from app.orchestration.checkpointing import CheckpointManager
-from app.plugins.plugin_system import PluginSystem, PluginBase, PluginManifest
+from app.orchestration.task_queue import QueueItem, TaskQueue
+from app.orchestration.team_formation import TeamFormation
+from app.plugins.plugin_system import PluginManifest, PluginSystem
 
 
 class TestModelManager:
@@ -140,8 +141,9 @@ class TestCheckpointManager:
 
     @pytest.mark.asyncio
     async def test_nonexistent_session(self):
-        import app.config
         import tempfile
+
+        import app.config
         app.config.settings.data_dir = tempfile.mkdtemp()
 
         mgr = CheckpointManager()
