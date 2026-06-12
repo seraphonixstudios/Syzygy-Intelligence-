@@ -176,7 +176,7 @@ describe("RoundTimeline", () => {
       proposals: ["Proposal B"],
       critiques: ["Critique B"],
       refinements: [],
-      scores: { a1: 0.95 },
+      scores: { a1: 0.95, a2: 0.0 },
       convergence_score: 0.88,
     },
   ];
@@ -248,12 +248,12 @@ describe("ConsensusView", () => {
       proposals: ["Test proposal"],
       critiques: [],
       refinements: [],
-      scores: { a1: 0.9 },
+      scores: { a1: 0.9, a2: 0.0 },
       convergence_score: 0.95,
     },
   ];
 
-  const mockFusion = { masculine: 5, feminine: 5, unified: 3 };
+  const mockFusion = { masculine: 5, feminine: 5, unified: 3, balance_score: 100 };
 
   it("renders loading state when loading and no result", () => {
     render(<ConsensusView result={null} loading={true} />);
