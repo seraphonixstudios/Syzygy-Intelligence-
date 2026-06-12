@@ -51,13 +51,9 @@ engine = ConsensusEngine()
 
 async def _track_usage(user: User | None, db: AsyncSession) -> None:
     if user is not None:
-        try:
-            user.message_count += 1  # type: ignore[assignment]
-            db.add(user)
-            await db.commit()
-        except Exception as e:
-            logger.warning(f"Failed to track message usage: {e}")
-            await db.rollback()
+        user.message_count += 1  # type: ignore[assignment]
+        db.add(user)
+        await db.commit()
 
 
 @router.post("/completions")
