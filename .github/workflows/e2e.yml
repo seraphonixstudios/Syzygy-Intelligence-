@@ -73,6 +73,10 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16-alpine
@@ -114,6 +118,13 @@ jobs:
         working-directory: syzygy-intelligence/frontend
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
+      - name: Cache Next.js build
+        id: nextjs-cache
+        uses: actions/cache@v5
+        with:
+          path: syzygy-intelligence/frontend/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('syzygy-intelligence/frontend/package-lock.json') }}
+
       - name: Start backend
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
@@ -150,8 +161,8 @@ jobs:
         env:
           NEXT_PUBLIC_SYZYGY_API_URL: http://localhost:8000
 
-      - name: Run E2E tests
-        run: npx playwright test --reporter=list
+      - name: Run E2E tests (shard ${{ matrix.shard }}/3)
+        run: npx playwright test --reporter=list --shard=${{ matrix.shard }}/3
         working-directory: syzygy-intelligence/frontend
         env:
           NEXT_PUBLIC_SYZYGY_API_URL: http://localhost:8000
