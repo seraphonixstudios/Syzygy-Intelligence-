@@ -27,12 +27,12 @@ from app.api.auth import (
 from app.config import settings
 from app.db.models import ApiKey, SubscriptionTier, User
 from app.db.session import get_db
-from app.services.email import EmailMessage
 from app.observability import (
     log_auth_event,
     log_usage_event,
     metrics_registry,
 )
+from app.services.email import EmailMessage
 
 router = APIRouter()
 
@@ -181,7 +181,12 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     user = result.scalar_one_or_none()
     if not user or user.verified_at:
         if user and user.verified_at:
-            log_auth_event("email_verification_requested", user_email=req.email, user_id=str(user.id), result="already_verified")
+            log_auth_event(
+                "email_verification_requested",
+                user_email=req.email,
+                user_id=str(user.id),
+                result="already_verified",
+            )
         return {"message": "If that email exists, a verification link has been sent."}
 
     token = create_verification_token(str(user.id))
@@ -391,7 +396,13 @@ async def create_api_key(
     await db.commit()
     await db.refresh(api_key)
 
-    log_auth_event("api_key_created", user_id=str(user.id), user_email=user.email, result="success", api_key_id=str(api_key.id))
+    log_auth_event(
+        "api_key_created",
+        user_id=str(user.id),
+        user_email=user.email,
+        result="success",
+        api_key_id=str(api_key.id),
+    )
     metrics_registry.auth_api_keys_created.inc()
 
     return ApiKeyCreatedResponse(

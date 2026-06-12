@@ -33,7 +33,7 @@ from app.db.session import close_db, init_db
 from app.errors import setup_error_handlers
 from app.logging_setup import logger
 from app.middleware.rate_limiter import setup_rate_limiter
-from app.observability import RequestTracingMiddleware, setup_tracing, metrics_endpoint
+from app.observability import RequestTracingMiddleware, metrics_endpoint, setup_tracing
 
 
 @asynccontextmanager
