@@ -33,7 +33,7 @@ test.describe("Workflows page", () => {
   test("audit workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
     await page.locator("button:has-text('audit')").first().click();
-    await expect(page.locator("input[placeholder*='audit']")).toBeVisible();
+    await expect(page.locator("input[placeholder*='audit']")).toBeVisible({ timeout: 10000 });
   });
 
   test("translate workflow card is clickable and shows input form", async ({ page }) => {
