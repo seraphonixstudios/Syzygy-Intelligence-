@@ -14,12 +14,16 @@ test.describe("Content page", () => {
 
   test("has tone selector", async ({ page }) => {
     await page.goto("/content");
-    await expect(page.getByText("Formal").first()).toBeVisible();
+    const toneSelect = page.locator("select").first();
+    await expect(toneSelect).toBeVisible();
+    await expect(toneSelect).toHaveValue("Formal");
   });
 
   test("has format selector", async ({ page }) => {
     await page.goto("/content");
-    await expect(page.getByText("Article").first()).toBeVisible();
+    const formatSelect = page.locator("select").nth(1);
+    await expect(formatSelect).toBeVisible();
+    await expect(formatSelect).toHaveValue("Article");
   });
 
   test("shows pipeline stage indicators", async ({ page }) => {

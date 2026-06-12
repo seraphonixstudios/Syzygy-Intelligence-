@@ -17,7 +17,7 @@ test.describe("Memory page", () => {
     await expect(page.getByText("All").first()).toBeVisible();
     await expect(page.getByText("Short-term")).toBeVisible();
     await expect(page.getByText("Long-term")).toBeVisible();
-    await expect(page.getByText("Team")).toBeVisible();
+    await expect(page.getByText("Team").first()).toBeVisible();
   });
 
   test("has polarity filter", async ({ page }) => {

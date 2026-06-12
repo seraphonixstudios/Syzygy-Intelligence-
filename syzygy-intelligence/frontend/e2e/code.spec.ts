@@ -21,9 +21,9 @@ test.describe("Code page", () => {
   test("language picker shows options on click", async ({ page }) => {
     await page.goto("/code");
     await page.locator("button:has-text('python')").first().click();
-    await expect(page.getByText("javascript")).toBeVisible();
-    await expect(page.getByText("rust")).toBeVisible();
-    await expect(page.getByText("go")).toBeVisible();
+    await expect(page.getByText("javascript").first()).toBeVisible();
+    await expect(page.getByText("rust").first()).toBeVisible();
+    await expect(page.getByText("go").first()).toBeVisible();
   });
 
   test("has suggestion cards when empty", async ({ page }) => {

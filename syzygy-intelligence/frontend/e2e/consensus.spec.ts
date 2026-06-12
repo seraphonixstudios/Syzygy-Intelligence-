@@ -51,7 +51,7 @@ test.describe("Consensus page", () => {
 
   test("opens config panel on settings click", async ({ page }) => {
     await page.goto("/consensus");
-    const settingsBtn = page.getByText("Settings").first();
+    const settingsBtn = page.locator("button:has(.lucide-settings2)");
     await settingsBtn.click();
     await expect(page.getByText("Consensus Configuration")).toBeVisible();
     await expect(page.getByText("Max Rounds")).toBeVisible();
