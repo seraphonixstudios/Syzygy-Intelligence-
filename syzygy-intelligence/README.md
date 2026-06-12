@@ -302,6 +302,29 @@ User → /auth/login or /auth/register
   → Sidebar shows user info, message usage bar, and logout button
 ```
 
+### OAuth Setup (Google & GitHub)
+
+**Google:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → APIs & Services → Credentials
+2. Create **OAuth 2.0 Client ID** (Web application type)
+3. Add **Authorized Redirect URI**: `http://localhost:8001/api/auth/oauth/google/callback`
+4. Copy the Client ID and Client Secret into `.env`:
+   ```
+   SYZYGY_GOOGLE_CLIENT_ID=your-client-id
+   SYZYGY_GOOGLE_CLIENT_SECRET=your-client-secret
+   ```
+
+**GitHub:**
+1. Go to [GitHub Settings](https://github.com/settings/developers) → Developer settings → OAuth Apps → Register a new application
+2. Set **Authorization callback URL**: `http://localhost:8001/api/auth/oauth/github/callback`
+3. Copy the Client ID and generate a Client Secret, then add to `.env`:
+   ```
+   SYZYGY_GITHUB_CLIENT_ID=your-client-id
+   SYZYGY_GITHUB_CLIENT_SECRET=your-client-secret
+   ```
+
+**Production:** Replace `localhost:8001` with your real backend domain (e.g., `https://api.example.com`) and update `SYZYGY_OAUTH_REDIRECT_URL` accordingly. Update the redirect URIs in both provider apps.
+
 ### Debug Endpoints
 
 | Method | Endpoint | Description |
