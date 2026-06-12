@@ -1,4 +1,4 @@
-.PHONY: lint lint-fix test test-all e2e dev dev-backend dev-frontend dev-mock clean
+.PHONY: lint lint-fix test test-all e2e dev dev-backend dev-frontend dev-mock ollama ollama-docker clean
 
 BACKEND = backend
 FRONTEND = frontend
@@ -17,6 +17,14 @@ test-all:
 
 e2e:
 	cd $(FRONTEND) && set NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8001 && npx playwright test
+
+ollama:
+	@echo "Run: .\scripts\setup-ollama.ps1  (Windows)"
+	@echo "Or:  ollama pull qwen2.5:7b && ollama cp qwen2.5:7b qwen3:8b-gpu"
+	@echo "     ollama pull dolphin-llama3:8b && ollama cp dolphin-llama3:8b dolphin-llama3:8b-gpu"
+
+ollama-docker:
+	docker compose -f docker-compose.yml -f docker-compose.ollama-cpu.yml up -d ollama
 
 dev-mock:
 	cd $(BACKEND) && python -m uvicorn tests.mock_ollama_server:app --host 0.0.0.0 --port 11435

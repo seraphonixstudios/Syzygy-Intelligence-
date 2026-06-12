@@ -31,6 +31,9 @@ syzygy-intelligence/
 │   ├── e2e/              # Playwright E2E tests (25 specs)
 │   └── .env              # NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8001
 ├── docker-compose.yml
+├── docker-compose.ollama-cpu.yml  # CPU-only override (no GPU reservation)
+├── scripts/
+│   └── setup-ollama.ps1           # Ollama install/pull/tag automation
 └── AGENTS.md
 ```
 
@@ -54,6 +57,9 @@ CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (188 tests
 | `make test-all` | Run tests with OLLAMA_BASE_URL set to mock server |
 | `make e2e` | Run Playwright E2E tests |
 | `make dev-mock` | Start mock Ollama server on port 11435 |
+| `.\scripts\setup-ollama.ps1` | Install/config Ollama locally (Windows) |
+| `.\scripts\setup-ollama.ps1 -Docker` | Pull models inside Docker Ollama container |
+| `docker compose -f docker-compose.yml -f docker-compose.ollama-cpu.yml up -d` | Start stack with CPU-only Ollama |
 | `npm run test:unit` | Run vitest component tests (frontend) |
 | `make clean` | Remove caches and temp files |
 

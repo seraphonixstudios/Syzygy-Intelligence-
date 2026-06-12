@@ -1,0 +1,10 @@
+# CPU-only override for Ollama service
+# Removes GPU device reservation so Ollama works on systems without nvidia-container-toolkit
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ollama-cpu.yml up -d
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices: []
