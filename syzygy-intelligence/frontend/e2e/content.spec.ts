@@ -14,21 +14,21 @@ test.describe("Content page", () => {
 
   test("has tone selector", async ({ page }) => {
     await page.goto("/content");
-    await expect(page.getByText("Formal")).toBeVisible();
+    await expect(page.getByText("Formal").first()).toBeVisible();
   });
 
   test("has format selector", async ({ page }) => {
     await page.goto("/content");
-    await expect(page.getByText("Article")).toBeVisible();
+    await expect(page.getByText("Article").first()).toBeVisible();
   });
 
   test("shows pipeline stage indicators", async ({ page }) => {
     await page.goto("/content");
-    await expect(page.getByText("Research")).toBeVisible();
-    await expect(page.getByText("Outline")).toBeVisible();
-    await expect(page.getByText("Draft")).toBeVisible();
-    await expect(page.getByText("Edit")).toBeVisible();
-    await expect(page.getByText("Polish")).toBeVisible();
+    await expect(page.getByText("Research").first()).toBeVisible();
+    await expect(page.getByText("Outline").first()).toBeVisible();
+    await expect(page.getByText("Draft").first()).toBeVisible();
+    await expect(page.getByText("Edit").first()).toBeVisible();
+    await expect(page.getByText("Polish").first()).toBeVisible();
   });
 
   test("has suggestion cards when empty", async ({ page }) => {

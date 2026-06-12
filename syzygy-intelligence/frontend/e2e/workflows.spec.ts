@@ -32,13 +32,13 @@ test.describe("Workflows page", () => {
 
   test("audit workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('audit')").click();
+    await page.locator("button:has-text('audit')").first().click();
     await expect(page.locator("input[placeholder*='audit']")).toBeVisible();
   });
 
   test("translate workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('translate')").click();
+    await page.locator("button:has-text('translate')").first().click();
     await expect(page.locator("input[placeholder*='translate']")).toBeVisible();
   });
 
@@ -50,61 +50,61 @@ test.describe("Workflows page", () => {
 
   test("summary workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('summary')").click();
+    await page.locator("button:has-text('summary')").first().click();
     await expect(page.locator("input[placeholder*='summary']")).toBeVisible();
   });
 
   test("test gen workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('test gen')").click();
+    await page.locator("button:has-text('test gen')").first().click();
     await expect(page.locator("input[placeholder*='test gen']")).toBeVisible();
   });
 
   test("qa bot workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('qa bot')").click();
+    await page.locator("button:has-text('qa bot')").first().click();
     await expect(page.locator("input[placeholder*='qa bot']")).toBeVisible();
   });
 
   test("interview coach workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('interview coach')").click();
+    await page.locator("button:has-text('interview coach')").first().click();
     await expect(page.locator("input[placeholder*='interview coach']")).toBeVisible();
   });
 
   test("data analyzer workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('data analyzer')").click();
+    await page.locator("button:has-text('data analyzer')").first().click();
     await expect(page.locator("input[placeholder*='data analyzer']")).toBeVisible();
   });
 
   test("api designer workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('api designer')").click();
+    await page.locator("button:has-text('api designer')").first().click();
     await expect(page.locator("input[placeholder*='api designer']")).toBeVisible();
   });
 
   test("agentic rag workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('agentic rag')").click();
+    await page.locator("button:has-text('agentic rag')").first().click();
     await expect(page.locator("input[placeholder*='agentic rag']")).toBeVisible();
   });
 
   test("report gen workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('report gen')").click();
+    await page.locator("button:has-text('report gen')").first().click();
     await expect(page.locator("input[placeholder*='report gen']")).toBeVisible();
   });
 
   test("data pipeline workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('data pipeline')").click();
+    await page.locator("button:has-text('data pipeline')").first().click();
     await expect(page.locator("input[placeholder*='data pipeline']")).toBeVisible();
   });
 
   test("ci piper workflow card is clickable and shows input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('ci piper')").click();
+    await page.locator("button:has-text('ci piper')").first().click();
     await expect(page.locator("input[placeholder*='ci piper']")).toBeVisible();
   });
 });

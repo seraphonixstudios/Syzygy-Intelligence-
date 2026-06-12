@@ -14,7 +14,7 @@ test.describe("Memory page", () => {
 
   test("has filter buttons for memory types", async ({ page }) => {
     await page.goto("/memory");
-    await expect(page.getByText("All")).toBeVisible();
+    await expect(page.getByText("All").first()).toBeVisible();
     await expect(page.getByText("Short-term")).toBeVisible();
     await expect(page.getByText("Long-term")).toBeVisible();
     await expect(page.getByText("Team")).toBeVisible();

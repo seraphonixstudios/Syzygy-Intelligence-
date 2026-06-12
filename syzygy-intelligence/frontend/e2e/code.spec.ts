@@ -14,13 +14,13 @@ test.describe("Code page", () => {
 
   test("has language picker", async ({ page }) => {
     await page.goto("/code");
-    const langPicker = page.locator("button:has-text('python')");
+    const langPicker = page.locator("button:has-text('python')").first();
     await expect(langPicker).toBeVisible();
   });
 
   test("language picker shows options on click", async ({ page }) => {
     await page.goto("/code");
-    await page.locator("button:has-text('python')").click();
+    await page.locator("button:has-text('python')").first().click();
     await expect(page.getByText("javascript")).toBeVisible();
     await expect(page.getByText("rust")).toBeVisible();
     await expect(page.getByText("go")).toBeVisible();
