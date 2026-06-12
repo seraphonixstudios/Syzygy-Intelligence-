@@ -28,6 +28,11 @@ from app.config import settings
 from app.db.models import ApiKey, SubscriptionTier, User
 from app.db.session import get_db
 from app.services.email import EmailMessage
+from app.observability import (
+    log_auth_event,
+    log_usage_event,
+    metrics_registry,
+)
 
 router = APIRouter()
 
@@ -115,6 +120,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
     if not user:
+        log_auth_event("password_reset_requested", user_email=req.email, result="user_not_found")
         return {"message": "If that email exists, a reset link has been sent."}
 
     token = create_password_reset_token(str(user.id))
@@ -130,6 +136,9 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         ),
     ))
 
+    log_auth_event("password_reset_requested", user_email=req.email, user_id=str(user.id), result="success")
+    metrics_registry.auth_password_resets.labels(result="sent").inc()
+
     resp: dict[str, Any] = {"message": "If that email exists, a reset link has been sent."}
     if settings.email_provider == "console":
         resp["reset_token"] = token
@@ -140,20 +149,29 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
 async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     payload = decode_token(req.token)
     if payload is None or payload.get("type") != "password_reset":
+        log_auth_event("password_reset", result="invalid_token")
+        metrics_registry.auth_password_resets.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
 
     user_id = payload.get("sub")
     if user_id is None:
+        log_auth_event("password_reset", result="invalid_token")
+        metrics_registry.auth_password_resets.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
 
     result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user:
+        log_auth_event("password_reset", user_id=user_id, result="user_not_found")
+        metrics_registry.auth_password_resets.labels(result="user_not_found").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
     user.hashed_password = hash_password(req.new_password)  # type: ignore
     db.add(user)
     await db.commit()
+
+    log_auth_event("password_reset", user_id=str(user.id), user_email=user.email, result="success")
+    metrics_registry.auth_password_resets.labels(result="success").inc()
     return {"message": "Password has been reset successfully."}
 
 
@@ -162,6 +180,8 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
     if not user or user.verified_at:
+        if user and user.verified_at:
+            log_auth_event("email_verification_requested", user_email=req.email, user_id=str(user.id), result="already_verified")
         return {"message": "If that email exists, a verification link has been sent."}
 
     token = create_verification_token(str(user.id))
@@ -178,6 +198,8 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
         ),
     ))
 
+    log_auth_event("email_verification_requested", user_email=req.email, user_id=str(user.id), result="success")
+
     resp: dict[str, Any] = {"message": "If that email exists, a verification link has been sent."}
     if settings.email_provider == "console":
         resp["verification_token"] = token
@@ -188,20 +210,29 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
 async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     payload = decode_token(req.token)
     if payload is None or payload.get("type") != "email_verification":
+        log_auth_event("email_verified", result="invalid_token")
+        metrics_registry.auth_email_verifications.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
 
     user_id = payload.get("sub")
     if user_id is None:
+        log_auth_event("email_verified", result="invalid_token")
+        metrics_registry.auth_email_verifications.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token")
 
     result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user:
+        log_auth_event("email_verified", user_id=user_id, result="user_not_found")
+        metrics_registry.auth_email_verifications.labels(result="user_not_found").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
     user.verified_at = datetime.now(UTC)  # type: ignore
     db.add(user)
     await db.commit()
+
+    log_auth_event("email_verified", user_id=str(user.id), user_email=user.email, result="success")
+    metrics_registry.auth_email_verifications.labels(result="success").inc()
     return {"message": "Email verified successfully."}
 
 
@@ -245,12 +276,14 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
         user.usage_reset_at = now  # type: ignore
         db.add(user)
         await db.commit()
+        log_usage_event("usage_reset", str(user.id), user.subscription_tier.value, 0)
 
 
 @router.post("/register", response_model=TokenResponse)
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     existing = await db.execute(select(User).where(User.email == req.email))
     if existing.scalar_one_or_none():
+        log_auth_event("register", user_email=req.email, result="already_exists")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
     user = User(
@@ -264,6 +297,8 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> 
     await db.commit()
     await db.refresh(user)
 
+    log_auth_event("register", user_email=req.email, user_id=str(user.id), result="success", subscription_tier="free")
+    metrics_registry.auth_login_attempts.labels(status="success").inc()
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.email),  # type: ignore
         refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore
@@ -275,10 +310,16 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenR
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(req.password, user.hashed_password):  # type: ignore
+        log_auth_event("login", user_email=req.email, result="invalid_credentials")
+        metrics_registry.auth_login_attempts.labels(status="failed").inc()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if not user.is_active:
+        log_auth_event("login", user_email=req.email, user_id=str(user.id), result="account_disabled")
+        metrics_registry.auth_login_attempts.labels(status="failed").inc()
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
 
+    log_auth_event("login", user_email=req.email, user_id=str(user.id), result="success")
+    metrics_registry.auth_login_attempts.labels(status="success").inc()
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.email),  # type: ignore
         refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore
@@ -289,11 +330,21 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenR
 async def refresh(req: RefreshRequest) -> TokenResponse:
     payload = decode_token(req.refresh_token)
     if payload is None or payload.get("type") != "refresh":
+        log_auth_event("token_refresh", result="invalid_token")
+        metrics_registry.auth_token_refreshes.labels(token_type="refresh").inc()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
 
+    sub = payload.get("sub")
+    email = payload.get("email")
+    if not sub or not email:
+        log_auth_event("token_refresh", result="invalid_token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    log_auth_event("token_refresh", user_id=sub, user_email=email, result="success")
+    metrics_registry.auth_token_refreshes.labels(token_type="access").inc()
     return TokenResponse(
-        access_token=create_access_token(payload["sub"], payload["email"]),
-        refresh_token=create_refresh_token(payload["sub"], payload["email"]),
+        access_token=create_access_token(sub, email),
+        refresh_token=create_refresh_token(sub, email),
     )
 
 
@@ -315,6 +366,7 @@ async def update_settings(
     user.settings = req.settings  # type: ignore
     db.add(user)
     await db.commit()
+    log_auth_event("settings_updated", user_id=str(user.id), user_email=user.email, result="success")
     return {"status": "ok"}
 
 
@@ -338,6 +390,9 @@ async def create_api_key(
     db.add(api_key)
     await db.commit()
     await db.refresh(api_key)
+
+    log_auth_event("api_key_created", user_id=str(user.id), user_email=user.email, result="success", api_key_id=str(api_key.id))
+    metrics_registry.auth_api_keys_created.inc()
 
     return ApiKeyCreatedResponse(
         id=str(api_key.id),
@@ -384,11 +439,15 @@ async def revoke_api_key(
     )
     api_key = result.scalar_one_or_none()
     if not api_key:
+        log_auth_event("api_key_revoked", user_id=str(user.id), result="not_found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
     api_key.is_active = False  # type: ignore
     db.add(api_key)
     await db.commit()
+
+    log_auth_event("api_key_revoked", user_id=str(user.id), api_key_id=key_id, result="success")
+    metrics_registry.auth_api_keys_revoked.inc()
     return {"status": "revoked"}
 
 
@@ -407,6 +466,9 @@ async def expire_trial(
         )
     )
     await db.commit()
+
+    log_auth_event("trial_expired", user_id=str(user.id), user_email=user.email, result="success")
+    metrics_registry.trial_expirations.inc()
     return {"trial_ends_at": None, "message_count": settings.free_tier_monthly_messages}
 
 
@@ -416,12 +478,23 @@ async def charge_message(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     await check_usage_limit(user, db)
-    await db.execute(
+    # Atomically increment message count using RETURNING to prevent race conditions
+    # This ensures the operation is atomic: both increment and value fetch happen in a single transaction
+    stmt = (
         update(User)
         .where(User.id == user.id)
         .values(message_count=User.message_count + 1)
+        .returning(User.message_count)
     )
-    await db.commit()
-    result = await db.execute(select(User.message_count).where(User.id == user.id))
+    result = await db.execute(stmt)
     new_count = result.scalar_one()
+    await db.commit()
+
+    log_usage_event(
+        "message_charged",
+        user_id=str(user.id),
+        subscription_tier=user.subscription_tier.value,
+        message_count=new_count,
+    )
+    metrics_registry.message_count_charged.labels(subscription_tier=user.subscription_tier.value).inc()
     return {"message_count": new_count}

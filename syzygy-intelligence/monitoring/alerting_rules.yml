@@ -1,0 +1,130 @@
+# Alert Rules for Syzygy Intelligence
+# Save as: monitoring/alerting_rules.yml
+
+groups:
+  - name: syzygy_alerts
+    interval: 30s
+    rules:
+      # ─── Auth Alerts ───────────────────────────────────────
+      - alert: HighFailedLoginRate
+        expr: rate(syzygy_auth_login_attempts_total{status="failed"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High failed login rate detected"
+          description: "Failed login attempts exceed 0.1/sec over 5 minutes (instance {{ $labels.instance }})"
+
+      - alert: HighPasswordResetRequests
+        expr: rate(syzygy_auth_password_resets_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Unusual password reset activity"
+          description: "Password reset requests exceed 1/sec (instance {{ $labels.instance }})"
+
+      # ─── Usage Alerts ──────────────────────────────────────
+      - alert: UsageLimitExceededSpike
+        expr: rate(syzygy_usage_limit_exceeded_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in usage limit exceeded errors"
+          description: "Users hitting usage limits at rate > 0.5/sec"
+
+      - alert: HighTrialExpirations
+        expr: rate(syzygy_trial_expirations_total[1h]) > 10
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "Multiple trial expirations"
+          description: "{{ $value }} trial expirations in the last hour"
+
+      # ─── API Performance Alerts ────────────────────────────
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(syzygy_http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API endpoint latency"
+          description: "95th percentile latency > 1s for {{ $labels.endpoint }} ({{ $labels.method }})"
+
+      - alert: HighErrorRate
+        expr: rate(syzygy_http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate > 5% for {{ $labels.endpoint }} ({{ $labels.method }})"
+
+      # ─── Database Alerts ───────────────────────────────────
+      - alert: DatabaseConnectionErrors
+        expr: increase(syzygy_db_connection_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection errors detected"
+          description: "{{ $value }} connection errors in the last 5 minutes"
+
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(syzygy_db_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database query performance"
+          description: "95th percentile query time > 0.5s for {{ $labels.operation }}"
+
+      # ─── Consensus Engine Alerts ───────────────────────────
+      - alert: ConsensusRoundFailures
+        expr: rate(syzygy_consensus_rounds_completed_total{result="failed"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consensus rounds failing"
+          description: "Consensus failure rate > 0.1/sec"
+
+      - alert: LongConsensusRounds
+        expr: histogram_quantile(0.95, rate(syzygy_consensus_round_duration_seconds_bucket[5m])) > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consensus rounds taking too long"
+          description: "95th percentile consensus time > 30s"
+
+      # ─── LLM Alerts ────────────────────────────────────────
+      - alert: LLMAPIErrors
+        expr: rate(syzygy_llm_calls_total{status=~"timeout|error"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM API errors for {{ $labels.model }}"
+          description: "LLM error rate > 0.1/sec"
+
+      - alert: HighLLMLatency
+        expr: histogram_quantile(0.95, rate(syzygy_llm_latency_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM response latency for {{ $labels.model }}"
+          description: "95th percentile latency > 10s"
+
+      # ─── Cache Alerts ──────────────────────────────────────
+      - alert: LowCacheHitRate
+        expr: (rate(syzygy_cache_hits_total[5m]) / (rate(syzygy_cache_hits_total[5m]) + rate(syzygy_cache_misses_total[5m]))) < 0.7
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low cache hit rate for {{ $labels.cache_type }}"
+          description: "Cache hit rate < 70%"

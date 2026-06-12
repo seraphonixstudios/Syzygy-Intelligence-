@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from app.api.routes import (
     admin,
@@ -32,6 +33,7 @@ from app.db.session import close_db, init_db
 from app.errors import setup_error_handlers
 from app.logging_setup import logger
 from app.middleware.rate_limiter import setup_rate_limiter
+from app.observability import RequestTracingMiddleware, setup_tracing, metrics_endpoint
 
 
 @asynccontextmanager
@@ -80,6 +82,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception as e:
         logger.warning(f"Database initialization error: {e}")
 
+    # Initialize tracing for production
+    setup_tracing()
+
     yield
     logger.info("Syzygy Intelligence shutting down")
     await close_db()
@@ -91,6 +96,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Add request tracing middleware first (so it wraps everything)
+app.add_middleware(RequestTracingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -137,21 +145,9 @@ async def root() -> dict[str, Any]:
 async def health() -> dict[str, str]:
     return {"status": "healthy", "env": settings.env}
 
-@app.get("/debug/config")
-async def debug_config() -> dict[str, Any]:
-    """Expose non-sensitive config for debugging (only in dev/testing)."""
-    if settings.env == "production":
-        return {"error": "Not available in production"}
-    return {
-        "env": settings.env,
-        "db_type": "SQLite" if settings.db_is_sqlite else "PostgreSQL",
-        "db_host": settings.db_host,
-        "db_port": settings.db_port,
-        "db_name": settings.db_name,
-        "db_user": settings.db_user,
-        "db_is_sqlite": settings.db_is_sqlite,
-        "ollama_base_url": settings.ollama_base_url,
-        "rate_limit_enabled": settings.rate_limit_enabled,
-        "litellm_enabled": settings.litellm_enabled,
-        "cors_origins": settings.cors_origins,
-    }
+
+@app.get("/metrics")
+async def get_metrics() -> Response:
+    """Prometheus metrics endpoint."""
+    body, content_type = await metrics_endpoint()
+    return Response(content=body, media_type=content_type)

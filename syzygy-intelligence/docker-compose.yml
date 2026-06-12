@@ -59,7 +59,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ~/.ollama:/root/.ollama
+      - ollama_data:/root/.ollama
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -128,7 +128,8 @@ services:
       NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes: []
     <<: *shared
 
@@ -149,6 +150,7 @@ services:
 volumes:
   pgdata:
   neo4jdata:
+  ollama_data:
   sandbox_data:
   chroma_data:
 

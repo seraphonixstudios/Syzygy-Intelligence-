@@ -1,0 +1,31 @@
+# Prometheus configuration for Syzygy Intelligence
+# Save as: monitoring/prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'syzygy-monitor'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']
+
+rule_files:
+  - 'alerting_rules.yml'
+
+scrape_configs:
+  - job_name: 'syzygy-api'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['localhost:5432']
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['localhost:6379']

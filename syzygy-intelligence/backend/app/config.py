@@ -21,6 +21,7 @@ class SyzygyConfig(BaseSettings):
     # General
     env: Literal["development", "production", "testing"] = "development"
     log_level: str = "INFO"
+    log_format: str = "json"
     secret_key: str = "change-me-to-a-random-secret"
     cors_origins: str = "http://localhost:3000,http://localhost:8000"
 
@@ -62,11 +63,15 @@ class SyzygyConfig(BaseSettings):
 
         if self.env == "production":
             if self.db_password == "syzygy_secret":
-                print("[config] WARNING: SYZYGY_DB_PASSWORD is set to the default insecure value. "
-                      "Set a strong password via environment variable.")
+                raise ValueError(
+                    "SYZYGY_DB_PASSWORD must be set to a secure value in production. "
+                    "Generate a strong password and set it via environment variable."
+                )
             if self.neo4j_password == "syzygy_secret":
-                print("[config] WARNING: SYZYGY_NEO4J_PASSWORD is set to the default insecure value. "
-                      "Set a strong password via environment variable.")
+                raise ValueError(
+                    "SYZYGY_NEO4J_PASSWORD must be set to a secure value in production. "
+                    "Generate a strong password and set it via environment variable."
+                )
             if "localhost" in self.cors_origins:
                 print("[config] WARNING: SYZYGY_CORS_ORIGINS contains localhost references in production. "
                       "Set to your actual domain(s) (e.g., https://app.example.com).")
@@ -95,6 +100,15 @@ class SyzygyConfig(BaseSettings):
             f"postgresql://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+
+    @property
+    def effective_log_format(self) -> str:
+        """Use JSON format in production unless explicitly overridden."""
+        if self.log_format == "text":
+            return "text"
+        if self.log_format == "json" or self.env == "production":
+            return "json"
+        return "text"
 
     @property
     def db_is_sqlite(self) -> bool:

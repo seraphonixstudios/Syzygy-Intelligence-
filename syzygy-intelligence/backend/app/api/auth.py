@@ -74,6 +74,7 @@ def create_verification_token(user_id: str) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any] | None:
+    """Safely decode JWT token, returning None if invalid or expired."""
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])  # type: ignore
     except jwt.PyJWTError:
@@ -135,8 +136,10 @@ async def check_usage_limit(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Check if user has exceeded their monthly message limit. Always normalize to UTC."""
     now = datetime.now(UTC)
 
+    # Reset usage if new month started — normalize naive datetimes to UTC
     usage_reset = user.usage_reset_at
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
@@ -146,15 +149,18 @@ async def check_usage_limit(
         db.add(user)
         await db.commit()
 
+    # Premium and enterprise users have unlimited messages
     if user.subscription_tier == SubscriptionTier.PREMIUM or user.subscription_tier == SubscriptionTier.ENTERPRISE:
         return user
 
+    # Trial users can use premium limit — normalize naive datetimes to UTC
     trial_ends = user.trial_ends_at
     if trial_ends and trial_ends.tzinfo is None:
         trial_ends = trial_ends.replace(tzinfo=UTC)
     if trial_ends and trial_ends > now:
         return user
 
+    # Free tier users are limited
     if user.message_count >= settings.free_tier_monthly_messages:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

@@ -29,6 +29,32 @@ class StructuredMessage:
         return f"{self.message} | {json.dumps(self.kwargs, default=str)}"
 
 
+class JsonFormatter(logging.Formatter):
+    """Outputs each log record as a single JSON object.
+
+    Compatible with log aggregators (Datadog, Grafana Loki, CloudWatch).
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        obj: dict[str, Any] = {
+            "timestamp": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if hasattr(record, "extra") and isinstance(record.extra, dict):
+            for k, v in record.extra.items():
+                if k not in obj:
+                    try:
+                        json.dumps(v)
+                        obj[k] = v
+                    except (TypeError, ValueError):
+                        obj[k] = str(v)
+        if record.exc_info and record.exc_info[0]:
+            obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(obj, default=str)
+
+
 class SyzygyLogger:
     """Structured logger with file rotation, console output, and context injection.
 
@@ -57,13 +83,16 @@ class SyzygyLogger:
         )
 
     def _setup_handlers(self) -> None:
-        formatter = logging.Formatter(
+        use_json = settings.effective_log_format == "json"
+
+        text_fmt = logging.Formatter(
             "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
             datefmt="%Y-%m-%dT%H:%M:%S%z",
         )
+        json_fmt = JsonFormatter()
 
         console = logging.StreamHandler(sys.stdout)
-        console.setFormatter(formatter)
+        console.setFormatter(json_fmt if use_json else text_fmt)
         console.addFilter(lambda r: r.levelno >= getattr(logging, self.level))
         self._logger.addHandler(console)
 
@@ -73,7 +102,7 @@ class SyzygyLogger:
             backupCount=5,
             encoding="utf-8",
         )
-        file_handler.setFormatter(formatter)
+        file_handler.setFormatter(json_fmt if use_json else text_fmt)
         self._logger.addHandler(file_handler)
 
         error_handler = RotatingFileHandler(
@@ -83,7 +112,7 @@ class SyzygyLogger:
             encoding="utf-8",
         )
         error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
+        error_handler.setFormatter(json_fmt if use_json else text_fmt)
         self._logger.addHandler(error_handler)
 
         audit_handler = RotatingFileHandler(
@@ -94,7 +123,8 @@ class SyzygyLogger:
         )
         audit_handler.setLevel(logging.INFO)
         audit_handler.setFormatter(
-            logging.Formatter(
+            JsonFormatter() if use_json
+            else logging.Formatter(
                 "%(asctime)s | AUDIT | %(message)s",
                 datefmt="%Y-%m-%dT%H:%M:%S%z",
             )
