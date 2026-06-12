@@ -51,7 +51,7 @@ engine = ConsensusEngine()
 
 async def _track_usage(user: User | None, db: AsyncSession) -> None:
     if user is not None:
-        user.message_count += 1  # type: ignore[assignment]
+        user.message_count += 1  # type: ignore
         db.add(user)
         await db.commit()
 

@@ -5,7 +5,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { StateStorage } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 
-const API_URL = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 export interface UserInfo {
   id: string;

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 interface CreateAgentModalProps {
   open: boolean;

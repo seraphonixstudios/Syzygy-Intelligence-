@@ -58,7 +58,7 @@ class CheckpointManager:
         if not checkpoints:
             return None
 
-        return json.loads(checkpoints[-1].read_text())  # type: ignore[no-any-return]
+        return json.loads(checkpoints[-1].read_text())  # type: ignore
 
     async def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
         """List all checkpoints for a session."""

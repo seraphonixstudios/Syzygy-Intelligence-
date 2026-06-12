@@ -142,6 +142,6 @@ class VectorMemory:
         if self._collection:
             try:
                 return self._collection.count()  # type: ignore[no-any-return]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Vector store count failed", error=str(e))
         return 0

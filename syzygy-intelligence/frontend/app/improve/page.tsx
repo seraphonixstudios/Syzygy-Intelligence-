@@ -9,8 +9,7 @@ import { Loader2, Zap, Brain, TrendingUp, CheckCircle2, XCircle, ArrowRight, Ref
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { cn, formatDate } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 interface Evaluation {
   score: number;
@@ -130,7 +129,7 @@ export default function ImprovePage() {
       });
       const data = await res.json();
       setEvaluation(data.evaluation);
-      setProposals(data.proposals.filter((p: any) => !data.auto_applied.includes(p.id)));
+      setProposals(data.proposals.filter((p: { id: string }) => !data.auto_applied.includes(p.id)));
       const sumRes = await fetch(`${API}/api/meta/summary`);
       setSummary(await sumRes.json());
       const histRes = await fetch(`${API}/api/meta/history`);
@@ -457,7 +456,7 @@ export default function ImprovePage() {
             { icon: Lightbulb, title: "Review agent performance", desc: "Evaluate an agent's recent task execution", prompt: "Review the agent's performance on: " },
           ].map((card, i) => (
             <button
-              key={i}
+              key={card.title}
               onClick={() => setInput(card.prompt)}
               className="syzygy-card-glass rounded-xl p-4 text-left transition-all duration-300 hover:border-syzygy-gold/30 hover:scale-[1.02] group"
             >

@@ -14,11 +14,9 @@ env
 .git
 .gitignore
 README.md
-migrations
 tests
 data
 chroma_data
 sandbox_data
 .env
 .env.local
-alembic.ini

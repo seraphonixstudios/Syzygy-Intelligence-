@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from app.consensus.engine import ConsensusEngine
 from app.errors import LLMConnectionError
 from app.llm.ollama_client import OllamaClient
+from app.logging_setup import logger
 
 router = APIRouter(prefix="/v1", tags=["OpenAI Compatible"])
 
@@ -67,7 +68,8 @@ async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
                 "code": "CONSENSUS_TIMEOUT",
                 "message": "Consensus engine timed out",
             })
-        except Exception:
+        except Exception as e:
+            logger.error("Consensus engine failed", error=str(e))
             raise HTTPException(500, detail={
                 "code": "CONSENSUS_ERROR",
                 "message": "Consensus engine failed",
@@ -90,7 +92,8 @@ async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
                 "code": "LLM_CONNECTION_ERROR",
                 "message": str(e),
             })
-        except Exception:
+        except Exception as e:
+            logger.error("LLM request failed", error=str(e))
             raise HTTPException(500, detail={
                 "code": "LLM_ERROR",
                 "message": "LLM request failed",

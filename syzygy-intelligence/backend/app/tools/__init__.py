@@ -36,7 +36,7 @@ class ToolRegistry:
         tool = self.get(tool_id)
         if not tool:
             return {"error": f"Tool '{tool_id}' not found"}
-        return await tool.execute(**params)  # type: ignore[no-any-return]
+        return await tool.execute(**params)  # type: ignore
 
 
 tool_registry = ToolRegistry()

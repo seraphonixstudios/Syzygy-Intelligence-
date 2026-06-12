@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();

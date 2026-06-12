@@ -69,14 +69,14 @@ async def list_users(
 
         items.append(UserListItem(
             id=str(u.id),
-            email=u.email,  # type: ignore[arg-type]
-            display_name=u.display_name,  # type: ignore[arg-type]
-            is_active=u.is_active,  # type: ignore[arg-type]
-            is_superuser=u.is_superuser,  # type: ignore[arg-type]
+            email=u.email,  # type: ignore
+            display_name=u.display_name,  # type: ignore
+            is_active=u.is_active,  # type: ignore
+            is_superuser=u.is_superuser,  # type: ignore
             verified_at=u.verified_at.isoformat() if u.verified_at else None,
             trial_ends_at=u.trial_ends_at.isoformat() if u.trial_ends_at else None,
             subscription_tier=u.subscription_tier.value,
-            message_count=u.message_count,  # type: ignore[arg-type]
+            message_count=u.message_count,  # type: ignore
             monthly_message_limit=limit,
             created_at=u.created_at.isoformat(),
             last_active_at=u.updated_at.isoformat() if u.updated_at else None,
@@ -105,14 +105,14 @@ async def get_user(
 
     return UserListItem(
         id=str(u.id),
-        email=u.email,  # type: ignore[arg-type]
-        display_name=u.display_name,  # type: ignore[arg-type]
-        is_active=u.is_active,  # type: ignore[arg-type]
-        is_superuser=u.is_superuser,  # type: ignore[arg-type]
+        email=u.email,  # type: ignore
+        display_name=u.display_name,  # type: ignore
+        is_active=u.is_active,  # type: ignore
+        is_superuser=u.is_superuser,  # type: ignore
         verified_at=u.verified_at.isoformat() if u.verified_at else None,
         trial_ends_at=u.trial_ends_at.isoformat() if u.trial_ends_at else None,
         subscription_tier=u.subscription_tier.value,
-        message_count=u.message_count,  # type: ignore[arg-type]
+        message_count=u.message_count,  # type: ignore
         monthly_message_limit=limit,
         created_at=u.created_at.isoformat(),
         last_active_at=u.updated_at.isoformat() if u.updated_at else None,
@@ -139,16 +139,16 @@ async def update_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if req.is_active is not None:
-        u.is_active = req.is_active  # type: ignore[assignment]
+        u.is_active = req.is_active  # type: ignore
     if req.is_superuser is not None:
-        u.is_superuser = req.is_superuser  # type: ignore[assignment]
+        u.is_superuser = req.is_superuser  # type: ignore
     if req.subscription_tier is not None:
         try:
-            u.subscription_tier = SubscriptionTier(req.subscription_tier)  # type: ignore[assignment]
+            u.subscription_tier = SubscriptionTier(req.subscription_tier)  # type: ignore
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid tier: {req.subscription_tier}")
     if req.display_name is not None:
-        u.display_name = req.display_name  # type: ignore[assignment]
+        u.display_name = req.display_name  # type: ignore
 
     db.add(u)
     await db.commit()
@@ -166,7 +166,7 @@ async def delete_user(
     if not u:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    u.is_active = False  # type: ignore[assignment]
+    u.is_active = False  # type: ignore
     db.add(u)
     await db.commit()
     return {"status": "ok", "detail": "User disabled"}

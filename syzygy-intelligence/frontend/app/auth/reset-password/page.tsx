@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, CheckCircle2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();

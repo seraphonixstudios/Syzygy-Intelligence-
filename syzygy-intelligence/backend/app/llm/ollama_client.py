@@ -241,7 +241,7 @@ class OllamaClient:
             response.raise_for_status()
             models = response.json().get("models", [])
             logger.info("Ollama models listed", count=len(models))
-            return models  # type: ignore[no-any-return]
+            return models  # type: ignore
         except Exception as e:
             logger.error("Failed to list Ollama models", error=str(e))
             return []
@@ -251,14 +251,14 @@ class OllamaClient:
         import json as json_mod
         raw = response.content.decode("utf-8", errors="replace").strip()
         try:
-            return json_mod.loads(raw)  # type: ignore[no-any-return]
+            return json_mod.loads(raw)  # type: ignore
         except json_mod.JSONDecodeError:
             first_brace = raw.find("{")
             last_brace = raw.rfind("}")
             if first_brace >= 0 and last_brace > first_brace:
                 candidate = raw[first_brace:last_brace + 1]
                 try:
-                    return json_mod.loads(candidate)  # type: ignore[no-any-return]
+                    return json_mod.loads(candidate)  # type: ignore
                 except json_mod.JSONDecodeError:
                     # Last resort: try to find a complete top-level JSON object
                     depth = 0
@@ -271,7 +271,7 @@ class OllamaClient:
                         elif ch == "}":
                             depth -= 1
                             if depth == 0 and start >= 0:
-                                return json_mod.loads(raw[start:i + 1])  # type: ignore[no-any-return]
+                                return json_mod.loads(raw[start:i + 1])  # type: ignore
                     raise
             raise
 

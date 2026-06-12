@@ -56,7 +56,7 @@ async def run_consensus_with_memory(
         enriched = f"{ctx}\n\nRelevant context from past work:\n{context}" if context else ctx
         return await original_agent_propose(agent, task_text, enriched)
 
-    engine._agent_propose = _agent_propose_with_memory  # type: ignore[assignment,unused-ignore]
+    engine._agent_propose = _agent_propose_with_memory  # type: ignore
 
     session = await engine.run_consensus(
         task=task,
@@ -237,8 +237,8 @@ async def _build_consensus_context(task: str, session_id: str) -> str:
         rag_results = await rag_query(task, top_k=2, min_score=0.3)
         for r in rag_results:
             parts.append(f"[Knowledge base] {r.get('content', '')[:300]}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("RAG query failed (non-critical)", error=str(e))
 
     if parts:
         return "### Relevant context:\n" + "\n\n".join(parts)

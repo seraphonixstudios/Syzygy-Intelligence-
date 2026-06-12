@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
 
-const WS_URL = process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8000/ws";
+import { WS_URL } from "@/lib/config";
 
 interface UseWebSocketReturn {
   isConnected: boolean;

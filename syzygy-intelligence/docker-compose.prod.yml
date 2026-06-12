@@ -1,0 +1,25 @@
+# Production overrides for syzygy-intelligence.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  ollama:
+    image: ollama/ollama:0.3.14
+    deploy:
+      resources:
+        reservations:
+          devices: []
+
+  backend:
+    volumes: []
+    command: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-reload
+    environment:
+      SYZYGY_ENV: production
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
+    environment:
+      NODE_ENV: production

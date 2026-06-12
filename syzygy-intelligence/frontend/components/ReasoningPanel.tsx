@@ -47,7 +47,7 @@ export function ReasoningPanel({ steps, loading, title }: ReasoningPanelProps) {
           )}
           {steps.map((step, i) => (
             <div
-              key={i}
+              key={step.agent + i}
               className="group relative rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/50 p-3 transition-all hover:border-syzygy-gold/20"
             >
               <div className="flex items-center gap-2 mb-1.5">

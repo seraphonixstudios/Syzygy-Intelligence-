@@ -6,8 +6,7 @@ import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, Messa
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { logger } from "@/lib/logger";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const MODEL_OPTIONS = [
   { value: "qwen3:8b-gpu", label: "Qwen3 8B (GPU)" },
@@ -67,7 +66,7 @@ export default function SettingsPage() {
         setPolarityPreset(s.polarityPreset || polarityPreset);
         setMaxRounds(s.maxRounds || maxRounds);
         setConsensusThreshold(s.consensusThreshold ?? consensusThreshold);
-      } catch {}
+      } catch { console.debug("Failed to load saved settings"); }
     }
   }, []);
 

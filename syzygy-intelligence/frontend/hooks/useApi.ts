@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
 import { useAuthStore } from "@/store/authStore";
 
-const API_URL = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 let refreshPromise: Promise<void> | null = null;
 
 export function useApi() {

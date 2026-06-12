@@ -26,7 +26,7 @@ import {
   Gauge,
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 interface UserInfo {
   id: string;
@@ -55,7 +55,7 @@ interface SystemStats {
   users_over_limit: number;
 }
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: number | string; sub?: string }) {
+function StatCard({ icon: Icon, label, value, sub }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string; sub?: string }) {
   return (
     <Card className="border-syzygy-surface-border bg-syzygy-card">
       <CardContent className="p-4">
@@ -99,8 +99,8 @@ export default function AdminPage() {
       if (!statsRes.ok) throw new Error("Failed to fetch stats");
       setUsers(await usersRes.json());
       setStats(await statsRes.json());
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
       logger.error("Admin fetch failed", err, "Admin");
     } finally {
       setLoading(false);
@@ -126,8 +126,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to update user");
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: !current } : u)));
       toast.success(current ? "User disabled" : "User enabled");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update user");
     } finally {
       setActionLoading(null);
     }
@@ -144,8 +144,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to update user");
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_superuser: !current } : u)));
       toast.success(current ? "Admin removed" : "Admin granted");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update user");
     } finally {
       setActionLoading(null);
     }
@@ -162,8 +162,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to disable user");
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: false } : u)));
       toast.success("User disabled");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to disable user");
     } finally {
       setActionLoading(null);
     }

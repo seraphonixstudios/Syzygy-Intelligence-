@@ -9,11 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, Plus, Trash2, Zap, Sparkles } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<{
+    id: string;
+    polarity: string;
+    name: string;
+    archetype: string;
+    model: string;
+    shadow_active?: boolean;
+    persona?: { name: string; style: string; tone: string; traits: string[] };
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [composing, setComposing] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -205,11 +212,11 @@ export default function AgentsPage() {
           <TeamSuggestions onCompose={(archs) => handleCompose(archs)} />
 
           <div className="flex items-center justify-center gap-2 text-xs text-syzygy-grey/40">
-            <span>{agents.filter((a: any) => a.polarity === "masculine").length} Masculine</span>
+            <span>{agents.filter((a) => a.polarity === "masculine").length} Masculine</span>
             <span className="text-syzygy-grey/20">•</span>
-            <span>{agents.filter((a: any) => a.polarity === "feminine").length} Feminine</span>
+            <span>{agents.filter((a) => a.polarity === "feminine").length} Feminine</span>
             <span className="text-syzygy-grey/20">•</span>
-            <span>{agents.filter((a: any) => a.polarity === "unified").length} Unified</span>
+            <span>{agents.filter((a) => a.polarity === "unified").length} Unified</span>
           </div>
         </>
       )}

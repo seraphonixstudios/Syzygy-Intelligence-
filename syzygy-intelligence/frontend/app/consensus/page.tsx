@@ -14,9 +14,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
-const WS_URL = process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8000/ws";
+import { API_URL as API, WS_URL } from "@/lib/config";
 
 interface RoundDetail {
   round: number;
@@ -69,7 +67,7 @@ export default function ConsensusPage() {
   const saveToHistory = useCallback((entry: HistoryEntry) => {
     setHistory((prev) => {
       const next = [entry, ...prev].slice(0, 20);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { console.debug("Failed to save history to localStorage"); }
       return next;
     });
   }, []);
@@ -78,7 +76,7 @@ export default function ConsensusPage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setHistory(JSON.parse(stored));
-    } catch { /* ignore */ }
+    } catch { console.debug("Failed to load history from localStorage"); }
 
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -141,7 +139,7 @@ export default function ConsensusPage() {
           setRunning(false);
           setLiveAgents((prev) => prev.map((a) => ({ ...a, done: true })));
         }
-      } catch { /* ignore */ }
+      } catch (e) { logger.error("Failed to parse WebSocket message: %s", e); }
     };
     return () => {
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {

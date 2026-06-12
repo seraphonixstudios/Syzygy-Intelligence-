@@ -19,7 +19,7 @@ interface AgentSelectorProps {
   onChange: (ids: string[]) => void;
 }
 
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 export function AgentSelector({ selected, onChange }: AgentSelectorProps) {
   const [agents, setAgents] = useState<AgentInfo[]>([]);

@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Upload, Search, FileText, Trash2, Loader2, Database, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { API_URL as API } from "@/lib/config";
 import { VoiceButton } from "@/components/VoiceButton";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 interface DocEntry {
   source: string;
@@ -244,14 +243,14 @@ export default function RAGPage() {
             <div className="space-y-1.5 rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-syzygy-grey/50">Batch Results</h3>
               {batchResults.results?.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-syzygy-grey/70">
+                <div key={r.file} className="flex items-center gap-2 text-xs text-syzygy-grey/70">
                   <CheckCircle className="h-3 w-3 shrink-0 text-green-500" />
                   <span className="truncate">{r.file}</span>
                   <span className="ml-auto text-syzygy-gold/60">{r.chunks} chunks</span>
                 </div>
               ))}
               {batchResults.errors?.map((e, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-red-400/70">
+                <div key={e.file} className="flex items-center gap-2 text-xs text-red-400/70">
                   <XCircle className="h-3 w-3 shrink-0" />
                   <span className="truncate">{e.file}</span>
                   <span className="ml-auto">{e.error}</span>
@@ -339,7 +338,7 @@ export default function RAGPage() {
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {results.map((r, i) => (
                   <div
-                    key={i}
+                    key={r.metadata?.source ?? r.content.slice(0, 40)}
                     className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-4 transition-colors hover:border-syzygy-gold/20"
                   >
                     <div className="mb-2 flex items-center gap-2">
@@ -388,7 +387,7 @@ export default function RAGPage() {
               <div className="space-y-1">
                 {documents.map((doc, i) => (
                   <div
-                    key={i}
+                    key={doc.source}
                     className="flex items-center gap-3 rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/20 px-3 py-2 transition-colors hover:bg-syzygy-shadow/40"
                   >
                     <FileText className="h-4 w-4 shrink-0 text-syzygy-grey/40" />

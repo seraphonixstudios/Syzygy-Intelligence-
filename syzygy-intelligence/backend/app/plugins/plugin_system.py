@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.logging_setup import logger
+
 
 @dataclass
 class PluginManifest:
@@ -60,7 +62,8 @@ class PluginSystem:
                     import json
                     data = json.loads(manifest_file.read_text())
                     manifests.append(PluginManifest(**data))
-                except Exception:
+                except Exception as e:
+                    logger.warning("Failed to load plugin manifest", manifest=str(manifest_file), error=str(e))
                     continue
 
         return manifests
@@ -91,7 +94,8 @@ class PluginSystem:
                                     await plugin.on_load()
                                     self._plugins[name] = plugin
                                     return plugin
-                    except Exception:
+                    except Exception as e:
+                        logger.warning("Failed to load plugin", plugin=name, error=str(e))
                         continue
 
         return None

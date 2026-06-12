@@ -62,7 +62,8 @@ class ConnectionManager:
         for cid, ws in self.active_connections.items():
             try:
                 await ws.send_json(message)
-            except Exception:
+            except Exception as e:
+                logger.warning("WebSocket send failed", client_id=cid, error=str(e))
                 disconnected.append(cid)
         for cid in disconnected:
             self.disconnect(cid)

@@ -8,8 +8,7 @@ import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpl
 import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   code: "Scaffold, edit, test, and debug with polarity-aware pair programming",
@@ -58,7 +57,7 @@ export default function WorkflowsPage() {
       .then((r) => r.json())
       .then((data) => {
         const list = data.workflows || [];
-        setWorkflows(list.map((w: any) => (typeof w === "string" ? w : w.name)));
+        setWorkflows(list.map((w: string | { name: string }) => (typeof w === "string" ? w : w.name)));
       })
       .catch(() => {
         logger.warn("Could not fetch workflows from backend, using defaults", undefined, "Workflows");

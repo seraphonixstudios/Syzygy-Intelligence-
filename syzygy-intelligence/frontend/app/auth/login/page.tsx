@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 interface Ember {
   id: number;

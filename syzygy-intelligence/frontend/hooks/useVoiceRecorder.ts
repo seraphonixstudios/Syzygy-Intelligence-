@@ -49,7 +49,7 @@ export function useVoiceRecorder(): VoiceRecorderReturn {
     recognition.lang = "en-US";
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { resultIndex: number; results: SpeechRecognitionResultList }) => {
       let interim = "";
       let final = "";
 
@@ -73,7 +73,7 @@ export function useVoiceRecorder(): VoiceRecorderReturn {
       }));
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: { error: string }) => {
       if (event.error === "no-speech") return;
       setState((s) => ({
         ...s,
@@ -113,7 +113,7 @@ export function useVoiceRecorder(): VoiceRecorderReturn {
       try {
         recognition.stop();
         setTimeout(() => recognition.start(), 100);
-      } catch {}
+      } catch (e) { console.debug("Voice recognition retry failed: %s", e); }
     }
   }, []);
 

@@ -23,8 +23,8 @@ router = APIRouter()
 
 class CreateCheckoutRequest(BaseModel):
     price_id: str
-    success_url: str = "http://localhost:3000/settings?checkout=success"
-    cancel_url: str = "http://localhost:3000/settings?checkout=cancel"
+    success_url: str = ""
+    cancel_url: str = ""
 
 
 class CheckoutResponse(BaseModel):
@@ -49,10 +49,10 @@ async def create_checkout(
 
     result = await create_checkout_session(
         user_id=str(user.id),
-        user_email=user.email,  # type: ignore[arg-type]
+        user_email=user.email,  # type: ignore
         price_id=req.price_id,
-        success_url=req.success_url,
-        cancel_url=req.cancel_url,
+        success_url=req.success_url or f"{settings.frontend_url}/settings?checkout=success",
+        cancel_url=req.cancel_url or f"{settings.frontend_url}/settings?checkout=cancel",
         trial_days=0,
     )
     return CheckoutResponse(url=result["url"], session_id=result.get("session_id"))
@@ -68,8 +68,8 @@ async def customer_portal(
             detail="No active subscription found",
         )
     url = await create_customer_portal_url(
-        customer_id=user.stripe_customer_id,  # type: ignore[arg-type]
-        return_url="http://localhost:3000/settings",
+        customer_id=user.stripe_customer_id,  # type: ignore
+        return_url=f"{settings.frontend_url}/settings",
     )
     return PortalResponse(url=url)
 

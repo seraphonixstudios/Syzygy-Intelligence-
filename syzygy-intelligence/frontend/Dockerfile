@@ -4,6 +4,10 @@ FROM node:20.13-alpine AS base
 # Set npm to prefer offline mode & reduce install logs
 ENV NPM_CONFIG_LOGLEVEL=error
 
+# Build-time args for Next.js public env vars (must be set during build)
+ARG NEXT_PUBLIC_SYZYGY_API_URL
+ARG NEXT_PUBLIC_SYZYGY_WS_URL
+
 # ─── Dependencies Stage ───────────────────────────────────────
 FROM base AS deps
 
@@ -18,6 +22,11 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # ─── Builder Stage ────────────────────────────────────────────
 FROM base AS builder
+
+ARG NEXT_PUBLIC_SYZYGY_API_URL
+ARG NEXT_PUBLIC_SYZYGY_WS_URL
+ENV NEXT_PUBLIC_SYZYGY_API_URL=${NEXT_PUBLIC_SYZYGY_API_URL} \
+    NEXT_PUBLIC_SYZYGY_WS_URL=${NEXT_PUBLIC_SYZYGY_WS_URL}
 
 WORKDIR /app
 

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FlaskConical, Activity, Users as UsersIcon, Loader2, Code2, Search, FileText, Zap, ArrowRight, TrendingUp } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const defaultAgents = [
   { id: "1", name: "Sage", archetype: "sage", polarity: "masculine", model: "qwen3:8b-gpu", shadow: false },

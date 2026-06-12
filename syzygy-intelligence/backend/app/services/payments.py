@@ -133,13 +133,13 @@ async def _handle_checkout_completed(session: dict[str, Any]) -> None:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user:
-            user.stripe_customer_id = customer_id  # type: ignore[assignment]
-            user.stripe_subscription_id = subscription_id  # type: ignore[assignment]
+            user.stripe_customer_id = customer_id  # type: ignore
+            user.stripe_subscription_id = subscription_id  # type: ignore
             session.get("mode", "")
             if session.get("amount_total", 0) >= 9900:
-                user.subscription_tier = "enterprise"  # type: ignore[assignment]
+                user.subscription_tier = "enterprise"  # type: ignore
             elif session.get("amount_total", 0) >= 2900:
-                user.subscription_tier = "premium"  # type: ignore[assignment]
+                user.subscription_tier = "premium"  # type: ignore
             db.add(user)
             await db.commit()
             logger.info(f"User {user_id} upgraded via checkout", tier=user.subscription_tier, source="payments")
@@ -163,13 +163,13 @@ async def _handle_subscription_updated(sub: dict[str, Any]) -> None:
         user = result.scalar_one_or_none()
         if user:
             if status in ("canceled", "incomplete_expired", "past_due"):
-                user.subscription_tier = "free"  # type: ignore[assignment]
+                user.subscription_tier = "free"  # type: ignore
             elif items:
                 price_id = items[0].get("price", {}).get("id", "")
                 if price_id == settings.stripe_enterprise_price_id:
-                    user.subscription_tier = "enterprise"  # type: ignore[assignment]
+                    user.subscription_tier = "enterprise"  # type: ignore
                 elif price_id == settings.stripe_premium_price_id:
-                    user.subscription_tier = "premium"  # type: ignore[assignment]
+                    user.subscription_tier = "premium"  # type: ignore
             db.add(user)
             await db.commit()
             logger.info("User subscription updated", tier=user.subscription_tier, status=status, source="payments")
@@ -189,8 +189,8 @@ async def _handle_subscription_deleted(sub: dict[str, Any]) -> None:
         result = await db.execute(select(User).where(User.stripe_customer_id == customer_id))
         user = result.scalar_one_or_none()
         if user:
-            user.subscription_tier = "free"  # type: ignore[assignment]
-            user.stripe_subscription_id = None  # type: ignore[assignment]
+            user.subscription_tier = "free"  # type: ignore
+            user.stripe_subscription_id = None  # type: ignore
             db.add(user)
             await db.commit()
             logger.info("User subscription cancelled", user_id=user.id, source="payments")

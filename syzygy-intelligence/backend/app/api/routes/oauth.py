@@ -163,14 +163,13 @@ async def oauth_callback(provider: str, code: str, request: Request) -> Redirect
             await db.commit()
             await db.refresh(user)
         elif not user.verified_at:
-            user.verified_at = datetime.now(UTC)  # type: ignore[assignment]
+            user.verified_at = datetime.now(UTC)  # type: ignore
             db.add(user)
             await db.commit()
 
-        our_access = create_access_token(str(user.id), user.email)  # type: ignore[arg-type]
-        our_refresh = create_refresh_token(str(user.id), user.email)  # type: ignore[arg-type]
+        our_access = create_access_token(str(user.id), user.email)  # type: ignore
+        our_refresh = create_refresh_token(str(user.id), user.email)  # type: ignore
 
     # Redirect back to frontend with tokens in hash fragment
-    frontend_url = (settings.cors_origins.split(",")[0].strip() if settings.cors_origins else "http://localhost:3000")
-    redirect_to = f"{frontend_url}/auth/oauth-callback#access_token={our_access}&refresh_token={our_refresh}"
+    redirect_to = f"{settings.frontend_url}/auth/oauth-callback#access_token={our_access}&refresh_token={our_refresh}"
     return RedirectResponse(url=redirect_to)

@@ -135,7 +135,8 @@ class TaskQueue:
                 f"Provide a complete response."
             )
             return result
-        except Exception:
+        except Exception as e:
+            logger.error("Task execution failed", error=str(e))
             await asyncio.sleep(0.5)
             return f"Executed: {item.task[:100]}"
 

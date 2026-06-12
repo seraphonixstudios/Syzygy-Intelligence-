@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.logging_setup import logger
 from app.memory.graph_memory import GraphMemory
 from app.memory.long_term import LongTermMemory
 from app.memory.short_term import ShortTermMemory
@@ -143,8 +144,8 @@ class MemorySystem:
                         "source": "rag",
                         "metadata": r.get("metadata", {}),
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Memory RAG query failed", error=str(e))
 
         # Sort by relevance/importance and deduplicate
         seen_ids = set()

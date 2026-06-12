@@ -43,7 +43,7 @@ async def execute_workflow(
         context=data.get("context", {}),
     )
 
-    user.message_count += 1  # type: ignore[assignment]
+    user.message_count += 1  # type: ignore
     db.add(user)
     await db.commit()
 

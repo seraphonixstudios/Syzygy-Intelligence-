@@ -118,11 +118,10 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         return {"message": "If that email exists, a reset link has been sent."}
 
     token = create_password_reset_token(str(user.id))
-    frontend_url = settings.cors_origins.split(",")[0].strip() or "http://localhost:3000"
-    reset_link = f"{frontend_url}/auth/reset-password?token={token}"
+    reset_link = f"{settings.frontend_url}/auth/reset-password?token={token}"
 
     await send_email(EmailMessage(
-        to=user.email,  # type: ignore[arg-type]
+        to=user.email,  # type: ignore
         subject="Reset your Syzygy password",
         text_body=f"Reset your password here: {reset_link}\n\nThis link expires in 15 minutes.",
         html_body=(
@@ -152,7 +151,7 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    user.hashed_password = hash_password(req.new_password)  # type: ignore[assignment]
+    user.hashed_password = hash_password(req.new_password)  # type: ignore
     db.add(user)
     await db.commit()
     return {"message": "Password has been reset successfully."}
@@ -170,7 +169,7 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     verify_link = f"{frontend_url}/auth/verify-email?token={token}"
 
     await send_email(EmailMessage(
-        to=user.email,  # type: ignore[arg-type]
+        to=user.email,  # type: ignore
         subject="Verify your Syzygy email",
         text_body=f"Verify your email here: {verify_link}\n\nThis link expires in 24 hours.",
         html_body=(
@@ -200,7 +199,7 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    user.verified_at = datetime.now(UTC)  # type: ignore[assignment]
+    user.verified_at = datetime.now(UTC)  # type: ignore
     db.add(user)
     await db.commit()
     return {"message": "Email verified successfully."}
@@ -221,16 +220,16 @@ def _user_to_response(user: User) -> UserResponse:
 
     return UserResponse(
         id=str(user.id),
-        email=user.email,  # type: ignore[arg-type]
-        display_name=user.display_name,  # type: ignore[arg-type]
-        is_active=user.is_active,  # type: ignore[arg-type]
-        is_superuser=user.is_superuser,  # type: ignore[arg-type]
+        email=user.email,  # type: ignore
+        display_name=user.display_name,  # type: ignore
+        is_active=user.is_active,  # type: ignore
+        is_superuser=user.is_superuser,  # type: ignore
         verified_at=user.verified_at.isoformat() if user.verified_at else None,
         trial_ends_at=trial_ends.isoformat() if trial_ends else None,
         subscription_tier=user.subscription_tier.value,
-        message_count=user.message_count,  # type: ignore[arg-type]
+        message_count=user.message_count,  # type: ignore
         monthly_message_limit=limit,
-        settings=user.settings or {},  # type: ignore[arg-type]
+        settings=user.settings or {},  # type: ignore
         created_at=user.created_at.isoformat() if user.created_at else "",
     )
 
@@ -242,8 +241,8 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
 
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
-        user.message_count = 0  # type: ignore[assignment]
-        user.usage_reset_at = now  # type: ignore[assignment]
+        user.message_count = 0  # type: ignore
+        user.usage_reset_at = now  # type: ignore
         db.add(user)
         await db.commit()
 
@@ -266,8 +265,8 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> 
     await db.refresh(user)
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.email),  # type: ignore[arg-type]
-        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore[arg-type]
+        access_token=create_access_token(str(user.id), user.email),  # type: ignore
+        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore
     )
 
 
@@ -275,14 +274,14 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> 
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(req.password, user.hashed_password):  # type: ignore[arg-type]
+    if not user or not verify_password(req.password, user.hashed_password):  # type: ignore
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.email),  # type: ignore[arg-type]
-        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore[arg-type]
+        access_token=create_access_token(str(user.id), user.email),  # type: ignore
+        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore
     )
 
 
@@ -313,7 +312,7 @@ async def update_settings(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    user.settings = req.settings  # type: ignore[assignment]
+    user.settings = req.settings  # type: ignore
     db.add(user)
     await db.commit()
     return {"status": "ok"}
@@ -342,11 +341,11 @@ async def create_api_key(
 
     return ApiKeyCreatedResponse(
         id=str(api_key.id),
-        name=api_key.name,  # type: ignore[arg-type]
-        key_prefix=api_key.key_prefix,  # type: ignore[arg-type]
+        name=api_key.name,  # type: ignore
+        key_prefix=api_key.key_prefix,  # type: ignore
         raw_key=raw_key,
         last_used_at=api_key.last_used_at.isoformat() if api_key.last_used_at else None,
-        is_active=api_key.is_active,  # type: ignore[arg-type]
+        is_active=api_key.is_active,  # type: ignore
         created_at=api_key.created_at.isoformat(),
     )
 
@@ -364,10 +363,10 @@ async def list_api_keys(
     return ApiKeyListResponse(keys=[
         ApiKeyResponse(
             id=str(k.id),
-            name=k.name,  # type: ignore[arg-type]
-            key_prefix=k.key_prefix,  # type: ignore[arg-type]
+            name=k.name,  # type: ignore
+            key_prefix=k.key_prefix,  # type: ignore
             last_used_at=k.last_used_at.isoformat() if k.last_used_at else None,
-            is_active=k.is_active,  # type: ignore[arg-type]
+            is_active=k.is_active,  # type: ignore
             created_at=k.created_at.isoformat(),
         )
         for k in keys
@@ -387,7 +386,7 @@ async def revoke_api_key(
     if not api_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
-    api_key.is_active = False  # type: ignore[assignment]
+    api_key.is_active = False  # type: ignore
     db.add(api_key)
     await db.commit()
     return {"status": "revoked"}

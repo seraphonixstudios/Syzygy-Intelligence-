@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { API_URL } from "@/lib/config";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import {
@@ -369,9 +370,9 @@ function PricingCard({ tier, index, isAnnual, onTierClick }: { tier: typeof TIER
 
       {/* Features */}
       <ul className="relative z-10 space-y-2.5">
-        {tier.features.map((f, i) => (
+              {tier.features.map((f, i) => (
           <motion.li
-            key={i}
+            key={f.text}
             initial={{ opacity: 0, x: -8 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -405,14 +406,14 @@ function PricingCard({ tier, index, isAnnual, onTierClick }: { tier: typeof TIER
 function ComparisonTable() {
   const [openCategory, setOpenCategory] = useState<string | null>(FEATURES_COMPARE[0].category);
 
-  const cellClass = (val: any) =>
+  const cellClass = (val: boolean | string) =>
     val === true
       ? "text-syzygy-gold"
       : val === false
       ? "text-syzygy-grey/30"
       : "text-syzygy-grey-light";
 
-  const cellContent = (val: any) =>
+  const cellContent = (val: boolean | string) =>
     val === true ? <Check className="h-4 w-4" /> : val === false ? <div className="h-1.5 w-1.5 rounded-full bg-syzygy-grey/20" /> : val;
 
   return (
@@ -444,7 +445,7 @@ function ComparisonTable() {
                 <div className="divide-y divide-syzygy-surface-border/50">
                   {cat.items.map((item, i) => (
                     <div
-                      key={i}
+                      key={item.name}
                       className="grid grid-cols-[1fr_60px_60px_60px_60px] gap-2 px-4 py-2.5 text-xs hover:bg-syzygy-shadow/30"
                     >
                       <span className="text-syzygy-grey-light">{item.name}</span>
@@ -471,7 +472,7 @@ function FAQ({ faqs }: { faqs: typeof FAQS }) {
     <div className="space-y-2">
       {faqs.map((faq, i) => (
         <motion.div
-          key={i}
+          key={faq.q}
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -547,7 +548,7 @@ export default function CloudPage() {
         return;
       }
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000"}/api/payments/create-checkout-session`,
+        `${API_URL}/api/payments/create-checkout-session`,
         {
           method: "POST",
           headers: { ...headers, "Content-Type": "application/json" },

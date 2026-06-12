@@ -75,7 +75,7 @@ def create_verification_token(user_id: str) -> str:
 
 def decode_token(token: str) -> dict[str, Any] | None:
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])  # type: ignore[no-any-return]
+        return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])  # type: ignore
     except jwt.PyJWTError:
         return None
 
@@ -95,8 +95,8 @@ async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
         .where(ApiKey.is_active)
     )
     for api_key in result.scalars().all():
-        if verify_password(token, api_key.hashed_key):  # type: ignore[arg-type]
-            api_key.last_used_at = datetime.now(UTC)  # type: ignore[assignment]
+        if verify_password(token, api_key.hashed_key):  # type: ignore
+            api_key.last_used_at = datetime.now(UTC)  # type: ignore
             db.add(api_key)
             await db.commit()
             return api_key.user  # type: ignore[no-any-return]
@@ -141,8 +141,8 @@ async def check_usage_limit(
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
-        user.message_count = 0  # type: ignore[assignment]
-        user.usage_reset_at = now  # type: ignore[assignment]
+        user.message_count = 0  # type: ignore
+        user.usage_reset_at = now  # type: ignore
         db.add(user)
         await db.commit()
 

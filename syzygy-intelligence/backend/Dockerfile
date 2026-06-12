@@ -62,4 +62,4 @@ LABEL org.opencontainers.image.description="Syzygy Intelligence Backend API" \
       org.opencontainers.image.vendor="syzygy" \
       org.opencontainers.image.version="1.0.0"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000

@@ -60,6 +60,24 @@ class SyzygyConfig(BaseSettings):
                 "Generate one with: openssl rand -hex 32"
             )
 
+        if self.env == "production":
+            if self.db_password == "syzygy_secret":
+                print("[config] WARNING: SYZYGY_DB_PASSWORD is set to the default insecure value. "
+                      "Set a strong password via environment variable.")
+            if self.neo4j_password == "syzygy_secret":
+                print("[config] WARNING: SYZYGY_NEO4J_PASSWORD is set to the default insecure value. "
+                      "Set a strong password via environment variable.")
+            if "localhost" in self.cors_origins:
+                print("[config] WARNING: SYZYGY_CORS_ORIGINS contains localhost references in production. "
+                      "Set to your actual domain(s) (e.g., https://app.example.com).")
+            if "localhost" in self.oauth_redirect_url:
+                print("[config] WARNING: SYZYGY_OAUTH_REDIRECT_URL contains localhost in production. "
+                      "OAuth providers will redirect users there instead of your real domain.")
+            if self.email_provider == "console":
+                print("[config] WARNING: email_provider is set to 'console' in production. "
+                      "Email verification and password reset tokens will be returned in API responses. "
+                      "Set sendgrid_api_key or ses_* credentials.")
+
     @property
     def database_url(self) -> str:
         if self.env == "development":
@@ -90,6 +108,14 @@ class SyzygyConfig(BaseSettings):
             from app.logging_setup import logger
             logger.warning("CORS origins list is empty in production. No cross-origin requests will be allowed.")
         return origins
+
+    @property
+    def frontend_url(self) -> str:
+        """Derive the primary frontend URL from cors_origins."""
+        origins = self.allowed_origins
+        if origins:
+            return origins[0]
+        return "http://localhost:3000"
 
     # Auth
     jwt_algorithm: str = "HS256"

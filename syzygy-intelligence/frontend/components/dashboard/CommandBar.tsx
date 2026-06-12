@@ -101,7 +101,7 @@ export function CommandBar({ onSubmit, placeholder, compact }: CommandBarProps) 
             </p>
             {suggestions.map((s, i) => (
               <button
-                key={i}
+                key={s.label}
                 type="button"
                 onClick={() => {
                   setInput(s.label);

@@ -9,8 +9,7 @@ import { FileText, Send, Loader2, Eye, Edit3, Palette, Layout, Type, Clock, Spar
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const TONES = ["Formal", "Casual", "Persuasive", "Poetic"] as const;
 const FORMATS = ["Article", "Blog Post", "Report", "Email", "Social Post"] as const;

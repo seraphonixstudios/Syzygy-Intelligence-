@@ -12,7 +12,7 @@ from app.logging_setup import logger
 try:
     from neo4j import Driver as Neo4jDriver
 except ImportError:
-    Neo4jDriver = Any  # type: ignore[assignment,misc]
+    Neo4jDriver = Any  # type: ignore
 
 
 class GraphMemory:
@@ -251,6 +251,6 @@ class GraphMemory:
 
     async def close(self) -> None:
         if self._driver:
-            await self._driver.close()  # type: ignore[misc,func-returns-value]
+            await self._driver.close()  # type: ignore
             self._driver = None
             self._initialized = False

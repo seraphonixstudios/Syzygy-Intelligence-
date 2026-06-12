@@ -5,7 +5,7 @@ import { Image, Link, X, FileText, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 export interface UploadedFile {
   url: string;
@@ -133,7 +133,7 @@ export function FileLinkUpload({ files, links, onChange, disabled }: FileLinkUpl
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {files.map((f, i) => (
-            <div key={i} className="group relative flex items-center gap-1.5 rounded-md border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-1">
+            <div key={f.filename} className="group relative flex items-center gap-1.5 rounded-md border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-1">
               <img src={f.url} alt={f.filename} className="h-6 w-6 rounded object-cover" />
               <span className="max-w-[100px] truncate text-[10px] text-syzygy-grey/60">{f.filename}</span>
               <button type="button" onClick={() => removeFile(i)} className="ml-0.5 text-syzygy-grey/40 hover:text-red-400">
@@ -171,7 +171,7 @@ export function FileLinkUpload({ files, links, onChange, disabled }: FileLinkUpl
       {links.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {links.map((l, i) => (
-            <div key={i} className="group flex items-center gap-1.5 rounded-md border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-1">
+            <div key={l.url} className="group flex items-center gap-1.5 rounded-md border border-syzygy-surface-border bg-syzygy-shadow/50 px-2 py-1">
               {l.favicon ? (
                 <img src={l.favicon} alt="" className="h-3.5 w-3.5" />
               ) : (

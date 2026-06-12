@@ -9,8 +9,7 @@ import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight, Sto
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useSSE } from "@/hooks/useSSE";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const SUGGESTIONS = [
   "What is Syzygy?",
@@ -248,7 +247,7 @@ export default function ChatPage() {
 
       <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-4 min-h-0">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+          <div key={`${msg.role}-${msg.content.slice(0, 30)}`} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
             {msg.role === "assistant" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-syzygy-gold/20">
                 <Bot className="h-4 w-4 text-syzygy-gold" />

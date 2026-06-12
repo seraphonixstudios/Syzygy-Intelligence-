@@ -15,6 +15,13 @@ syzygy-intelligence/
 │   │   ├── llm/          # Ollama / LiteLLM abstraction
 │   │   ├── workflows/    # Workflow definitions (coding, research, etc.)
 │   │   └── main.py       # App entry point
+│   ├── migrations/       # Alembic migrations
+│   │   ├── versions/
+│   │   │   ├── 0001_add_user_table.py
+│   │   │   └── 0002_add_remaining_tables.py
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── alembic.ini
 │   ├── tests/            # pytest tests (asyncio_mode = auto)
 │   │   ├── conftest.py
 │   │   ├── mock_ollama_server.py
@@ -31,10 +38,12 @@ syzygy-intelligence/
 │   ├── e2e/              # Playwright E2E tests (25 specs)
 │   └── .env              # NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8001
 ├── docker-compose.yml
-├── docker-compose.ollama-cpu.yml  # CPU-only override (no GPU reservation)
+├── docker-compose.prod.yml         # Production overrides (alembic, no bind-mount, pinned tags)
+├── docker-compose.ollama-cpu.yml   # CPU-only override (no GPU reservation)
 ├── scripts/
 │   └── setup-ollama.ps1           # Ollama install/pull/tag automation
-└── AGENTS.md
+├── AGENTS.md
+└── README.md
 ```
 
 ## Test Counts
@@ -62,6 +71,9 @@ CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (3 paralle
 | `.\scripts\setup-ollama.ps1 -Docker` | Pull models inside Docker Ollama container |
 | `docker compose -f docker-compose.yml -f docker-compose.ollama-cpu.yml up -d` | Start stack with CPU-only Ollama |
 | `npm run test:unit` | Run vitest component tests (frontend) |
+| `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | Production deployment |
+| `docker compose -f docker-compose.yml -f docker-compose.prod.yml build --build-arg NEXT_PUBLIC_SYZYGY_API_URL=https://api.example.com` | Build frontend with production API URL |
+| `alembic upgrade head` | Run database migrations (inside backend dir) |
 | `make clean` | Remove caches and temp files |
 
 ## Conventions
@@ -87,3 +99,6 @@ CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (3 paralle
 - Consensus engine has 4 files: `engine.py` (orchestration), `phases.py` (prompts), `scoring.py` (LLM eval), `synthesis.py` (Rebis output)
 - `PolarityMeter` has zero-total fallback (even 33.33/33.33/33.34 split)
 - Page-level component tests in jsdom are fragile (useAuthStore/useRouter/fetch dependencies) — prefer E2E for page behavior
+- **Alembic migrations** target PostgreSQL only (uses `CREATE EXTENSION vector`, `postgresql.UUID`, `postgresql.VECTOR`). Migration runs via `CMD alembic upgrade head && uvicorn ...` in Dockerfile. Docker Compose dev mode overrides the CMD without alembic (`create_all()` handles SQLite). Production compose (`docker-compose.prod.yml`) includes alembic in the command.
+- **Frontend `NEXT_PUBLIC_*`** env vars are inlined at build time. The frontend Dockerfile accepts `ARG NEXT_PUBLIC_SYZYGY_API_URL` and `ARG NEXT_PUBLIC_SYZYGY_WS_URL`. Pass them with `docker compose build --build-arg` or set in `docker-compose.prod.yml`'s `build.args`.
+- **Migrations directory** and `alembic.ini` were previously excluded from Docker image via `.dockerignore` — now included for production startup automation.

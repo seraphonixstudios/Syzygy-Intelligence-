@@ -9,6 +9,7 @@ import { Search, Globe, Loader2, BookOpen, Layers, LayoutGrid, Lightbulb, Copy, 
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { cn, formatDate } from "@/lib/utils";
+import { API_URL as API } from "@/lib/config";
 
 type Depth = "quick" | "deep" | "comprehensive";
 
@@ -18,8 +19,6 @@ interface Source {
   snippet: string;
   confidence?: number;
 }
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
 const DEPTH_OPTIONS: { value: Depth; label: string; icon: typeof Layers; desc: string }[] = [
   { value: "quick", label: "Quick", icon: Layers, desc: "Single source sweep" },
@@ -227,7 +226,7 @@ export default function ResearchPage() {
             <div className="mb-4 flex flex-wrap gap-1.5">
               {sources.slice(0, 8).map((src, i) => (
                 <span
-                  key={i}
+                  key={src.url}
                   className="inline-flex items-center gap-1 rounded-full border border-syzygy-surface-border bg-syzygy-shadow/40 px-2 py-0.5 text-[10px] text-syzygy-grey/60"
                 >
                   <span
@@ -263,7 +262,7 @@ export default function ResearchPage() {
           <h2 className="text-sm font-medium text-syzygy-grey/60">Recent Queries</h2>
           {history.map((h, i) => (
             <button
-              key={i}
+              key={h}
               onClick={() => { setQuery(h); }}
               className="block w-full text-left rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/30 px-3 py-2 text-xs text-syzygy-grey/60 hover:border-syzygy-gold/30 transition-colors"
             >

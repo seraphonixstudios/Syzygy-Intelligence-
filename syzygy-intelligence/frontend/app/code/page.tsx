@@ -12,8 +12,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const languageOptions = ["python", "javascript", "typescript", "go", "rust", "bash"];
 
@@ -221,7 +220,7 @@ export default function CodePage() {
                 const Icon = getFileIcon(f.language);
                 return (
                   <button
-                    key={i}
+                    key={f.path}
                     onClick={() => setActiveFileIndex(i)}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs transition-all whitespace-nowrap",
@@ -274,7 +273,7 @@ export default function CodePage() {
                   const isWarn = r.status === "warning";
                   return (
                     <div
-                      key={i}
+                      key={r.category}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-medium",
                         isOk && "bg-green-500/10 text-green-400 border border-green-500/20",

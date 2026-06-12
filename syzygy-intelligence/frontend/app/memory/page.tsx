@@ -6,8 +6,7 @@ import { Library, Search, Clock, Loader2, Filter, Trash2, ChevronDown, ChevronRi
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { cn, formatDate } from "@/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+import { API_URL as API } from "@/lib/config";
 
 const MEMORY_TYPES = ["all", "short_term", "long_term", "team", "vector", "graph"] as const;
 const POLARITIES = ["all", "masculine", "feminine", "unified"] as const;

@@ -35,7 +35,7 @@ try:
 except ImportError:
     from sqlalchemy import LargeBinary
 
-    class VECTOR(TypeDecorator[Any]):  # type: ignore
+    class VECTOR(TypeDecorator[Any]):  # type: ignore[no-redef]
         """Fallback for when pgvector is not installed."""
         impl = LargeBinary
         def load_dialect_impl(self, dialect: Any) -> Any:

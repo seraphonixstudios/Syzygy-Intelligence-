@@ -172,6 +172,50 @@ npm install
 npm run dev
 ```
 
+### Production Deployment
+
+```bash
+# Set production environment variables
+cp .env.example .env
+# Edit .env with production values (strong secrets, real domains)
+
+# Build and launch with production overrides
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+The `docker-compose.prod.yml` override:
+- Strips the bind-mount volume (uses image-baked code instead of host live source)
+- Disables `--reload` (no hot-reload in production)
+- Runs `alembic upgrade head` on startup for database migrations
+- Pins Ollama image to `0.3.14` (reproducible builds)
+- Sets `SYZYGY_ENV=production` (enables PostgreSQL, disables SQLite)
+- Removes GPU device reservation from Ollama (configure GPU manually)
+- Accepts build-time `NEXT_PUBLIC_SYZYGY_API_URL` and `NEXT_PUBLIC_SYZYGY_WS_URL` args for the frontend image
+
+> **Important:** Next.js inlines `NEXT_PUBLIC_*` env vars at **build time**. Pass the correct production API URL when building:
+> ```bash
+> docker compose -f docker-compose.yml -f docker-compose.prod.yml build \
+>   --build-arg NEXT_PUBLIC_SYZYGY_API_URL=https://api.example.com \
+>   --build-arg NEXT_PUBLIC_SYZYGY_WS_URL=wss://api.example.com/ws
+> ```
+
+### Database Migrations
+
+Syzygy uses **Alembic** for PostgreSQL schema management:
+
+```bash
+# Run pending migrations
+alembic upgrade head
+
+# Auto-generate a new migration (after model changes)
+alembic revision --autogenerate -m "describe changes"
+
+# Rollback one step
+alembic downgrade -1
+```
+
+The Docker production entrypoint runs `alembic upgrade head` automatically before starting the app. Local development uses SQLAlchemy `create_all()` (SQLite), so Alembic is not required for dev.
+
 > **Port note:** On Windows, Docker Desktop may occupy port 8000. If you get `address already in use`, use port 8001 instead:
 > ```
 > uvicorn app.main:app --host 0.0.0.0 --port 8001
@@ -183,15 +227,15 @@ npm run dev
 ### Run Tests
 
 ```bash
-# Backend tests (pytest, 234 tests)
+# Backend tests (pytest, 392 tests)
 cd backend
 pip install -r requirements.txt
 pytest                         # All tests
 pytest -v --tb=short          # Verbose with short tracebacks
 
-# Frontend E2E tests (Playwright, 23 spec files)
+# Frontend E2E tests (Playwright, 24 spec files)
 cd frontend
-npx playwright test            # Headless CI mode (3 workers, 2 retries)
+npx playwright test            # Headless CI mode (2 workers, 3 shards)
 npx playwright test --ui      # Interactive UI mode
 npx playwright test e2e/auth.spec.ts  # Single file
 ```
@@ -199,8 +243,8 @@ npx playwright test e2e/auth.spec.ts  # Single file
 **CI pipeline** (`.github/workflows/e2e.yml`): On every push to `main`, three parallel jobs run:
 
 1. **frontend-lint** — `next lint --strict` + `tsc --noEmit`
-2. **backend-lint-and-test** — pytest 234 tests with PostgreSQL service + mock Ollama server
-3. **e2e** — Playwright full-stack tests against live backend + frontend + PostgreSQL
+2. **backend-lint-and-test** — pytest 392 tests with PostgreSQL service + mock Ollama server
+3. **e2e** — Playwright full-stack tests (3 shards × 2 workers, ~5min wall-clock) against live backend + frontend + PostgreSQL
 
 A lightweight mock Ollama server lives at `backend/tests/mock_ollama_server.py` — it responds to `/api/generate`, `/api/embed`, and `/api/tags` with plausible JSON so workflow execution tests pass in CI without requiring a GPU or model downloads. The backend config also accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed), making CI integration straightforward.
 
@@ -385,7 +429,10 @@ curl http://localhost:8000/v1/chat/completions \
 ```
 syzygy-intelligence/
 ├── README.md
+├── AGENTS.md                     # AI assistant guide
 ├── docker-compose.yml
+├── docker-compose.prod.yml       # Production overrides
+├── docker-compose.ollama-cpu.yml # CPU-only Ollama override
 ├── .env.example
 ├── backend/
 │   ├── app/
@@ -420,6 +467,13 @@ syzygy-intelligence/
 │   │   ├── orchestration/       # Team formation, task queues
 │   │   ├── plugins/             # Plugin system
 │   │   └── db/                  # Database models & session
+│   ├── migrations/              # Alembic migrations
+│   │   ├── versions/
+│   │   │   ├── 0001_add_user_table.py
+│   │   │   └── 0002_add_remaining_tables.py
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── alembic.ini
 │   ├── requirements.txt
 │   └── pyproject.toml
 ├── frontend/
