@@ -74,7 +74,7 @@ class OllamaClient:
                 model=model,
                 response_len=len(result),
             )
-            return result
+            return result  # type: ignore[no-any-return]
 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
@@ -181,7 +181,7 @@ class OllamaClient:
                 model=model,
                 response_len=len(result),
             )
-            return result
+            return result  # type: ignore[no-any-return]
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             body = e.response.text[:300]
@@ -241,24 +241,24 @@ class OllamaClient:
             response.raise_for_status()
             models = response.json().get("models", [])
             logger.info("Ollama models listed", count=len(models))
-            return models
+            return models  # type: ignore[no-any-return]
         except Exception as e:
             logger.error("Failed to list Ollama models", error=str(e))
             return []
 
-    def _parse_json(self, response: httpx.Response) -> dict:
+    def _parse_json(self, response: httpx.Response) -> dict[str, Any]:
         """Parse JSON response, handling trailing data gracefully."""
         import json as json_mod
         raw = response.content.decode("utf-8", errors="replace").strip()
         try:
-            return json_mod.loads(raw)
+            return json_mod.loads(raw)  # type: ignore[no-any-return]
         except json_mod.JSONDecodeError:
             first_brace = raw.find("{")
             last_brace = raw.rfind("}")
             if first_brace >= 0 and last_brace > first_brace:
                 candidate = raw[first_brace:last_brace + 1]
                 try:
-                    return json_mod.loads(candidate)
+                    return json_mod.loads(candidate)  # type: ignore[no-any-return]
                 except json_mod.JSONDecodeError:
                     # Last resort: try to find a complete top-level JSON object
                     depth = 0
@@ -271,7 +271,7 @@ class OllamaClient:
                         elif ch == "}":
                             depth -= 1
                             if depth == 0 and start >= 0:
-                                return json_mod.loads(raw[start:i + 1])
+                                return json_mod.loads(raw[start:i + 1])  # type: ignore[no-any-return]
                     raise
             raise
 
@@ -289,7 +289,7 @@ class OllamaClient:
                     continue
         return full_response
 
-    async def close(self):
+    async def close(self) -> None:
         if self._client:
             await self._client.aclose()
             self._client = None

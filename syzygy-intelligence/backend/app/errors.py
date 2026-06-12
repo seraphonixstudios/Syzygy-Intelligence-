@@ -20,7 +20,7 @@ class SyzygyError(Exception):
         message: str,
         code: str = "INTERNAL_ERROR",
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
-        details: dict[str, Any] = None,
+        details: dict[str, Any] | None = None,
     ):
         self.message = message
         self.code = code
@@ -50,7 +50,7 @@ class SessionNotFoundError(SyzygyError):
 
 
 class ConsensusError(SyzygyError):
-    def __init__(self, message: str, details: dict[str, Any] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__(
             message=message,
             code="CONSENSUS_ERROR",
@@ -80,7 +80,7 @@ class ToolExecutionError(SyzygyError):
 
 
 class ValidationError(SyzygyError):
-    def __init__(self, message: str, details: dict[str, Any] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__(
             message=message,
             code="VALIDATION_ERROR",
@@ -89,11 +89,11 @@ class ValidationError(SyzygyError):
         )
 
 
-def setup_error_handlers(app: FastAPI):
+def setup_error_handlers(app: FastAPI) -> None:
     """Register global error handlers on the FastAPI app."""
 
     @app.exception_handler(SyzygyError)
-    async def syzygy_error_handler(request: Request, exc: SyzygyError):
+    async def syzygy_error_handler(request: Request, exc: SyzygyError) -> JSONResponse:
         logger.error(
             f"SyzygyError: {exc.message}",
             code=exc.code,
@@ -114,7 +114,7 @@ def setup_error_handlers(app: FastAPI):
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_handler(request: Request, exc: RequestValidationError):
+    async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         errors = exc.errors()
         logger.warning(
             "Validation error",
@@ -133,7 +133,7 @@ def setup_error_handlers(app: FastAPI):
         )
 
     @app.exception_handler(Exception)
-    async def global_handler(request: Request, exc: Exception):
+    async def global_handler(request: Request, exc: Exception) -> JSONResponse:
         tb = traceback.format_exc()
         logger.error(
             f"Unhandled exception: {exc}",

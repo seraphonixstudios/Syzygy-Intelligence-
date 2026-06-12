@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -47,9 +49,9 @@ model_manager = ModelManager()
 engine = ConsensusEngine()
 
 
-async def _track_usage(user: User | None, db: AsyncSession):
+async def _track_usage(user: User | None, db: AsyncSession) -> None:
     if user is not None:
-        user.message_count += 1
+        user.message_count += 1  # type: ignore[assignment]
         db.add(user)
         await db.commit()
 
@@ -59,7 +61,7 @@ async def chat_completion(
     request: ChatCompletionRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Chat completion with optional RAG and consensus."""
     message = request.message
     model = request.model
@@ -139,7 +141,7 @@ async def chat_multi_model(
     request: ChatMultiModelRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Query multiple models in parallel and return all responses."""
     message = request.message
     models = request.models
@@ -162,7 +164,7 @@ async def chat_multi_model(
 
 
 @router.get("/models")
-async def list_configured_models():
+async def list_configured_models() -> dict[str, Any]:
     """Return all configured model names and their roles."""
     roles = {}
     for role in ModelManager.MODEL_ROLES:
@@ -183,7 +185,7 @@ async def chat_stream(
     request: ChatStreamRequest,
     user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> StreamingResponse:
     """SSE streaming chat completion with optional RAG context injection."""
     message = request.message
     model = request.model
@@ -193,7 +195,7 @@ async def chat_stream(
         await check_usage_limit(user, db)
         await _track_usage(user, db)
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         try:
             full_response = ""
             rag_context = ""

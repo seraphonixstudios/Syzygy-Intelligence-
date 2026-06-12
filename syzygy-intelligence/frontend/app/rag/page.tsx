@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Search, FileText, Trash2, Loader2, Database, CheckCircle, XCircle } from "lucide-react";
+import { Upload, Search, FileText, Trash2, Loader2, Database, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { VoiceButton } from "@/components/VoiceButton";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
 
@@ -29,6 +30,13 @@ interface BatchError {
   file: string;
   error: string;
 }
+
+const SUGGESTIONS = [
+  "Find documents about consensus engine",
+  "Search for polarity archetypes",
+  "Show me all memory entries about fusion",
+  "Find research on agent individuation",
+];
 
 export default function RAGPage() {
   const [documents, setDocuments] = useState<DocEntry[]>([]);
@@ -290,6 +298,7 @@ export default function RAGPage() {
               className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
               disabled={searching}
             />
+            <VoiceButton onTranscript={(t) => setQuery((prev) => prev + t)} />
             <Button
               onClick={handleSearch}
               disabled={!query.trim() || searching}
@@ -301,6 +310,25 @@ export default function RAGPage() {
               Search
             </Button>
           </div>
+
+          {/* Suggestions */}
+          {!searching && results.length === 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-syzygy-grey/40">Try searching for:</p>
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setQuery(s)}
+                    className="rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/30 px-3 py-1.5 text-xs text-syzygy-grey/60 transition-all hover:border-syzygy-gold/30 hover:text-syzygy-gold hover:bg-syzygy-gold/5"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Results */}
           {results.length > 0 && (

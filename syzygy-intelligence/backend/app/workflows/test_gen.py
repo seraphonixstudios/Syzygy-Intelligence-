@@ -20,11 +20,12 @@ class TestGenWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def analyze_code(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Analyze the following {language} code for testability:\n\n"
             f"```{language}\n{code[:3000]}\n```\n\n"
@@ -38,6 +39,7 @@ class TestGenWorkflow:
         return {"analysis": analysis}
 
     async def generate_unit_tests(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         framework = "pytest" if language == "python" else language
         prompt = (
             f"Write comprehensive unit tests using {framework} for:\n\n"
@@ -53,6 +55,7 @@ class TestGenWorkflow:
         return {"unit_tests": tests, "framework": framework}
 
     async def generate_edge_cases(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Analyze the following {language} code for edge cases and boundary conditions:\n\n"
             f"```{language}\n{code[:3000]}\n```\n\n"
@@ -68,6 +71,7 @@ class TestGenWorkflow:
         return {"edge_cases": edge_cases}
 
     async def validate_tests(self, test_code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Review the following {language} test code for correctness:\n\n"
             f"```{language}\n{test_code[:3000]}\n```\n\n"
@@ -81,7 +85,7 @@ class TestGenWorkflow:
         validation = await self.llm.generate(prompt, temperature=0.3)
         return {"validation": validation}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         code = ctx.get("code", task)
         language = ctx.get("language", "python")

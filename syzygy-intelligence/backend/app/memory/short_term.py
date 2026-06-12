@@ -21,8 +21,8 @@ class ShortTermMemory:
         session_id: str = "",
         polarity: str = "",
         archetype: str = "",
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         memory_id = str(uuid.uuid4())
         self._store[memory_id] = {
@@ -84,7 +84,7 @@ class ShortTermMemory:
     ) -> list[dict[str, Any]]:
         return await self.recall(session_id=session_id, limit=limit)
 
-    async def clear(self, session_id: str = ""):
+    async def clear(self, session_id: str = "") -> None:
         if session_id:
             self._store = {
                 k: v for k, v in self._store.items()
@@ -93,7 +93,7 @@ class ShortTermMemory:
         else:
             self._store.clear()
 
-    async def cleanup_expired(self):
+    async def cleanup_expired(self) -> None:
         now = datetime.now(UTC)
         self._store = {
             k: v for k, v in self._store.items()

@@ -20,11 +20,12 @@ class ReportGenWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def research_topic(self, topic: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Research the following topic and compile comprehensive information:\n\n{topic}\n\n"
             f"Gather:\n"
@@ -38,7 +39,8 @@ class ReportGenWorkflow:
         research = await self.llm.generate(prompt, temperature=0.3)
         return {"research": research}
 
-    async def outline_report(self, topic: str, research: dict, sections: list[str]) -> dict[str, Any]:
+    async def outline_report(self, topic: str, research: dict[str, Any], sections: list[str]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Create a detailed report outline for: {topic}\n\n"
             f"Research:\n{research.get('research', '')[:2000]}\n\n"
@@ -52,7 +54,8 @@ class ReportGenWorkflow:
         outline = await self.llm.generate(prompt, temperature=0.3)
         return {"outline": outline, "sections": sections}
 
-    async def generate_section(self, topic: str, section_title: str, research: dict) -> str:
+    async def generate_section(self, topic: str, section_title: str, research: dict[str, Any]) -> str:
+        assert self.llm is not None
         prompt = (
             f"Write the following section of a report on '{topic}':\n\n"
             f"Section: {section_title}\n\n"
@@ -64,6 +67,7 @@ class ReportGenWorkflow:
         return await self.llm.generate(prompt, temperature=0.4)
 
     async def generate_executive_summary(self, topic: str, sections: list[str]) -> str:
+        assert self.llm is not None
         combined = "\n\n".join(sections)
         prompt = (
             f"Write an executive summary for a report on '{topic}':\n\n"
@@ -77,6 +81,7 @@ class ReportGenWorkflow:
         return await self.llm.generate(prompt, temperature=0.3)
 
     async def format_report(self, topic: str, summary: str, sections: list[str], output_format: str) -> str:
+        assert self.llm is not None
         combined = "\n\n".join(sections)
         prompt = (
             f"Compile the following into a complete {output_format} report:\n\n"
@@ -92,7 +97,7 @@ class ReportGenWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         topic = ctx.get("topic", task)
         sections_list = ctx.get("sections", [])

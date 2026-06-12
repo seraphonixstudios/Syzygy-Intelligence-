@@ -20,11 +20,12 @@ class SummaryWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def extract_key_points(self, documents: list[str]) -> dict[str, Any]:
+        assert self.llm is not None
         combined = "\n\n---DOCUMENT SEPARATOR---\n\n".join(
             doc[:2000] for doc in documents
         )
@@ -40,6 +41,7 @@ class SummaryWorkflow:
         return {"key_points": points, "document_count": len(documents)}
 
     async def identify_themes(self, documents: list[str]) -> dict[str, Any]:
+        assert self.llm is not None
         combined = "\n\n---DOCUMENT SEPARATOR---\n\n".join(
             doc[:2000] for doc in documents
         )
@@ -55,7 +57,8 @@ class SummaryWorkflow:
         themes = await self.llm.generate(prompt, temperature=0.3)
         return {"themes": themes}
 
-    async def generate_insights(self, key_points: dict, themes: dict) -> str:
+    async def generate_insights(self, key_points: dict[str, Any], themes: dict[str, Any]) -> str:
+        assert self.llm is not None
         prompt = (
             f"Based on the extracted key points and themes, generate actionable insights:\n\n"
             f"Key Points:\n{key_points.get('key_points', 'N/A')[:2000]}\n\n"
@@ -68,7 +71,8 @@ class SummaryWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def create_summary(self, task: str, key_points: dict, themes: dict, insights: str) -> str:
+    async def create_summary(self, task: str, key_points: dict[str, Any], themes: dict[str, Any], insights: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Create a concise executive summary addressing: {task}\n\n"
             f"Key Points:\n{key_points.get('key_points', 'N/A')[:1500]}\n\n"
@@ -82,7 +86,7 @@ class SummaryWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.4)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         documents = ctx.get("documents", [task])
 

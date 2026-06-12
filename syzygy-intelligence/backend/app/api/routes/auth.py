@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -63,12 +64,12 @@ class UserResponse(BaseModel):
     subscription_tier: str
     message_count: int
     monthly_message_limit: int
-    settings: dict
+    settings: dict[str, Any]
     created_at: str
 
 
 class UpdateSettingsRequest(BaseModel):
-    settings: dict
+    settings: dict[str, Any]
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -110,7 +111,7 @@ class ApiKeyListResponse(BaseModel):
 
 
 @router.post("/forgot-password")
-async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -121,7 +122,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     reset_link = f"{frontend_url}/auth/reset-password?token={token}"
 
     await send_email(EmailMessage(
-        to=user.email,
+        to=user.email,  # type: ignore[arg-type]
         subject="Reset your Syzygy password",
         text_body=f"Reset your password here: {reset_link}\n\nThis link expires in 15 minutes.",
         html_body=(
@@ -130,14 +131,14 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         ),
     ))
 
-    resp: dict = {"message": "If that email exists, a reset link has been sent."}
+    resp: dict[str, Any] = {"message": "If that email exists, a reset link has been sent."}
     if settings.email_provider == "console":
         resp["reset_token"] = token
     return resp
 
 
 @router.post("/reset-password")
-async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     payload = decode_token(req.token)
     if payload is None or payload.get("type") != "password_reset":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
@@ -151,14 +152,14 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    user.hashed_password = hash_password(req.new_password)
+    user.hashed_password = hash_password(req.new_password)  # type: ignore[assignment]
     db.add(user)
     await db.commit()
     return {"message": "Password has been reset successfully."}
 
 
 @router.post("/send-verification")
-async def send_verification(req: SendVerificationRequest, db: AsyncSession = Depends(get_db)):
+async def send_verification(req: SendVerificationRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
     if not user or user.verified_at:
@@ -169,7 +170,7 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     verify_link = f"{frontend_url}/auth/verify-email?token={token}"
 
     await send_email(EmailMessage(
-        to=user.email,
+        to=user.email,  # type: ignore[arg-type]
         subject="Verify your Syzygy email",
         text_body=f"Verify your email here: {verify_link}\n\nThis link expires in 24 hours.",
         html_body=(
@@ -178,14 +179,14 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
         ),
     ))
 
-    resp: dict = {"message": "If that email exists, a verification link has been sent."}
+    resp: dict[str, Any] = {"message": "If that email exists, a verification link has been sent."}
     if settings.email_provider == "console":
         resp["verification_token"] = token
     return resp
 
 
 @router.post("/verify-email")
-async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     payload = decode_token(req.token)
     if payload is None or payload.get("type") != "email_verification":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
@@ -199,7 +200,7 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    user.verified_at = datetime.now(UTC)
+    user.verified_at = datetime.now(UTC)  # type: ignore[assignment]
     db.add(user)
     await db.commit()
     return {"message": "Email verified successfully."}
@@ -220,16 +221,16 @@ def _user_to_response(user: User) -> UserResponse:
 
     return UserResponse(
         id=str(user.id),
-        email=user.email,
-        display_name=user.display_name,
-        is_active=user.is_active,
-        is_superuser=user.is_superuser,
+        email=user.email,  # type: ignore[arg-type]
+        display_name=user.display_name,  # type: ignore[arg-type]
+        is_active=user.is_active,  # type: ignore[arg-type]
+        is_superuser=user.is_superuser,  # type: ignore[arg-type]
         verified_at=user.verified_at.isoformat() if user.verified_at else None,
         trial_ends_at=trial_ends.isoformat() if trial_ends else None,
         subscription_tier=user.subscription_tier.value,
-        message_count=user.message_count,
+        message_count=user.message_count,  # type: ignore[arg-type]
         monthly_message_limit=limit,
-        settings=user.settings or {},
+        settings=user.settings or {},  # type: ignore[arg-type]
         created_at=user.created_at.isoformat() if user.created_at else "",
     )
 
@@ -241,14 +242,14 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
 
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
-        user.message_count = 0
-        user.usage_reset_at = now
+        user.message_count = 0  # type: ignore[assignment]
+        user.usage_reset_at = now  # type: ignore[assignment]
         db.add(user)
         await db.commit()
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     existing = await db.execute(select(User).where(User.email == req.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -265,28 +266,28 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.email),
-        refresh_token=create_refresh_token(str(user.id), user.email),
+        access_token=create_access_token(str(user.id), user.email),  # type: ignore[arg-type]
+        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore[arg-type]
     )
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     result = await db.execute(select(User).where(User.email == req.email))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(req.password, user.hashed_password):
+    if not user or not verify_password(req.password, user.hashed_password):  # type: ignore[arg-type]
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.email),
-        refresh_token=create_refresh_token(str(user.id), user.email),
+        access_token=create_access_token(str(user.id), user.email),  # type: ignore[arg-type]
+        refresh_token=create_refresh_token(str(user.id), user.email),  # type: ignore[arg-type]
     )
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(req: RefreshRequest):
+async def refresh(req: RefreshRequest) -> TokenResponse:
     payload = decode_token(req.refresh_token)
     if payload is None or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
@@ -301,7 +302,7 @@ async def refresh(req: RefreshRequest):
 async def get_me(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> UserResponse:
     await _reset_usage_if_needed(user, db)
     return _user_to_response(user)
 
@@ -311,8 +312,8 @@ async def update_settings(
     req: UpdateSettingsRequest,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
-    user.settings = req.settings
+) -> dict[str, Any]:
+    user.settings = req.settings  # type: ignore[assignment]
     db.add(user)
     await db.commit()
     return {"status": "ok"}
@@ -325,7 +326,7 @@ async def create_api_key(
     req: CreateApiKeyRequest,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> ApiKeyCreatedResponse:
     raw_key, hashed_key = generate_api_key()
     prefix = raw_key[:12]
 
@@ -341,11 +342,11 @@ async def create_api_key(
 
     return ApiKeyCreatedResponse(
         id=str(api_key.id),
-        name=api_key.name,
-        key_prefix=api_key.key_prefix,
+        name=api_key.name,  # type: ignore[arg-type]
+        key_prefix=api_key.key_prefix,  # type: ignore[arg-type]
         raw_key=raw_key,
         last_used_at=api_key.last_used_at.isoformat() if api_key.last_used_at else None,
-        is_active=api_key.is_active,
+        is_active=api_key.is_active,  # type: ignore[arg-type]
         created_at=api_key.created_at.isoformat(),
     )
 
@@ -354,7 +355,7 @@ async def create_api_key(
 async def list_api_keys(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> ApiKeyListResponse:
     result = await db.execute(
         select(ApiKey).where(ApiKey.user_id == user.id).order_by(ApiKey.created_at.desc())
     )
@@ -363,10 +364,10 @@ async def list_api_keys(
     return ApiKeyListResponse(keys=[
         ApiKeyResponse(
             id=str(k.id),
-            name=k.name,
-            key_prefix=k.key_prefix,
+            name=k.name,  # type: ignore[arg-type]
+            key_prefix=k.key_prefix,  # type: ignore[arg-type]
             last_used_at=k.last_used_at.isoformat() if k.last_used_at else None,
-            is_active=k.is_active,
+            is_active=k.is_active,  # type: ignore[arg-type]
             created_at=k.created_at.isoformat(),
         )
         for k in keys
@@ -378,7 +379,7 @@ async def revoke_api_key(
     key_id: str,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     result = await db.execute(
         select(ApiKey).where(ApiKey.id == uuid.UUID(key_id), ApiKey.user_id == user.id)
     )
@@ -386,7 +387,7 @@ async def revoke_api_key(
     if not api_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
-    api_key.is_active = False
+    api_key.is_active = False  # type: ignore[assignment]
     db.add(api_key)
     await db.commit()
     return {"status": "revoked"}
@@ -396,7 +397,7 @@ async def revoke_api_key(
 async def expire_trial(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     await db.execute(
         update(User)
         .where(User.id == user.id)
@@ -414,7 +415,7 @@ async def expire_trial(
 async def charge_message(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     await check_usage_limit(user, db)
     await db.execute(
         update(User)

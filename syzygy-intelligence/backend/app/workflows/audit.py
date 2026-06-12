@@ -20,11 +20,12 @@ class AuditWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def scan_vulnerabilities(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Scan the following {language} code for security vulnerabilities:\n\n"
             f"```{language}\n{code[:4000]}\n```\n\n"
@@ -40,6 +41,7 @@ class AuditWorkflow:
         return {"vulnerabilities": result, "language": language}
 
     async def review_code_quality(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Review the following {language} code for quality issues:\n\n"
             f"```{language}\n{code[:4000]}\n```\n\n"
@@ -55,8 +57,9 @@ class AuditWorkflow:
         return {"quality_review": result}
 
     async def check_compliance(
-        self, code: str, standards: list[str] = None, language: str = "python"
+        self, code: str, standards: list[str] | None = None, language: str = "python"
     ) -> dict[str, Any]:
+        assert self.llm is not None
         standards = standards or ["owasp", "pci-dss"]
         prompt = (
             f"Check the following {language} code against {', '.join(standards)}:\n\n"
@@ -70,8 +73,9 @@ class AuditWorkflow:
         return {"compliance_check": result, "standards": standards}
 
     async def generate_report(
-        self, vulnerabilities: dict, quality: dict, compliance: dict
+        self, vulnerabilities: dict[str, Any], quality: dict[str, Any], compliance: dict[str, Any]
     ) -> str:
+        assert self.llm is not None
         combined = (
             f"Vulnerability Scan:\n{vulnerabilities.get('vulnerabilities', 'N/A')}\n\n"
             f"Code Quality Review:\n{quality.get('quality_review', 'N/A')}\n\n"
@@ -83,7 +87,7 @@ class AuditWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         code = ctx.get("code", task)
         language = ctx.get("language", "python")

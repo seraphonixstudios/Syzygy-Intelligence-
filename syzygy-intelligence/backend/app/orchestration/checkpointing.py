@@ -14,7 +14,7 @@ from app.config import settings
 class CheckpointManager:
     """Manages LangGraph checkpoint persistence for time-travel debugging."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.storage_path = Path(f"{settings.data_dir}/checkpoints")
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -23,7 +23,7 @@ class CheckpointManager:
         session_id: str,
         round_number: int,
         state: dict[str, Any],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Save a checkpoint at a given state."""
         checkpoint_id = str(uuid.uuid4())
@@ -58,7 +58,7 @@ class CheckpointManager:
         if not checkpoints:
             return None
 
-        return json.loads(checkpoints[-1].read_text())
+        return json.loads(checkpoints[-1].read_text())  # type: ignore[no-any-return]
 
     async def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
         """List all checkpoints for a session."""

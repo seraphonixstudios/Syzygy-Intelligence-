@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +35,7 @@ from app.middleware.rate_limiter import setup_rate_limiter
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     db_type = "SQLite" if settings.db_is_sqlite else "PostgreSQL"
     logger.info(
         "Syzygy Intelligence starting",
@@ -57,7 +59,7 @@ async def lifespan(app: FastAPI):
         missing.append("httpx")
     try:
         import bcrypt
-        logger.info("bcrypt", version=bcrypt.__version__)
+        logger.info("bcrypt", version=bcrypt.__version__)  # type: ignore[attr-defined]
     except ImportError:
         missing.append("bcrypt")
     try:
@@ -122,7 +124,7 @@ app.add_api_websocket_route("/ws", ws_handler)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, Any]:
     return {
         "service": "Syzygy Intelligence",
         "version": "0.1.0",
@@ -132,11 +134,11 @@ async def root():
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     return {"status": "healthy", "env": settings.env}
 
 @app.get("/debug/config")
-async def debug_config():
+async def debug_config() -> dict[str, Any]:
     """Expose non-sensitive config for debugging (only in dev/testing)."""
     if settings.env == "production":
         return {"error": "Not available in production"}

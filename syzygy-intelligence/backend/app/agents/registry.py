@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.agents.archetypes import ARCHETYPE_REGISTRY
 from app.agents.base import SyzygyAgent
 from app.agents.polarity import PolarityType
@@ -27,7 +29,7 @@ DEFAULT_AGENT_MODELS: dict[str, str] = {
 class AgentRegistry:
     """Central registry for all Syzygy agents."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._agents: dict[str, SyzygyAgent] = {}
 
     def register(self, agent: SyzygyAgent) -> str:
@@ -43,12 +45,12 @@ class AgentRegistry:
             return True
         return False
 
-    def list(self, polarity: PolarityType | None = None) -> list[SyzygyAgent]:
+    def list_agents(self, polarity: PolarityType | None = None) -> list[SyzygyAgent]:
         if polarity:
             return [a for a in self._agents.values() if a.polarity == polarity]
         return list(self._agents.values())
 
-    def clear(self):
+    def clear(self) -> None:
         self._agents.clear()
 
     def create_agent(
@@ -57,7 +59,7 @@ class AgentRegistry:
         name: str = "",
         model: str = "",
         shadow_active: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> SyzygyAgent:
         """Create and register a new agent."""
         if archetype_key not in ARCHETYPE_REGISTRY:

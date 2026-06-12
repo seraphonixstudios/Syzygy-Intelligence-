@@ -22,11 +22,12 @@ class DebateWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def opening_statement(self, topic: str, position: str, archetype: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Topic for debate: {topic}\n\n"
             f"Your position: {position}\nYour archetype: {archetype}\n\n"
@@ -39,6 +40,7 @@ class DebateWorkflow:
         return await self.llm.generate(prompt, temperature=0.5)
 
     async def rebuttal(self, topic: str, position: str, opponent_opening: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
             f"Opponent's opening statement:\n{opponent_opening[:1500]}\n\n"
@@ -51,6 +53,7 @@ class DebateWorkflow:
         return await self.llm.generate(prompt, temperature=0.5)
 
     async def cross_examine(self, topic: str, position: str, opponent_args: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
             f"Opponent's arguments:\n{opponent_args[:1500]}\n\n"
@@ -60,6 +63,7 @@ class DebateWorkflow:
         return await self.llm.generate(prompt, temperature=0.5)
 
     async def closing(self, topic: str, position: str, debate_summary: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
             f"Debate summary:\n{debate_summary[:1500]}\n\n"
@@ -72,6 +76,7 @@ class DebateWorkflow:
         return await self.llm.generate(prompt, temperature=0.5)
 
     async def synthesize(self, topic: str, all_arguments: list[str]) -> str:
+        assert self.llm is not None
         args_text = "\n\n---\n\n".join(all_arguments)
         prompt = (
             f"Topic: {topic}\n\nAll debate arguments:\n{args_text[:3000]}\n\n"
@@ -83,7 +88,7 @@ class DebateWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         positions = ctx.get("positions", {
             "pro": {"archetype": "hero", "position": "In favor"},

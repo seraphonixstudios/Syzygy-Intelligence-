@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -38,9 +40,12 @@ class RateLimiterMiddleware:
             lambda: TokenBucket(settings.rate_limit_authenticated_per_second, settings.rate_limit_authenticated_burst)
         )
 
-    async def __call__(self, scope, receive, send) -> None:
+    async def __call__(
+        self, scope: dict[str, Any], receive: Callable[[], Awaitable[dict[str, Any]]],
+        send: Callable[[dict[str, Any]], Awaitable[None]],
+    ) -> None:
         if scope["type"] != "http":
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, send)  # type: ignore[arg-type]
             return
 
         request = Request(scope, receive)
@@ -62,10 +67,10 @@ class RateLimiterMiddleware:
                     },
                     headers={"Retry-After": str(int(1.0 / settings.rate_limit_per_second))},
                 )
-                await response(scope, receive, send)
+                await response(scope, receive, send)  # type: ignore[arg-type]
                 return
 
-        await self.app(scope, receive, send)
+        await self.app(scope, receive, send)  # type: ignore[arg-type]
 
     def _is_exempt(self, path: str) -> bool:
         exempt = ["/api/auth/login", "/api/auth/register", "/health", "/"]
@@ -74,5 +79,5 @@ class RateLimiterMiddleware:
 
 def setup_rate_limiter(app: FastAPI) -> None:
     if settings.rate_limit_enabled:
-        app.add_middleware(RateLimiterMiddleware)
+        app.add_middleware(RateLimiterMiddleware)  # type: ignore[arg-type]
         logger.info("Rate limiter enabled", per_second=settings.rate_limit_per_second, burst=settings.rate_limit_burst)

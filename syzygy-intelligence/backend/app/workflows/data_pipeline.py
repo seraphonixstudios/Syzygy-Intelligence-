@@ -20,11 +20,12 @@ class DataPipelineWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def ingest(self, source: str, source_type: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Analyze the following data source for ingestion:\n\n"
             f"Source: {source[:2000]}\n"
@@ -40,6 +41,7 @@ class DataPipelineWorkflow:
         return {"analysis": analysis, "source_type": source_type}
 
     async def clean(self, data: str, issues: list[str]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a data cleaning plan for the following data:\n\n{data[:2000]}\n\n"
             f"Issues to address: {', '.join(issues) if issues else 'Auto-detect'}\n\n"
@@ -53,6 +55,7 @@ class DataPipelineWorkflow:
         return {"cleaning_plan": plan}
 
     async def transform(self, data: str, transformations: list[str]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Design data transformations for:\n\n{data[:2000]}\n\n"
             f"Required transformations: "
@@ -67,6 +70,7 @@ class DataPipelineWorkflow:
         return {"transformations": transformed}
 
     async def validate_schema(self, data: str, target_schema: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Validate the following data against the target schema:\n\n"
             f"Data:\n{data[:2000]}\n\n"
@@ -82,6 +86,7 @@ class DataPipelineWorkflow:
         return {"validation": validation}
 
     async def load_plan(self, data: str, target: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Create a data loading plan for:\n\n"
             f"Data summary: {data[:1500]}\n"
@@ -96,7 +101,7 @@ class DataPipelineWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         source = ctx.get("source_data", task)
         source_type = ctx.get("source_type", "CSV")

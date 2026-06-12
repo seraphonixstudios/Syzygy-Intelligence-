@@ -39,14 +39,14 @@ class FileSystemTool:
             elif action == "list":
                 if not p.exists():
                     return {"error": f"Path not found: {path}"}
-                items = []
+                file_items: list[dict[str, Any]] = []
                 for x in p.iterdir():
-                    items.append({
+                    file_items.append({
                         "name": x.name,
                         "type": "directory" if x.is_dir() else "file",
                         "size": x.stat().st_size if x.is_file() else 0,
                     })
-                return {"path": path, "items": items}
+                return {"path": path, "items": file_items}
 
             elif action == "delete":
                 if p.exists():

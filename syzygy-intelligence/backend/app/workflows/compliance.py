@@ -28,11 +28,12 @@ class ComplianceWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def analyze_policy(self, document: str, framework: str) -> dict[str, Any]:
+        assert self.llm is not None
         framework_desc = REGULATORY_FRAMEWORKS.get(framework.lower(), framework)
         prompt = (
             f"Analyze the following document against {framework.upper()} ({framework_desc}):\n\n"
@@ -49,6 +50,7 @@ class ComplianceWorkflow:
     async def map_requirements(
         self, document: str, frameworks: list[str]
     ) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Create a requirements traceability matrix mapping the following document\n"
             f"{document[:2000]}\n\n"
@@ -62,7 +64,8 @@ class ComplianceWorkflow:
         matrix = await self.llm.generate(prompt, temperature=0.2)
         return {"traceability_matrix": matrix, "frameworks": frameworks}
 
-    async def assess_risk(self, analysis_results: list[dict]) -> str:
+    async def assess_risk(self, analysis_results: list[dict[str, Any]]) -> str:
+        assert self.llm is not None
         combined = "\n\n".join(
             f"Framework {r.get('framework', '?')}:\n{r.get('analysis', '')[:1000]}"
             for r in analysis_results
@@ -78,6 +81,7 @@ class ComplianceWorkflow:
         return await self.llm.generate(prompt, temperature=0.3)
 
     async def generate_remediation_plan(self, risk_assessment: str) -> str:
+        assert self.llm is not None
         prompt = (
             f"Based on this risk assessment, create a detailed remediation plan:\n\n"
             f"{risk_assessment[:2000]}\n\n"
@@ -89,7 +93,7 @@ class ComplianceWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         document = ctx.get("document", task)
         frameworks = ctx.get("frameworks", ["gdpr", "hipaa", "soc2"])

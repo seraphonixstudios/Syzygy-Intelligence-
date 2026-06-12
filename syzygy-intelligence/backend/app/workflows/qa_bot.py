@@ -21,11 +21,12 @@ class QABotWorkflow:
     llm: OllamaClient | None = None
     knowledge_base: dict[str, str] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def ingest_document(self, doc_id: str, content: str) -> dict[str, Any]:
+        assert self.llm is not None
         self.knowledge_base[doc_id] = content
         prompt = (
             f"Summarize the following document (id: {doc_id}) for indexing:\n\n{content[:3000]}\n\n"
@@ -39,6 +40,7 @@ class QABotWorkflow:
         return {"doc_id": doc_id, "summary": summary, "ingested": True}
 
     async def retrieve_context(self, query: str) -> dict[str, Any]:
+        assert self.llm is not None
         if not self.knowledge_base:
             return {"context": [], "sources": [], "note": "No documents ingested. Using LLM knowledge only."}
 
@@ -56,7 +58,8 @@ class QABotWorkflow:
         sources = list(self.knowledge_base.keys())
         return {"context": context, "sources": sources, "note": "Retrieved from knowledge base"}
 
-    async def generate_answer(self, query: str, context: dict) -> str:
+    async def generate_answer(self, query: str, context: dict[str, Any]) -> str:
+        assert self.llm is not None
         context_text = context.get("context", "No specific context available for this query.")
         sources = context.get("sources", [])
 
@@ -73,6 +76,7 @@ class QABotWorkflow:
         return await self.llm.generate(prompt, temperature=0.3)
 
     async def generate_follow_ups(self, query: str, answer: str) -> list[str]:
+        assert self.llm is not None
         prompt = (
             f"Based on the following Q&A pair:\n\n"
             f"Question: {query}\n\n"
@@ -88,7 +92,7 @@ class QABotWorkflow:
             "What are the next steps?",
         ]
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         query = ctx.get("query", task)
         action = ctx.get("action", "ask")

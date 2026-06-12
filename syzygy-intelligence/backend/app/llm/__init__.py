@@ -13,7 +13,7 @@ class LLMFactory:
     """Factory for creating LLM clients."""
 
     @staticmethod
-    def create_client(provider: str = "ollama", **kwargs) -> Any:
+    def create_client(provider: str = "ollama", **kwargs: Any) -> Any:
         if provider == "ollama":
             return OllamaClient(**kwargs)
         elif provider == "litellm":

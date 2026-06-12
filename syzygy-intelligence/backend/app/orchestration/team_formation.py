@@ -18,8 +18,8 @@ class TeamFormation:
         task: str = "",
         num_agents: int = 5,
         polarity_balance: float = 0.6,
-        required_archetypes: list[str] = None,
-    ) -> list[dict[str, Any]]:
+        required_archetypes: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Form a polarity-balanced team for a given task."""
         agents = agent_registry.create_polarity_balanced_team(
             task_description=task,
@@ -40,7 +40,7 @@ class TeamFormation:
             "num_agents": len(agents),
         }
 
-    async def suggest_team_for_task(self, task: str) -> dict:
+    async def suggest_team_for_task(self, task: str) -> dict[str, Any]:
         """Analyze task and suggest optimal team composition."""
         task_lower = task.lower()
 

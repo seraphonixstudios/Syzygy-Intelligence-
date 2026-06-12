@@ -22,11 +22,12 @@ class CodingWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def scaffold(self, specification: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a complete project scaffold for the following specification:\n\n"
             f"{specification}\n\n"
@@ -37,6 +38,7 @@ class CodingWorkflow:
         return {"specification": specification, "scaffold": result}
 
     async def edit(self, file_path: str, instruction: str) -> dict[str, Any]:
+        assert self.llm is not None
         path = Path(file_path)
         if not path.exists():
             return {"error": f"File not found: {file_path}", "edited": False}
@@ -62,6 +64,7 @@ class CodingWorkflow:
         return {"error": "Failed to generate edit", "edited": False}
 
     async def test(self, code: str, language: str = "python") -> dict[str, Any]:
+        assert self.llm is not None
         test_prompt = (
             f"Write comprehensive unit tests for the following {language} code:\n\n"
             f"```{language}\n{code[:2000]}\n```\n\n"
@@ -102,6 +105,7 @@ class CodingWorkflow:
             return {"error": str(e), "tested": False}
 
     async def debug(self, error: str, context: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Error message: {error}\n\n"
             f"Context:\n{context[:2000]}\n\n"
@@ -114,6 +118,7 @@ class CodingWorkflow:
         return {"error": error, "analysis": fix}
 
     async def review(self, code: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Review the following code for bugs, security issues, style problems, "
             f"and improvement opportunities:\n\n"
@@ -123,12 +128,13 @@ class CodingWorkflow:
         review = await self.llm.generate(prompt, temperature=0.3)
         return {"review": review, "code_length": len(code)}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         language = ctx.get("language", "python")
 
         result = {"task": task, "language": language, "steps": {}}
 
+        assert self.llm is not None
         result["steps"]["scaffold"] = await self.scaffold(task)
         gen_prompt = (
             f"Generate {language} code for: {task}\n"

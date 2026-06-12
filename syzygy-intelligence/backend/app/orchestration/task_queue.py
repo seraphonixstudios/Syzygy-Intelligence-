@@ -28,19 +28,19 @@ class QueueItem:
     metadata: dict[str, Any] = field(default_factory=dict)
     retry_count: int = 0
     max_retries: int = 3
-    handler: Callable | None = None
+    handler: Callable[..., Any] | None = None
 
 
 class TaskQueue:
     """Priority-ordered async task queue with real execution and retry logic."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._items: list[QueueItem] = []
         self._running: set[str] = set()
         self._lock = asyncio.Lock()
-        self._handlers: dict[str, Callable] = {}
+        self._handlers: dict[str, Callable[..., Any]] = {}
 
-    def register_handler(self, task_type: str, handler: Callable):
+    def register_handler(self, task_type: str, handler: Callable[..., Any]) -> None:
         """Register a handler for a specific task type."""
         self._handlers[task_type] = handler
 
@@ -49,8 +49,8 @@ class TaskQueue:
         task: str,
         task_type: str = "generic",
         priority: int = 0,
-        metadata: dict[str, Any] = None,
-        handler: Callable | None = None,
+        metadata: dict[str, Any] | None = None,
+        handler: Callable[..., Any] | None = None,
     ) -> str:
         """Enqueue a task with priority (higher = more important)."""
         item = QueueItem(
@@ -77,7 +77,7 @@ class TaskQueue:
                     return item
         return None
 
-    async def complete(self, item_id: str, result: Any = None, error: str = ""):
+    async def complete(self, item_id: str, result: Any = None, error: str = "") -> None:
         """Mark a task as completed (or failed)."""
         async with self._lock:
             for item in self._items:
@@ -139,11 +139,11 @@ class TaskQueue:
             await asyncio.sleep(0.5)
             return f"Executed: {item.task[:100]}"
 
-    async def run_worker(self, max_concurrent: int = 3):
+    async def run_worker(self, max_concurrent: int = 3) -> None:
         """Run a worker that processes tasks concurrently."""
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def _worker():
+        async def _worker() -> None:
             while True:
                 async with semaphore:
                     result = await self.execute_next()
@@ -157,7 +157,7 @@ class TaskQueue:
         """Execute multiple tasks in parallel with concurrency limit."""
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def _run(task: str):
+        async def _run(task: str) -> Any:
             async with semaphore:
                 item_id = await self.enqueue(task)
                 item = await self.dequeue()
@@ -219,7 +219,7 @@ class TaskQueue:
                     return True
         return False
 
-    async def clear_completed(self):
+    async def clear_completed(self) -> None:
         """Remove completed and failed tasks from the queue."""
         async with self._lock:
             self._items = [i for i in self._items if i.status in ("pending", "running")]

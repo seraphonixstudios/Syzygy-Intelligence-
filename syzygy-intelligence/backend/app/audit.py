@@ -23,7 +23,7 @@ class AuditService:
         action: str,
         agent_id: str | None = None,
         session_id: str | None = None,
-        details: dict[str, Any] = None,
+        details: dict[str, Any] | None = None,
         ip_address: str | None = None,
     ) -> str:
         """Persist an audit event to the database."""

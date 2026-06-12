@@ -20,7 +20,7 @@ from app.agents.archetypes import (
     get_shadow,
 )
 from app.agents.personas import Persona, get_persona
-from app.agents.polarity import POLARITY_CONFIGS, PolarityType
+from app.agents.polarity import POLARITY_CONFIGS, PolarityConfig, PolarityType
 
 
 @dataclass
@@ -41,7 +41,7 @@ class SyzygyAgent:
     _shadow: ShadowArchetype | None = None
     _persona: Persona | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.name:
             self.name = self.archetype_key.title()
         self._archetype = get_archetype(self.archetype_key)
@@ -67,7 +67,7 @@ class SyzygyAgent:
         return PolarityType.UNIFIED
 
     @property
-    def polarity_config(self):
+    def polarity_config(self) -> PolarityConfig | None:
         return POLARITY_CONFIGS.get(self.polarity)
 
     @property
@@ -123,7 +123,7 @@ class SyzygyAgent:
         name: str = "",
         model: str = "",
         shadow_active: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> SyzygyAgent:
         return cls(
             name=name or archetype_key.title(),

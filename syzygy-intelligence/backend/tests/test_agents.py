@@ -210,9 +210,9 @@ class TestAgentRegistry:
         registry.create_agent("sage")
         registry.create_agent("hero")
         registry.create_agent("great_mother")
-        assert len(registry.list()) == 3
-        assert len(registry.list(PolarityType.MASCULINE)) == 2
-        assert len(registry.list(PolarityType.FEMININE)) == 1
+        assert len(registry.list_agents()) == 3
+        assert len(registry.list_agents(PolarityType.MASCULINE)) == 2
+        assert len(registry.list_agents(PolarityType.FEMININE)) == 1
 
     def test_create_default_team(self):
         registry = AgentRegistry()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/")
-async def list_workflows():
+async def list_workflows() -> dict[str, Any]:
     return {
         "workflows": [
             {"name": w.name, "description": w.description}
@@ -26,10 +28,10 @@ async def list_workflows():
 @router.post("/{workflow_name}/execute")
 async def execute_workflow(
     workflow_name: str,
-    data: dict,
+    data: dict[str, Any],
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     workflow = get_workflow(workflow_name)
     if not workflow:
         raise HTTPException(404, f"Workflow '{workflow_name}' not found")
@@ -41,7 +43,7 @@ async def execute_workflow(
         context=data.get("context", {}),
     )
 
-    user.message_count += 1
+    user.message_count += 1  # type: ignore[assignment]
     db.add(user)
     await db.commit()
 

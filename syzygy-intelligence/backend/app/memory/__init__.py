@@ -23,7 +23,7 @@ from app.memory.vector_store import VectorMemory
 class MemorySystem:
     """Unified memory system combining all memory layers."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.short_term = ShortTermMemory()
         self.long_term = LongTermMemory()
         self.vector = VectorMemory()
@@ -39,8 +39,8 @@ class MemorySystem:
         polarity: str = "",
         archetype: str = "",
         importance: float = 0.5,
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Store memory in the appropriate layer based on type and importance."""
         memory_id = ""
@@ -92,7 +92,7 @@ class MemorySystem:
     async def recall(
         self,
         query: str,
-        memory_types: list[str] = None,
+        memory_types: list[str] | None = None,
         agent_id: str = "",
         polarity: str = "",
         limit: int = 10,

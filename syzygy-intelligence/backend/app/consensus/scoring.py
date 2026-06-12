@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from app.agents.base import SyzygyAgent
 from app.llm.ollama_client import OllamaClient
@@ -69,6 +70,7 @@ class ConsensusScorer:
     ) -> dict[str, float]:
         """Evaluate a single agent's contribution across all dimensions using LLM."""
         scorer = llm or self.llm
+        assert agent.archetype is not None
 
         prompt = (
             f"Task: {task}\n\n"
@@ -121,7 +123,6 @@ class ConsensusScorer:
     def _parse_fallback(self, text: str) -> dict[str, float]:
         """Parse comma-separated numbers as fallback."""
         try:
-            import re
             numbers = re.findall(r"[\d.]+", text)
             floats = [max(0.0, min(1.0, float(n))) for n in numbers[:5]]
             while len(floats) < 5:
@@ -138,3 +139,8 @@ class ConsensusScorer:
             for dim in self.SCORE_DIMENSIONS
         )
         return round(weighted, 4)
+
+
+__all__ = [
+    "ConsensusScorer",
+]

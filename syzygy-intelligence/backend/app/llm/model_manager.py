@@ -40,7 +40,7 @@ class ModelManager:
         "quick": "fast_model",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ollama = OllamaClient()
         self.litellm = LiteLLMClient()
         self._model_cache: dict[str, Any] = {}

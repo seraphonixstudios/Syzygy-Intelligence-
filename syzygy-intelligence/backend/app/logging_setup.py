@@ -21,7 +21,7 @@ from app.config import settings
 
 
 class StructuredMessage:
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         self.message = message
         self.kwargs = kwargs
 
@@ -56,7 +56,7 @@ class SyzygyLogger:
             "syzygy_log_context", default={}
         )
 
-    def _setup_handlers(self):
+    def _setup_handlers(self) -> None:
         formatter = logging.Formatter(
             "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
             datefmt="%Y-%m-%dT%H:%M:%S%z",
@@ -101,34 +101,34 @@ class SyzygyLogger:
         )
         self._logger.addHandler(audit_handler)
 
-    def with_context(self, **kwargs) -> SyzygyLogger:
+    def with_context(self, **kwargs: Any) -> SyzygyLogger:
         """Set context variables for the current async task (thread-safe)."""
         current_context = self._context.get().copy()
         current_context.update(kwargs)
         self._context.set(current_context)
         return self
 
-    def _log(self, level: int, msg: str, **kwargs):
+    def _log(self, level: int, msg: str, **kwargs: Any) -> None:
         extra = {**self._context.get(), **kwargs}
         structured = StructuredMessage(msg, **extra)
         self._logger.log(level, str(structured), extra=extra)
 
-    def debug(self, msg: str, **kwargs):
+    def debug(self, msg: str, **kwargs: Any) -> None:
         self._log(logging.DEBUG, msg, **kwargs)
 
-    def info(self, msg: str, **kwargs):
+    def info(self, msg: str, **kwargs: Any) -> None:
         self._log(logging.INFO, msg, **kwargs)
 
-    def warning(self, msg: str, **kwargs):
+    def warning(self, msg: str, **kwargs: Any) -> None:
         self._log(logging.WARNING, msg, **kwargs)
 
-    def error(self, msg: str, **kwargs):
+    def error(self, msg: str, **kwargs: Any) -> None:
         self._log(logging.ERROR, msg, **kwargs)
 
-    def critical(self, msg: str, **kwargs):
+    def critical(self, msg: str, **kwargs: Any) -> None:
         self._log(logging.CRITICAL, msg, **kwargs)
 
-    def audit(self, action: str, **kwargs):
+    def audit(self, action: str, **kwargs: Any) -> None:
         """Audit trail: always logged at INFO level with AUDIT prefix."""
         self._log(
             logging.INFO,
@@ -138,7 +138,7 @@ class SyzygyLogger:
             **kwargs,
         )
 
-    def log_exception(self, exc: Exception, msg: str = "", **kwargs):
+    def log_exception(self, exc: Exception, msg: str = "", **kwargs: Any) -> None:
         self._logger.exception(
             str(StructuredMessage(msg or str(exc), **kwargs)),
             exc_info=exc,

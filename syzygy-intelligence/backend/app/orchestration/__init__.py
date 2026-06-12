@@ -10,7 +10,7 @@ from app.orchestration.team_formation import TeamFormation
 class Orchestrator:
     """Central orchestrator for agent teams, task execution, and persistence."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.team_formation = TeamFormation()
         self.task_queue = TaskQueue()
         self.checkpoint_manager = CheckpointManager()

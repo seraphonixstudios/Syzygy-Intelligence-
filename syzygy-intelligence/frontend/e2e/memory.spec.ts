@@ -9,24 +9,34 @@ test.describe("Memory page", () => {
   test("renders memory interface", async ({ page }) => {
     await page.goto("/memory");
     await expect(page.locator("h1")).toContainText("Memory");
+    await expect(page.locator("input[placeholder*='Search' i]")).toBeVisible();
   });
 
-  test("has search input", async ({ page }) => {
+  test("has filter buttons for memory types", async ({ page }) => {
     await page.goto("/memory");
-    const searchInput = page.locator("input[placeholder*='Search']");
-    await expect(searchInput).toBeVisible();
+    await expect(page.getByText("All")).toBeVisible();
+    await expect(page.getByText("Short-term")).toBeVisible();
+    await expect(page.getByText("Long-term")).toBeVisible();
+    await expect(page.getByText("Team")).toBeVisible();
+  });
+
+  test("has polarity filter", async ({ page }) => {
+    await page.goto("/memory");
+    await expect(page.getByText("Masculine")).toBeVisible();
+    await expect(page.getByText("Feminine")).toBeVisible();
+    await expect(page.getByText("Unified")).toBeVisible();
+  });
+
+  test("has search form", async ({ page }) => {
+    await page.goto("/memory");
+    const searchBtn = page.locator("button:has-text('Search')");
+    await expect(searchBtn).toBeVisible();
   });
 
   test("can type search query", async ({ page }) => {
     await page.goto("/memory");
-    const searchInput = page.locator("input[placeholder*='Search']");
-    await searchInput.fill("test query");
-    await expect(searchInput).toHaveValue("test query");
-  });
-
-  test("search button is visible", async ({ page }) => {
-    await page.goto("/memory");
-    const searchBtn = page.locator("button[type='submit']");
-    await expect(searchBtn).toBeVisible();
+    const input = page.locator("input[placeholder*='Search' i]");
+    await input.fill("consensus results");
+    await expect(input).toHaveValue("consensus results");
   });
 });

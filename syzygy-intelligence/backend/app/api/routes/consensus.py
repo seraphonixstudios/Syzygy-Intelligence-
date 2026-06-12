@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +35,7 @@ async def run_consensus(
     data: RunConsensusRequest,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     if not data.task:
         raise HTTPException(400, "Task is required")
 
@@ -50,7 +52,7 @@ async def run_consensus(
     else:
         agents = agent_registry.create_default_team()
 
-    async def on_event(event_type: str, payload: dict):
+    async def on_event(event_type: str, payload: dict[str, Any]) -> None:
         if data.ws_client_id:
             await ws_manager.send_to(data.ws_client_id, {
                 "type": f"consensus_{event_type}",
@@ -89,7 +91,7 @@ async def run_consensus(
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str) -> dict[str, Any]:
     session = engine.active_sessions.get(session_id)
     if not session:
         raise HTTPException(404, "Session not found")

@@ -20,11 +20,12 @@ class ContentWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def research(self, topic: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Research the following topic thoroughly:\n\n{topic}\n\n"
             f"Provide:\n"
@@ -37,7 +38,8 @@ class ContentWorkflow:
         research = await self.llm.generate(prompt, temperature=0.4)
         return {"topic": topic, "research": research}
 
-    async def outline(self, topic: str, research: dict, polarity: str = "balanced") -> dict[str, Any]:
+    async def outline(self, topic: str, research: dict[str, Any], polarity: str = "balanced") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Topic: {topic}\n\n"
             f"Research findings:\n{research.get('research', '')[:2000]}\n\n"
@@ -51,7 +53,8 @@ class ContentWorkflow:
         outline = await self.llm.generate(prompt, temperature=0.4)
         return {"topic": topic, "outline": outline, "polarity": polarity}
 
-    async def draft(self, outline: dict, polarity: str = "balanced") -> dict[str, Any]:
+    async def draft(self, outline: dict[str, Any], polarity: str = "balanced") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Write a complete content draft based on this outline:\n\n"
             f"{outline.get('outline', '')[:3000]}\n\n"
@@ -64,7 +67,8 @@ class ContentWorkflow:
         draft = await self.llm.generate(prompt, temperature=0.5)
         return {"draft": draft, "word_count": len(draft.split())}
 
-    async def edit(self, draft: dict, feedback: str = "") -> dict[str, Any]:
+    async def edit(self, draft: dict[str, Any], feedback: str = "") -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Edit the following content for clarity, flow, and impact:\n\n"
             f"{draft.get('draft', '')[:4000]}\n\n"
@@ -83,7 +87,8 @@ class ContentWorkflow:
             "word_count": len(edited.split()),
         }
 
-    async def polish(self, edited: dict) -> dict[str, Any]:
+    async def polish(self, edited: dict[str, Any]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Do a final polish pass on this content:\n\n"
             f"{edited.get('edited', '')[:4000]}\n\n"
@@ -98,7 +103,7 @@ class ContentWorkflow:
         polished = await self.llm.generate(prompt, temperature=0.3)
         return {"polished": polished, "word_count": len(polished.split())}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         polarity = ctx.get("polarity", "balanced")
 

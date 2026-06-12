@@ -70,7 +70,9 @@ async def create_checkout_session(
 async def create_customer_portal_url(customer_id: str, return_url: str) -> str:
     try:
         import stripe
-        stripe.api_key = get_stripe_config().secret_key
+        cfg = get_stripe_config()
+        assert cfg is not None
+        stripe.api_key = cfg.secret_key
         session = stripe.billing_portal.Session.create(
             customer=customer_id,
             return_url=return_url,
@@ -89,7 +91,7 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
     try:
         import stripe
         stripe.api_key = cfg.secret_key
-        event = stripe.Webhook.construct_event(payload, sig_header, cfg.webhook_secret)
+        event = stripe.Webhook.construct_event(payload, sig_header, cfg.webhook_secret)  # type: ignore[no-untyped-call]
     except Exception as e:
         logger.error("Stripe webhook verification failed", error=str(e), source="payments")
         raise
@@ -113,7 +115,7 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
     return {"status": "ok"}
 
 
-async def _handle_checkout_completed(session: dict) -> None:
+async def _handle_checkout_completed(session: dict[str, Any]) -> None:
     from sqlalchemy import select
 
     from app.db.models import User
@@ -131,19 +133,19 @@ async def _handle_checkout_completed(session: dict) -> None:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user:
-            user.stripe_customer_id = customer_id
-            user.stripe_subscription_id = subscription_id
+            user.stripe_customer_id = customer_id  # type: ignore[assignment]
+            user.stripe_subscription_id = subscription_id  # type: ignore[assignment]
             session.get("mode", "")
             if session.get("amount_total", 0) >= 9900:
-                user.subscription_tier = "enterprise"
+                user.subscription_tier = "enterprise"  # type: ignore[assignment]
             elif session.get("amount_total", 0) >= 2900:
-                user.subscription_tier = "premium"
+                user.subscription_tier = "premium"  # type: ignore[assignment]
             db.add(user)
             await db.commit()
             logger.info(f"User {user_id} upgraded via checkout", tier=user.subscription_tier, source="payments")
 
 
-async def _handle_subscription_updated(sub: dict) -> None:
+async def _handle_subscription_updated(sub: dict[str, Any]) -> None:
     from sqlalchemy import select
 
     from app.db.models import User
@@ -161,19 +163,19 @@ async def _handle_subscription_updated(sub: dict) -> None:
         user = result.scalar_one_or_none()
         if user:
             if status in ("canceled", "incomplete_expired", "past_due"):
-                user.subscription_tier = "free"
+                user.subscription_tier = "free"  # type: ignore[assignment]
             elif items:
                 price_id = items[0].get("price", {}).get("id", "")
                 if price_id == settings.stripe_enterprise_price_id:
-                    user.subscription_tier = "enterprise"
+                    user.subscription_tier = "enterprise"  # type: ignore[assignment]
                 elif price_id == settings.stripe_premium_price_id:
-                    user.subscription_tier = "premium"
+                    user.subscription_tier = "premium"  # type: ignore[assignment]
             db.add(user)
             await db.commit()
             logger.info("User subscription updated", tier=user.subscription_tier, status=status, source="payments")
 
 
-async def _handle_subscription_deleted(sub: dict) -> None:
+async def _handle_subscription_deleted(sub: dict[str, Any]) -> None:
     from sqlalchemy import select
 
     from app.db.models import User
@@ -187,18 +189,18 @@ async def _handle_subscription_deleted(sub: dict) -> None:
         result = await db.execute(select(User).where(User.stripe_customer_id == customer_id))
         user = result.scalar_one_or_none()
         if user:
-            user.subscription_tier = "free"
-            user.stripe_subscription_id = None
+            user.subscription_tier = "free"  # type: ignore[assignment]
+            user.stripe_subscription_id = None  # type: ignore[assignment]
             db.add(user)
             await db.commit()
             logger.info("User subscription cancelled", user_id=user.id, source="payments")
 
 
-async def _handle_invoice_paid(invoice: dict) -> None:
+async def _handle_invoice_paid(invoice: dict[str, Any]) -> None:
     logger.info("Invoice paid", invoice_id=invoice.get("id"), source="payments")
 
 
-async def _handle_invoice_failed(invoice: dict) -> None:
+async def _handle_invoice_failed(invoice: dict[str, Any]) -> None:
     from sqlalchemy import select
 
     from app.db.models import User

@@ -14,7 +14,7 @@ from app.config import settings
 class TeamMemory:
     """Shared team memory store accessible by all agents."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.storage_path = Path(f"{settings.data_dir}/memories/team")
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -24,8 +24,8 @@ class TeamMemory:
         session_id: str = "",
         agent_id: str = "",
         memory_type: str = "insight",
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         memory_id = str(uuid.uuid4())
         entry = {

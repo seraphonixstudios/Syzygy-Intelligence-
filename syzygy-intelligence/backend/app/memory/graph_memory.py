@@ -9,15 +9,20 @@ from typing import Any
 from app.config import settings
 from app.logging_setup import logger
 
+try:
+    from neo4j import Driver as Neo4jDriver
+except ImportError:
+    Neo4jDriver = Any  # type: ignore[assignment,misc]
+
 
 class GraphMemory:
     """Neo4j-based graph memory for relationship tracking with Cypher queries."""
 
-    def __init__(self):
-        self._driver = None
+    def __init__(self) -> None:
+        self._driver: Neo4jDriver | None = None
         self._initialized = False
 
-    async def _ensure_init(self):
+    async def _ensure_init(self) -> None:
         if not self._initialized:
             try:
                 from neo4j import GraphDatabase
@@ -40,8 +45,8 @@ class GraphMemory:
         session_id: str = "",
         polarity: str = "",
         archetype: str = "",
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Store a memory node in the graph with relationships."""
         await self._ensure_init()
@@ -49,7 +54,7 @@ class GraphMemory:
 
         if self._driver:
             try:
-                async with self._driver.session() as session:
+                async with self._driver.session() as session:  # type: ignore[attr-defined]
                     await session.run(
                         """
                         CREATE (m:Memory {
@@ -122,20 +127,20 @@ class GraphMemory:
         agent_id: str = "",
         polarity: str = "",
         archetype: str = "",
-        tags: list[str] = None,
+        tags: list[str] | None = None,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         """Query memory graph with Cypher."""
         await self._ensure_init()
-        results = []
+        results: list[dict[str, Any]] = []
 
         if not self._driver:
             return results
 
         try:
-            async with self._driver.session() as session:
+            async with self._driver.session() as session:  # type: ignore[attr-defined]
                 cypher = "MATCH (m:Memory) WHERE 1=1"
-                params = {}
+                params: dict[str, Any] = {}
 
                 if agent_id:
                     cypher += " AND m.agent_id = $agent_id"
@@ -188,13 +193,13 @@ class GraphMemory:
     ) -> list[dict[str, Any]]:
         """Traverse graph relationships from a memory node."""
         await self._ensure_init()
-        results = []
+        results: list[dict[str, Any]] = []
 
         if not self._driver:
             return results
 
         try:
-            async with self._driver.session() as session:
+            async with self._driver.session() as session:  # type: ignore[attr-defined]
                 result = await session.run(
                     f"""
                     MATCH (m:Memory {{id: $memory_id}})
@@ -234,7 +239,7 @@ class GraphMemory:
         if not self._driver:
             return False
         try:
-            async with self._driver.session() as session:
+            async with self._driver.session() as session:  # type: ignore[attr-defined]
                 await session.run(
                     "MATCH (m:Memory {id: $id}) DETACH DELETE m",
                     id=memory_id,
@@ -244,8 +249,8 @@ class GraphMemory:
             logger.error(f"Neo4j delete failed: {e}")
             return False
 
-    async def close(self):
+    async def close(self) -> None:
         if self._driver:
-            await self._driver.close()
+            await self._driver.close()  # type: ignore[misc,func-returns-value]
             self._driver = None
             self._initialized = False

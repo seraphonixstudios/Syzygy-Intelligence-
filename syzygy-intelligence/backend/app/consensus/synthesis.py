@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from app.agents.base import SyzygyAgent
 from app.llm.ollama_client import OllamaClient
 
@@ -18,14 +20,15 @@ class SynthesisGenerator:
         proposals: dict[str, str],
         critiques: dict[str, str],
         refinements: dict[str, str],
-        evaluations: dict[str, dict],
+        evaluations: dict[str, dict[str, float]],
         agents: list[SyzygyAgent],
+        timeout: float = 0,
     ) -> str:
         """Generate the final unified synthesis from all consensus materials."""
         synthesis_prompt = self._build_synthesis_prompt(
             task, proposals, critiques, refinements, evaluations, agents
         )
-        return await self.llm.generate(
+        coro = self.llm.generate(
             synthesis_prompt,
             system=(
                 "You are the Rebis — the unified Self, the goal of the Great Work. "
@@ -37,6 +40,9 @@ class SynthesisGenerator:
             ),
             temperature=0.4,
         )
+        if timeout > 0:
+            coro = asyncio.wait_for(coro, timeout=timeout)
+        return await coro
 
     def _build_synthesis_prompt(
         self,
@@ -44,7 +50,7 @@ class SynthesisGenerator:
         proposals: dict[str, str],
         critiques: dict[str, str],
         refinements: dict[str, str],
-        evaluations: dict[str, dict],
+        evaluations: dict[str, dict[str, float]],
         agents: list[SyzygyAgent],
     ) -> str:
         parts = [f"# Task\n{task}\n"]
@@ -52,6 +58,7 @@ class SynthesisGenerator:
         parts.append("# Proposals (by archetype)\n")
         for agent in agents:
             prop = proposals.get(agent.id, "")
+            assert agent.archetype is not None
             parts.append(f"## {agent.name} ({agent.archetype.name}, {agent.polarity.value})\n{prop}\n")
 
         if critiques:
@@ -90,3 +97,8 @@ class SynthesisGenerator:
         )
 
         return "\n".join(parts)
+
+
+__all__ = [
+    "SynthesisGenerator",
+]

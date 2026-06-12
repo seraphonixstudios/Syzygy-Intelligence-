@@ -5,10 +5,13 @@ This module exposes an OpenAI-compatible API endpoint.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.consensus.engine import ConsensusEngine
+from app.errors import LLMConnectionError
 from app.llm.ollama_client import OllamaClient
 
 router = APIRouter(prefix="/v1", tags=["OpenAI Compatible"])
@@ -34,12 +37,12 @@ class ChatCompletionResponse(BaseModel):
     object: str = "chat.completion"
     created: int
     model: str
-    choices: list[dict]
-    usage: dict
+    choices: list[dict[str, Any]]
+    usage: dict[str, Any]
 
 
 @router.post("/chat/completions")
-async def chat_completions(request: ChatCompletionRequest):
+async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
     """OpenAI-compatible chat completions endpoint with Syzygy enhancements."""
     import time
 
@@ -53,23 +56,45 @@ async def chat_completions(request: ChatCompletionRequest):
 
     # Use consensus engine for syzygy model
     if "syzygy" in request.model.lower():
-        engine = ConsensusEngine()
-        session = await engine.run_consensus(
-            task=user_message,
-            max_rounds=request.syzygy_consensus_rounds,
-        )
+        try:
+            engine = ConsensusEngine()
+            session = await engine.run_consensus(
+                task=user_message,
+                max_rounds=request.syzygy_consensus_rounds,
+            )
+        except TimeoutError:
+            raise HTTPException(504, detail={
+                "code": "CONSENSUS_TIMEOUT",
+                "message": "Consensus engine timed out",
+            })
+        except Exception:
+            raise HTTPException(500, detail={
+                "code": "CONSENSUS_ERROR",
+                "message": "Consensus engine failed",
+            })
 
         content = session.final_synthesis
         content += "\n\n---\n*Syzygy Polarity Fusion Report:*\n"
         content += f"Rounds completed: {session.current_round}\n"
         content += f"Polarity balance: {session.polarity_fusion_report.get('individuation_notes', '')}"
     else:
-        llm = OllamaClient()
-        content = await llm.chat(
-            messages=[m.model_dump() for m in request.messages],
-            model=request.model,
-            temperature=request.temperature,
-        )
+        try:
+            llm = OllamaClient()
+            content = await llm.chat(
+                messages=[m.model_dump() for m in request.messages],
+                model=request.model,
+                temperature=request.temperature,
+            )
+        except LLMConnectionError as e:
+            raise HTTPException(503, detail={
+                "code": "LLM_CONNECTION_ERROR",
+                "message": str(e),
+            })
+        except Exception:
+            raise HTTPException(500, detail={
+                "code": "LLM_ERROR",
+                "message": "LLM request failed",
+            })
 
     return {
         "id": f"chatcmpl-{int(time.time())}",

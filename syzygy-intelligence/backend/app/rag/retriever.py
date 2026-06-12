@@ -15,7 +15,7 @@ from app.rag.ingester import chunk_text, parse_document
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _collection():
+def _collection() -> Any:
     """Return (creating if needed) the RAG document collection."""
     client = chromadb.PersistentClient(path=settings.chroma_path)
     return client.get_or_create_collection(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -40,7 +41,7 @@ async def list_sessions(
     db: AsyncSession = Depends(get_db),
     limit: int = 50,
     offset: int = 0,
-):
+) -> dict[str, Any]:
     result = await db.execute(
         select(DBSession)
         .order_by(DBSession.created_at.desc())
@@ -70,10 +71,10 @@ async def list_sessions(
 
 @router.post("/")
 async def create_session(
-    data: dict,
+    data: dict[str, Any],
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     agent = await _get_or_create_agent(db)
     session = DBSession(
         id=uuid.uuid4(),
@@ -100,7 +101,7 @@ async def get_session(
     session_id: str,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     result = await db.execute(
         select(DBSession)
         .options(selectinload(DBSession.consensus_rounds))

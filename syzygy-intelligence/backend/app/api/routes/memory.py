@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Query
 
 from app.memory import memory_system
@@ -10,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/store")
-async def store_memory(data: dict):
+async def store_memory(data: dict[str, Any]) -> dict[str, Any]:
     memory_id = await memory_system.store(
         content=data.get("content", ""),
         memory_type=data.get("type", "short_term"),
@@ -30,7 +32,7 @@ async def recall_memory(
     agent_id: str = Query(""),
     polarity: str = Query(""),
     limit: int = Query(10),
-):
+) -> dict[str, Any]:
     results = await memory_system.recall(
         query=query,
         agent_id=agent_id,
@@ -41,7 +43,7 @@ async def recall_memory(
 
 
 @router.get("/recent")
-async def recent_memories(session_id: str = Query(""), limit: int = Query(5)):
+async def recent_memories(session_id: str = Query(""), limit: int = Query(5)) -> dict[str, Any]:
     results = await memory_system.remember_recent(
         session_id=session_id,
         limit=limit,

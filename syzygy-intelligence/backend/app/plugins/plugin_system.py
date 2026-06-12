@@ -40,11 +40,11 @@ class PluginBase:
 class PluginSystem:
     """Manages plugin discovery, loading, and execution."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._plugins: dict[str, PluginBase] = {}
         self._plugin_dirs: list[Path] = []
 
-    def add_plugin_dir(self, path: str):
+    def add_plugin_dir(self, path: str) -> None:
         self._plugin_dirs.append(Path(path))
 
     async def discover_plugins(self) -> list[PluginManifest]:
@@ -74,11 +74,11 @@ class PluginSystem:
             for py_file in plugin_dir.glob("**/*.py"):
                 if py_file.stem == "plugin" or py_file.stem == name:
                     try:
-                        spec = importlib.util.spec_from_file_location(
+                        spec = importlib.util.spec_from_file_location(  # type: ignore[attr-defined]
                             f"syzygy_plugin_{name}", py_file
                         )
                         if spec and spec.loader:
-                            module = importlib.util.module_from_spec(spec)
+                            module = importlib.util.module_from_spec(spec)  # type: ignore[attr-defined]
                             spec.loader.exec_module(module)
 
                             for _, obj in inspect.getmembers(module):
@@ -108,7 +108,7 @@ class PluginSystem:
         self,
         plugin_name: str,
         action: str,
-        params: dict[str, Any] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """Execute a plugin action."""
         plugin = self._plugins.get(plugin_name)

@@ -20,11 +20,12 @@ class ApiDesignerWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def design_endpoints(self, description: str, style: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Design API endpoints for the following requirement:\n\n{description}\n\n"
             f"API Style: {style}\n\n"
@@ -39,7 +40,8 @@ class ApiDesignerWorkflow:
         design = await self.llm.generate(prompt, temperature=0.3)
         return {"design": design, "style": style}
 
-    async def generate_openapi_spec(self, description: str, design: dict, style: str) -> dict[str, Any]:
+    async def generate_openapi_spec(self, description: str, design: dict[str, Any], style: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a complete OpenAPI 3.1 specification for the following API:\n\n"
             f"Description: {description}\n\n"
@@ -54,7 +56,8 @@ class ApiDesignerWorkflow:
         spec = await self.llm.generate(prompt, temperature=0.2)
         return {"spec": spec}
 
-    async def generate_stubs(self, spec: dict, language: str) -> dict[str, Any]:
+    async def generate_stubs(self, spec: dict[str, Any], language: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate {language} endpoint stubs from this OpenAPI spec:\n\n"
             f"{spec.get('spec', '')[:3000]}\n\n"
@@ -68,7 +71,8 @@ class ApiDesignerWorkflow:
         stubs = await self.llm.generate(prompt, temperature=0.3)
         return {"stubs": stubs, "language": language}
 
-    async def generate_tests(self, spec: dict, language: str) -> dict[str, Any]:
+    async def generate_tests(self, spec: dict[str, Any], language: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate validation tests in {language} for this API spec:\n\n"
             f"{spec.get('spec', '')[:3000]}\n\n"
@@ -82,7 +86,7 @@ class ApiDesignerWorkflow:
         tests = await self.llm.generate(prompt, temperature=0.3)
         return {"tests": tests}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         description = ctx.get("description", task)
         style = ctx.get("api_style", "REST")

@@ -84,23 +84,23 @@ class Notification:
 class MessageBus:
     """Async event bus for internal component communication."""
 
-    def __init__(self):
-        self._subscribers: dict[str, list[Callable]] = {}
+    def __init__(self) -> None:
+        self._subscribers: dict[str, list[Callable[..., Any]]] = {}
         self._history: list[Notification] = []
         self._max_history = 1000
 
-    def subscribe(self, event_type: str, callback: Callable):
+    def subscribe(self, event_type: str, callback: Callable[..., Any]) -> None:
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
         self._subscribers[event_type].append(callback)
 
-    def unsubscribe(self, event_type: str, callback: Callable):
+    def unsubscribe(self, event_type: str, callback: Callable[..., Any]) -> None:
         if event_type in self._subscribers:
             self._subscribers[event_type] = [
                 cb for cb in self._subscribers[event_type] if cb is not callback
             ]
 
-    async def publish(self, notification: Notification):
+    async def publish(self, notification: Notification) -> None:
         self._history.append(notification)
         if len(self._history) > self._max_history:
             self._history = self._history[-self._max_history:]
@@ -120,21 +120,21 @@ class MessageBus:
     def get_history(self, limit: int = 50) -> list[Notification]:
         return self._history[-limit:]
 
-    def clear_history(self):
+    def clear_history(self) -> None:
         self._history.clear()
 
 
 class NotificationManager:
     """Manages notifications — creation, persistence, WebSocket broadcast."""
 
-    def __init__(self, bus: MessageBus | None = None):
+    def __init__(self, bus: MessageBus | None = None) -> None:
         self.bus = bus or MessageBus()
         self._ws_connections: dict[str, Any] = {}
 
-    def register_ws(self, client_id: str, send_func: Callable):
+    def register_ws(self, client_id: str, send_func: Callable[..., Any]) -> None:
         self._ws_connections[client_id] = send_func
 
-    def unregister_ws(self, client_id: str):
+    def unregister_ws(self, client_id: str) -> None:
         self._ws_connections.pop(client_id, None)
 
     async def notify(
@@ -146,7 +146,7 @@ class NotificationManager:
         source: str = "",
         agent_id: str = "",
         session_id: str = "",
-        data: dict[str, Any] = None,
+        data: dict[str, Any] | None = None,
     ) -> Notification:
         notification = Notification(
             type=type,

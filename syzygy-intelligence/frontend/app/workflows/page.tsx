@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
-import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download } from "lucide-react";
+import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -31,6 +31,15 @@ const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   data_pipeline: "ETL pipeline — ingest, clean, transform, validate schema, and load data",
   ci_piper: "CI/CD pipeline configs — GitHub Actions, GitLab CI, Jenkins with matrix builds and deploy stages",
 };
+
+const SUGGESTIONS = [
+  "Build a REST API in Python with FastAPI",
+  "Research the latest advances in quantum computing",
+  "Write a blog post about zero-trust architecture",
+  "Debate: Is AGI achievable without embodiment?",
+  "Break down: Building a recommendation engine",
+  "Audit this Python codebase for security issues",
+];
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<string[]>([]);
@@ -126,6 +135,24 @@ export default function WorkflowsPage() {
           ))
         )}
       </div>
+
+      {!selected && (
+        <div className="animate-fade-in-up space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-3">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setInput(s)}
+                className="group flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/20 px-4 py-3 text-left text-xs text-syzygy-grey/60 transition-all duration-200 hover:border-syzygy-gold/30 hover:bg-syzygy-gold/5 hover:text-syzygy-grey-light"
+              >
+                <span className="leading-relaxed">{s}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-syzygy-grey/30 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-syzygy-gold/60" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="animate-fade-in-up stagger-1 space-y-3">

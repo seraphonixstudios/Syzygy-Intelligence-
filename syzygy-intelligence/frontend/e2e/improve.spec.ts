@@ -6,10 +6,31 @@ test.describe("Improve page", () => {
     await registerAndLogin(page);
   });
 
-  test("renders improvement interface", async ({ page }) => {
+  test("renders self-improvement interface", async ({ page }) => {
     await page.goto("/improve");
-    await expect(page.locator("h1")).toContainText("Improve");
-    await expect(page.locator("input[placeholder*='output' i]")).toBeVisible();
+    await expect(page.locator("h1")).toContainText("Self-Improvement");
+    await expect(page.locator("input[placeholder*='evaluate' i]")).toBeVisible();
+  });
+
+  test("has evaluate and auto-improve buttons", async ({ page }) => {
+    await page.goto("/improve");
+    const evaluate = page.locator("button:has-text('Evaluate')");
+    const autoImprove = page.locator("button:has-text('Auto-Improve')");
+    await expect(evaluate).toBeVisible();
+    await expect(autoImprove).toBeVisible();
+  });
+
+  test("has suggestion cards when empty", async ({ page }) => {
+    await page.goto("/improve");
+    await expect(page.getByText("Evaluate a recent output")).toBeVisible();
+    await expect(page.getByText("Analyze decision quality")).toBeVisible();
+  });
+
+  test("suggestion click fills input", async ({ page }) => {
+    await page.goto("/improve");
+    await page.getByText("Evaluate a recent output").click();
+    const input = page.locator("input[placeholder*='evaluate' i]");
+    await expect(input).toHaveValue(/Evaluate/i);
   });
 
   test("has voice button", async ({ page }) => {
@@ -18,16 +39,10 @@ test.describe("Improve page", () => {
     await expect(voiceBtn).toBeVisible();
   });
 
-  test("can type output to improve", async ({ page }) => {
+  test("can type input for evaluation", async ({ page }) => {
     await page.goto("/improve");
-    const input = page.locator("input[placeholder*='output' i]");
-    await input.fill("Improve this text");
-    await expect(input).toHaveValue("Improve this text");
-  });
-
-  test("has evaluate button", async ({ page }) => {
-    await page.goto("/improve");
-    const btn = page.locator("button:has-text('Evaluate')");
-    await expect(btn).toBeVisible();
+    const input = page.locator("input[placeholder*='evaluate' i]");
+    await input.fill("Sample output for evaluation");
+    await expect(input).toHaveValue("Sample output for evaluation");
   });
 });

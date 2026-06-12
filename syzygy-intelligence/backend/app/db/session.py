@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -30,7 +32,7 @@ _async_session_factory = None
 _db_type: str | None = None
 
 
-def _get_sqlite_engine():
+def _get_sqlite_engine() -> AsyncEngine:
     engine = create_async_engine(
         settings.database_url,
         echo=False,
@@ -38,7 +40,7 @@ def _get_sqlite_engine():
     )
 
     @event.listens_for(engine.sync_engine, "connect")
-    def _set_sqlite_pragma(dbapi_connection, connection_record):
+    def _set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -47,7 +49,7 @@ def _get_sqlite_engine():
     return engine
 
 
-def _get_engine():
+def _get_engine() -> AsyncEngine:
     global _engine, _db_type
     if _engine is not None:
         return _engine
@@ -69,7 +71,7 @@ def _get_engine():
     return _engine
 
 
-def _get_session_factory():
+def _get_session_factory() -> async_sessionmaker[AsyncSession]:
     global _async_session_factory
     if _async_session_factory is None:
         _async_session_factory = async_sessionmaker(
@@ -81,7 +83,7 @@ def _get_session_factory():
 
 
 # Re-export for modules that need direct session creation outside DI
-def get_session_factory():
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Return the async session factory for manual session creation.
     Caller is responsible for cleanup with context manager or explicit close.
     """
@@ -116,7 +118,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def init_db():
+async def init_db() -> bool:
     """Initialize database — create all tables if they don't exist. Returns True on success, False if skipped."""
     safe_url = (
         settings.database_url.replace(settings.db_password, "****")
@@ -137,7 +139,7 @@ async def init_db():
         return False
 
 
-async def close_db():
+async def close_db() -> None:
     """Dispose of the database engine."""
     global _engine, _async_session_factory
     if _engine is not None:

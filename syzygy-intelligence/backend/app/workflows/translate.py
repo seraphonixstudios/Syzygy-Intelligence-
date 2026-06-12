@@ -20,11 +20,12 @@ class TranslateWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def detect_language(self, text: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Detect the language of the following text. Return ISO 639-1 code and language name:\n\n"
             f"{text[:1000]}"
@@ -33,6 +34,7 @@ class TranslateWorkflow:
         return {"detected": result}
 
     async def translate_direct(self, text: str, source: str, target: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Translate the following text from {source} to {target}:\n\n"
             f"{text[:3000]}\n\n"
@@ -43,6 +45,7 @@ class TranslateWorkflow:
         return {"source": source, "target": target, "translation": translation}
 
     async def cultural_adapt(self, text: str, translation: str, source: str, target: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Review and adapt the following translation from {source} to {target} "
             f"for cultural appropriateness:\n\n"
@@ -60,6 +63,7 @@ class TranslateWorkflow:
         return {"adaptation": adapted}
 
     async def quality_review(self, text: str, translation: str, source: str, target: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Perform a quality review of this translation from {source} to {target}:\n\n"
             f"Original: {text[:2000]}\n\n"
@@ -75,7 +79,7 @@ class TranslateWorkflow:
         review = await self.llm.generate(prompt, temperature=0.3)
         return {"review": review}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         text = ctx.get("text", task)
         source = ctx.get("source_language", None)

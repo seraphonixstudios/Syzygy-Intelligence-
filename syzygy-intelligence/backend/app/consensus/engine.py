@@ -26,7 +26,7 @@ from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
 from app.llm.ollama_client import OllamaClient
 
-ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
+ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 
 @dataclass
@@ -37,7 +37,7 @@ class ConsensusRound:
     proposals: dict[str, str] = field(default_factory=dict)  # agent_id -> proposal text
     critiques: dict[str, str] = field(default_factory=dict)   # agent_id -> critique text
     refinements: dict[str, str] = field(default_factory=dict) # agent_id -> refined text
-    evaluations: dict[str, dict] = field(default_factory=dict) # agent_id -> {score: float, dimensions: dict}
+    evaluations: dict[str, dict[str, float]] = field(default_factory=dict)  # agent_id -> scores
     scores: dict[str, float] = field(default_factory=dict)
     convergence_score: float = 0.0
     polarity_balance: float = 0.5
@@ -59,7 +59,7 @@ class ConsensusSession:
     convergence_threshold: float = 0.85
     variance_threshold: float = 0.1
     final_synthesis: str = ""
-    polarity_fusion_report: dict = field(default_factory=dict)
+    polarity_fusion_report: dict[str, Any] = field(default_factory=dict)
     status: str = "pending"
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
@@ -77,6 +77,14 @@ class ConsensusEngine:
         self.scorer = ConsensusScorer()
         self.synthesizer = SynthesisGenerator(self.llm)
         self.active_sessions: dict[str, ConsensusSession] = {}
+        self._timeout: float = 0
+
+    async def _call_llm(self, prompt: str, **kwargs: Any) -> str:
+        """Call the LLM with optional timeout wrapper."""
+        coro = self.llm.generate(prompt, **kwargs)
+        if self._timeout > 0:
+            coro = asyncio.wait_for(coro, timeout=self._timeout)
+        return await coro
 
     async def run_consensus(
         self,
@@ -101,9 +109,12 @@ class ConsensusEngine:
             convergence_threshold=convergence_threshold,
             variance_threshold=settings.variance_threshold,
         )
+        self._timeout = timeout
         self.active_sessions[session.id] = session
         session.status = "running"
-        self._on_event = on_event
+
+        for agent in agents:
+            assert agent.archetype is not None
 
         for round_num in range(1, max_rounds + 1):
             round_data = ConsensusRound(round_number=round_num)
@@ -112,11 +123,11 @@ class ConsensusEngine:
 
             # Phase 1: Proposals
             await self._proposal_phase(session, round_data)
-            if self._on_event:
+            if on_event:
                 for agent in session.agents:
-                    await self._on_event("proposal", {
+                    await on_event("proposal", {
                         "agent": agent.name,
-                        "archetype": agent.archetype.name,
+                        "archetype": agent.archetype.name if agent.archetype else "",
                         "polarity": agent.polarity.value,
                         "content": round_data.proposals.get(agent.id, ""),
                     })
@@ -124,11 +135,11 @@ class ConsensusEngine:
             # Phase 2: Critique with Shadow activation
             if round_num >= 2 or len(agents) >= 3:
                 await self._critique_phase(session, round_data)
-                if self._on_event:
+                if on_event:
                     for agent in session.agents:
-                        await self._on_event("critique", {
+                        await on_event("critique", {
                             "agent": agent.name,
-                            "archetype": agent.archetype.name,
+                            "archetype": agent.archetype.name if agent.archetype else "",
                             "polarity": agent.polarity.value,
                             "content": round_data.critiques.get(agent.id, ""),
                         })
@@ -136,19 +147,19 @@ class ConsensusEngine:
             # Phase 3: Refinement
             if round_num >= 2:
                 await self._refinement_phase(session, round_data)
-                if self._on_event:
+                if on_event:
                     for agent in session.agents:
-                        await self._on_event("refinement", {
+                        await on_event("refinement", {
                             "agent": agent.name,
-                            "archetype": agent.archetype.name,
+                            "archetype": agent.archetype.name if agent.archetype else "",
                             "polarity": agent.polarity.value,
                             "content": round_data.refinements.get(agent.id, ""),
                         })
 
             # Phase 4: Evaluation
             await self._evaluation_phase(session, round_data)
-            if self._on_event:
-                await self._on_event("evaluation", {
+            if on_event:
+                await on_event("evaluation", {
                     "scores": round_data.scores,
                     "convergence": round_data.convergence_score,
                     "polarity_balance": round_data.polarity_balance,
@@ -172,10 +183,11 @@ class ConsensusEngine:
             refinements=final_round.refinements,
             evaluations=final_round.evaluations,
             agents=agents,
+            timeout=self._timeout,
         )
 
-        if self._on_event:
-            await self._on_event("synthesis", {
+        if on_event:
+            await on_event("synthesis", {
                 "content": session.final_synthesis,
             })
 
@@ -186,7 +198,7 @@ class ConsensusEngine:
         session.completed_at = datetime.now(UTC)
         return session
 
-    async def _proposal_phase(self, session: ConsensusSession, round_data: ConsensusRound):
+    async def _proposal_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 1: Each agent produces an independent proposal."""
         tasks = []
         for agent in session.agents:
@@ -198,9 +210,9 @@ class ConsensusEngine:
             if isinstance(result, Exception):
                 round_data.proposals[agent.id] = f"[Error generating proposal: {result}]"
             else:
-                round_data.proposals[agent.id] = result
+                round_data.proposals[agent.id] = str(result)
 
-    async def _critique_phase(self, session: ConsensusSession, round_data: ConsensusRound):
+    async def _critique_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 2: Cross-polarity critique with shadow activation."""
         tasks = []
         prev_round = session.rounds[-2] if len(session.rounds) >= 2 else None
@@ -235,10 +247,10 @@ class ConsensusEngine:
             if isinstance(result, Exception):
                 round_data.critiques[agent.id] = f"[Error during critique: {result}]"
             else:
-                round_data.critiques[agent.id] = result
+                round_data.critiques[agent.id] = str(result)
             agent.deactivate_shadow()
 
-    async def _refinement_phase(self, session: ConsensusSession, round_data: ConsensusRound):
+    async def _refinement_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 3: Agents revise proposals based on received critiques."""
         tasks = []
         for agent in session.agents:
@@ -262,9 +274,9 @@ class ConsensusEngine:
             if isinstance(result, Exception):
                 round_data.refinements[agent.id] = round_data.proposals.get(agent.id, "")
             else:
-                round_data.refinements[agent.id] = result
+                round_data.refinements[agent.id] = str(result)
 
-    async def _evaluation_phase(self, session: ConsensusSession, round_data: ConsensusRound):
+    async def _evaluation_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 4: Multi-axis scoring of all refinements/proposals."""
         contents = round_data.refinements or round_data.proposals
         evaluations = await self.scorer.evaluate_all(
@@ -304,7 +316,7 @@ class ConsensusEngine:
 
         return high_agreement or low_variance
 
-    def _generate_fusion_report(self, session: ConsensusSession) -> dict:
+    def _generate_fusion_report(self, session: ConsensusSession) -> dict[str, Any]:
         """Generate polarity fusion report with individuation notes."""
         masc_contributions = []
         fem_contributions = []
@@ -336,6 +348,7 @@ class ConsensusEngine:
         }
 
     async def _agent_propose(self, agent: SyzygyAgent, task: str, context: str) -> str:
+        assert agent.archetype is not None
         prompt = (
             f"As a {agent.archetype.name} agent ({agent.polarity.value} polarity), "
             f"propose your approach to the following task:\n\n{task}\n\n"
@@ -343,7 +356,7 @@ class ConsensusEngine:
             f"Frame your proposal through the lens of your archetype's strengths: "
             f"{', '.join(agent.archetype.strengths)}."
         )
-        return await self.llm.generate(prompt, system=agent.build_system_prompt())
+        return await self._call_llm(prompt, system=agent.build_system_prompt())
 
     async def _agent_critique(
         self,
@@ -372,7 +385,7 @@ class ConsensusEngine:
             f"Provide constructive cross-polarity critique. Identify blind spots, "
             f"unexamined assumptions, and opportunities for integration."
         )
-        return await self.llm.generate(prompt, system=agent.build_system_prompt())
+        return await self._call_llm(prompt, system=agent.build_system_prompt())
 
     async def _agent_refine(
         self,
@@ -381,6 +394,7 @@ class ConsensusEngine:
         own_proposal: str,
         critiques: dict[str, str],
     ) -> str:
+        assert agent.archetype is not None
         critiques_text = "\n\n".join(
             f"Critique from {cid}: {c}" for cid, c in critiques.items()
         )
@@ -392,7 +406,7 @@ class ConsensusEngine:
             f"while maintaining your archetypal perspective as {agent.archetype.name}. "
             f"Explain what you changed and why."
         )
-        return await self.llm.generate(prompt, system=agent.build_system_prompt())
+        return await self._call_llm(prompt, system=agent.build_system_prompt())
 
     def _build_proposal_context(
         self,

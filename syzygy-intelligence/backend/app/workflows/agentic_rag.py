@@ -20,11 +20,12 @@ class AgenticRagWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def decompose_query(self, query: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Decompose the following complex query into simpler sub-queries:\n\n{query}\n\n"
             f"For each sub-query provide:\n"
@@ -38,6 +39,7 @@ class AgenticRagWorkflow:
         return {"sub_queries": decomposed, "original_query": query}
 
     async def retrieve_context(self, sub_query: str, knowledge_base: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Search the following knowledge base for information relevant to:\n{sub_query}\n\n"
             f"Knowledge Base:\n{knowledge_base[:5000]}\n\n"
@@ -52,8 +54,9 @@ class AgenticRagWorkflow:
         return {"sub_query": sub_query, "retrieved": retrieved}
 
     async def multi_hop_synthesize(
-        self, query: str, sub_query_results: list[dict], context: list[dict]
+        self, query: str, sub_query_results: list[dict[str, Any]], context: list[dict[str, Any]]
     ) -> str:
+        assert self.llm is not None
         combined = "\n\n".join(
             f"Sub-query: {r.get('sub_query', '')}\nResults: {r.get('retrieved', '')}"
             for r in sub_query_results
@@ -74,6 +77,7 @@ class AgenticRagWorkflow:
         return await self.llm.generate(prompt, temperature=0.3)
 
     async def validate_answer(self, query: str, answer: str, sources: list[str]) -> str:
+        assert self.llm is not None
         src_text = "\n".join(f"- {s[:200]}" for s in sources[:5])
         prompt = (
             f"Fact-check the following answer against its sources:\n\n"
@@ -89,7 +93,7 @@ class AgenticRagWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.2)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         query = ctx.get("query", task)
         knowledge_base = ctx.get("knowledge_base", "")

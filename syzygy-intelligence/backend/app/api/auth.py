@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 import jwt
@@ -72,9 +73,9 @@ def create_verification_token(user_id: str) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> dict | None:
+def decode_token(token: str) -> dict[str, Any] | None:
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])  # type: ignore[no-any-return]
     except jwt.PyJWTError:
         return None
 
@@ -94,11 +95,11 @@ async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
         .where(ApiKey.is_active)
     )
     for api_key in result.scalars().all():
-        if verify_password(token, api_key.hashed_key):
-            api_key.last_used_at = datetime.now(UTC)
+        if verify_password(token, api_key.hashed_key):  # type: ignore[arg-type]
+            api_key.last_used_at = datetime.now(UTC)  # type: ignore[assignment]
             db.add(api_key)
             await db.commit()
-            return api_key.user
+            return api_key.user  # type: ignore[no-any-return]
     return None
 
 
@@ -140,8 +141,8 @@ async def check_usage_limit(
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
-        user.message_count = 0
-        user.usage_reset_at = now
+        user.message_count = 0  # type: ignore[assignment]
+        user.usage_reset_at = now  # type: ignore[assignment]
         db.add(user)
         await db.commit()
 

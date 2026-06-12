@@ -14,6 +14,7 @@ class ProposalPhase:
 
     @staticmethod
     def build_prompt(task: str, agent: SyzygyAgent, context: str = "") -> str:
+        assert agent.archetype is not None
         return (
             f"As a {agent.archetype.name} agent ({agent.polarity.value} polarity), "
             f"propose your approach to the following task:\n\n{task}\n\n"
@@ -67,6 +68,7 @@ class RefinementPhase:
         own_proposal: str,
         critiques: dict[str, str],
     ) -> str:
+        assert agent.archetype is not None
         critiques_text = "\n\n".join(
             f"Critique from {cid}: {c[:600]}"
             for cid, c in critiques.items()
@@ -92,8 +94,17 @@ class EvaluationPhase:
         content: str,
         agent: SyzygyAgent,
     ) -> str:
+        assert agent.archetype is not None
         return (
             f"Task: {task}\n\n"
             f"Agent: {agent.name} ({agent.archetype.name}, {agent.polarity.value})\n"
             f"Content to evaluate:\n{content[:1500]}"
         )
+
+
+__all__ = [
+    "ProposalPhase",
+    "CritiquePhase",
+    "RefinementPhase",
+    "EvaluationPhase",
+]

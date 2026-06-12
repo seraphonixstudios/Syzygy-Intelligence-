@@ -34,11 +34,12 @@ class TaskDecompositionWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
-    async def decompose(self, task: str, context: dict[str, Any] = None) -> list[Subtask]:
+    async def decompose(self, task: str, context: dict[str, Any] | None = None) -> list[Subtask]:
+        assert self.llm is not None
         prompt = (
             f"Decompose the following complex task into manageable subtasks:\n\n"
             f"Task: {task}\n\n"
@@ -102,9 +103,10 @@ class TaskDecompositionWorkflow:
     async def execute(
         self,
         task: str,
-        context: dict[str, Any] = None,
-        on_subtask_complete: Callable | None = None,
+        context: dict[str, Any] | None = None,
+        on_subtask_complete: Callable[..., Any] | None = None,
     ) -> list[Subtask]:
+        assert self.llm is not None
         subtasks = await self.decompose(task, context)
         completed = set()
         for i, subtask in enumerate(subtasks):

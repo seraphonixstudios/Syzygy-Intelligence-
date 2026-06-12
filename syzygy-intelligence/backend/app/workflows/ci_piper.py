@@ -23,11 +23,12 @@ class CiPiperWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def analyze_project(self, project_description: str, language: str, framework: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Analyze the following project for CI/CD pipeline requirements:\n\n"
             f"Description: {project_description[:1500]}\n"
@@ -46,7 +47,8 @@ class CiPiperWorkflow:
         analysis = await self.llm.generate(prompt, temperature=0.3)
         return {"analysis": analysis, "language": language, "framework": framework}
 
-    async def generate_github_actions(self, project_description: str, analysis: dict) -> dict[str, Any]:
+    async def generate_github_actions(self, project_description: str, analysis: dict[str, Any]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a complete GitHub Actions workflow YAML for:\n\n"
             f"Project: {project_description[:1000]}\n\n"
@@ -65,7 +67,8 @@ class CiPiperWorkflow:
         config = await self.llm.generate(prompt, temperature=0.3)
         return {"config": config, "platform": "github_actions"}
 
-    async def generate_gitlab_ci(self, project_description: str, analysis: dict) -> dict[str, Any]:
+    async def generate_gitlab_ci(self, project_description: str, analysis: dict[str, Any]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a complete GitLab CI .gitlab-ci.yml for:\n\n"
             f"Project: {project_description[:1000]}\n\n"
@@ -84,7 +87,8 @@ class CiPiperWorkflow:
         config = await self.llm.generate(prompt, temperature=0.3)
         return {"config": config, "platform": "gitlab_ci"}
 
-    async def generate_jenkins(self, project_description: str, analysis: dict) -> dict[str, Any]:
+    async def generate_jenkins(self, project_description: str, analysis: dict[str, Any]) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate a Jenkins declarative pipeline (Jenkinsfile) for:\n\n"
             f"Project: {project_description[:1000]}\n\n"
@@ -102,7 +106,7 @@ class CiPiperWorkflow:
         config = await self.llm.generate(prompt, temperature=0.3)
         return {"config": config, "platform": "jenkins"}
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         project_description = ctx.get("description", task)
         language = ctx.get("language", "python")

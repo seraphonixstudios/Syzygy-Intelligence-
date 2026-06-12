@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,7 +32,7 @@ class SyzygyConfig(BaseSettings):
     db_password: str = "syzygy_secret"
     db_sqlite_path: str = str(Path("./data/syzygy.db").absolute())
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         """Validate configuration after initialization."""
         # Support DATABASE_URL env var (raw, no SYZYGY_ prefix)
         raw_url = os.environ.get("DATABASE_URL", "")

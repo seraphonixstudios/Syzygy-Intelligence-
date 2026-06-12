@@ -20,11 +20,12 @@ class InterviewCoachWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def generate_questions(self, role: str, difficulty: str, count: int) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Generate {count} {difficulty}-level interview questions for a {role} position.\n\n"
             f"For each question provide:\n"
@@ -38,6 +39,7 @@ class InterviewCoachWorkflow:
         return {"questions": result, "role": role, "difficulty": difficulty, "count": count}
 
     async def evaluate_answer(self, question: str, answer: str, role: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Evaluate the following interview answer for a {role} position:\n\n"
             f"Question: {question}\n\n"
@@ -53,7 +55,8 @@ class InterviewCoachWorkflow:
         result = await self.llm.generate(prompt, temperature=0.3)
         return {"evaluation": result, "question": question}
 
-    async def generate_feedback(self, evaluations: list[dict]) -> str:
+    async def generate_feedback(self, evaluations: list[dict[str, Any]]) -> str:
+        assert self.llm is not None
         combined = "\n\n".join(
             f"Q: {e.get('question', '')}\nEvaluation: {e.get('evaluation', '')}"
             for e in evaluations
@@ -70,7 +73,7 @@ class InterviewCoachWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         role = ctx.get("role", task)
         difficulty = ctx.get("difficulty", "medium")

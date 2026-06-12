@@ -5,12 +5,21 @@ import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/VoiceButton";
 import { ReasoningPanel } from "@/components/ReasoningPanel";
 import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
-import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight, StopCircle, Database } from "lucide-react";
+import { Send, Loader2, Bot, User, Brain, Layers, ChevronDown, ChevronRight, StopCircle, Database, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useSSE } from "@/hooks/useSSE";
 
 const API = process.env.NEXT_PUBLIC_SYZYGY_API_URL || "http://localhost:8000";
+
+const SUGGESTIONS = [
+  "What is Syzygy?",
+  "Explain polarity fusion",
+  "Compare consensus models",
+  "How does the Rebis archetype work?",
+  "Explain the individuation process",
+  "Help me configure my agent team",
+];
 
 interface Message {
   role: "user" | "assistant";
@@ -298,6 +307,24 @@ export default function ChatPage() {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {messages.length === 1 && (
+        <div className="animate-fade-in-up space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-3">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setInput(s)}
+                className="group flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/20 px-4 py-3 text-left text-xs text-syzygy-grey/60 transition-all duration-200 hover:border-syzygy-gold/30 hover:bg-syzygy-gold/5 hover:text-syzygy-grey-light"
+              >
+                <span className="leading-relaxed">{s}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-syzygy-grey/30 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-syzygy-gold/60" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {reasoning.length > 0 && (
         <ReasoningPanel steps={reasoning} loading={sending} title="Agent Reasoning" />

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -32,7 +33,7 @@ class LinkResponse(BaseModel):
 
 
 @router.post("/file")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
     if file.content_type and file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
     ext = Path(file.filename or "image.png").suffix or ".png"
@@ -48,7 +49,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @router.post("/link")
-async def upload_link(payload: LinkPayload):
+async def upload_link(payload: LinkPayload) -> LinkResponse:
     import httpx
     from bs4 import BeautifulSoup
 
@@ -60,18 +61,20 @@ async def upload_link(payload: LinkPayload):
             resp = await client.get(url, headers={"User-Agent": "SyzygyBot/1.0"})
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
-            title = soup.title.string.strip() if soup.title else url
+            title = str(soup.title.string).strip() if soup.title and soup.title.string else url
             meta_desc = soup.find("meta", attrs={"name": "description"})
             desc_tag = meta_desc or soup.find("meta", attrs={"property": "og:description"})
-            description = desc_tag.get("content", "").strip() if desc_tag else ""
+            description = str(desc_tag.get("content", "")).strip() if desc_tag else ""
             favicon_tag = soup.find("link", rel=lambda v: v and "icon" in v.lower()) if hasattr(soup, "find") else None
             favicon = ""
             if favicon_tag and favicon_tag.get("href"):
-                favicon = favicon_tag["href"]
-                if favicon.startswith("/"):
-                    from urllib.parse import urlparse
-                    parsed = urlparse(url)
-                    favicon = f"{parsed.scheme}://{parsed.netloc}{favicon}"
+                favicon_href = favicon_tag["href"]
+                if isinstance(favicon_href, str):
+                    favicon = favicon_href
+                    if favicon.startswith("/"):
+                        from urllib.parse import urlparse
+                        parsed = urlparse(url)
+                        favicon = f"{parsed.scheme}://{parsed.netloc}{favicon}"
         logger.info("Link processed", url=url, title=title)
         return LinkResponse(url=url, title=title, description=description, favicon=favicon)
     except Exception as e:

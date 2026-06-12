@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AgentCard } from "@/components/agents/AgentCard";
+import { PolarityBalance } from "@/components/agents/PolarityBalance";
+import { TeamSuggestions } from "@/components/agents/TeamSuggestions";
+import { CreateAgentModal } from "@/components/agents/CreateAgentModal";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, Plus, Trash2, Zap, Sparkles } from "lucide-react";
 import { logger } from "@/lib/logger";
@@ -15,6 +18,7 @@ export default function AgentsPage() {
   const [composing, setComposing] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const fetchAgents = useCallback(async () => {
     try {
@@ -31,13 +35,26 @@ export default function AgentsPage() {
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
 
-  const handleCompose = async () => {
+  const handleCompose = async (archetypes?: string[]) => {
     setComposing(true);
     setError("");
     try {
-      const res = await fetch(`${API}/api/agents/compose`, { method: "POST" });
-      const data = await res.json();
-      setAgents(data.agents || []);
+      if (archetypes && archetypes.length > 0) {
+        for (const agent of agents) {
+          await fetch(`${API}/api/agents/${agent.id}`, { method: "DELETE" });
+        }
+        for (const arch of archetypes) {
+          await fetch(`${API}/api/agents/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ archetype: arch }),
+          });
+        }
+      } else {
+        await fetch(`${API}/api/agents/compose`, { method: "POST" });
+      }
+      await fetchAgents();
+      toast.success("Team composed");
     } catch (err) {
       logger.error("Failed to compose team", err, "Agents");
       setError("Failed to compose team");
@@ -63,7 +80,9 @@ export default function AgentsPage() {
     try {
       const res = await fetch(`${API}/api/agents/${id}/shadow/toggle`, { method: "POST" });
       const data = await res.json();
-      setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, shadow_active: data.shadow_active } : a)));
+      setAgents((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, shadow_active: data.shadow_active } : a))
+      );
     } catch (err) {
       logger.error("Failed to toggle shadow", err, "Agents");
       setError("Failed to toggle shadow");
@@ -96,14 +115,20 @@ export default function AgentsPage() {
             <p className="mt-0.5 text-xs text-syzygy-grey/60">Polarity-balanced agent team</p>
           </div>
         </div>
-        <Button variant="gold" size="sm" onClick={handleCompose} disabled={composing}>
-          {composing ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <Zap className="mr-1 h-4 w-4" />
-          )}
-          {composing ? "Composing..." : "Compose Team"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="gold" size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            Create Agent
+          </Button>
+          <Button variant="occult" size="sm" onClick={() => handleCompose()} disabled={composing}>
+            {composing ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="mr-1 h-4 w-4" />
+            )}
+            {composing ? "Composing..." : "Compose Team"}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -113,68 +138,87 @@ export default function AgentsPage() {
         </div>
       )}
 
+      {agents.length > 0 && (
+        <PolarityBalance agents={agents} />
+      )}
+
       {agents.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20">
           <Users className="h-12 w-12 text-syzygy-grey/20" />
           <p className="text-sm text-syzygy-grey/40">No agents yet. Compose a team to get started.</p>
-          <Button variant="gold" size="sm" onClick={handleCompose} disabled={composing}>
-            <Sparkles className="mr-1 h-4 w-4" />
-            Compose Team
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="occult" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" />
+              Create Agent
+            </Button>
+            <Button variant="gold" size="sm" onClick={() => handleCompose()} disabled={composing}>
+              <Sparkles className="mr-1 h-4 w-4" />
+              Compose Team
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {agents.map((agent, i) => (
-            <div
-              key={agent.id}
-              className={`stagger-${Math.min(i + 1, 8)} animate-fade-in-up group relative hover:scale-[1.02] hover:border-syzygy-gold/50 transition-all duration-300`}
-            >
-              <AgentCard
-                name={agent.name}
-                archetype={agent.archetype}
-                polarity={agent.polarity}
-                model={agent.model}
-                shadow={agent.shadow_active}
-              />
-              <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleToggleShadow(agent.id)}
-                  title="Toggle shadow"
-                >
-                  {agent.shadow_active ? "☀" : "☾"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                  onClick={() => handleDelete(agent.id)}
-                  disabled={deleting === agent.id}
-                  title="Delete agent"
-                >
-                  {deleting === agent.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                </Button>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {agents.map((agent, i) => (
+              <div
+                key={agent.id}
+                className={`stagger-${Math.min(i + 1, 8)} animate-fade-in-up group relative hover:scale-[1.02] hover:border-syzygy-gold/50 transition-all duration-300`}
+              >
+                <AgentCard
+                  name={agent.name}
+                  archetype={agent.archetype}
+                  polarity={agent.polarity}
+                  model={agent.model}
+                  shadow={agent.shadow_active}
+                  persona={agent.persona}
+                />
+                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleToggleShadow(agent.id)}
+                    title="Toggle shadow"
+                  >
+                    {agent.shadow_active ? "☀" : "☾"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    onClick={() => handleDelete(agent.id)}
+                    disabled={deleting === agent.id}
+                    title="Delete agent"
+                  >
+                    {deleting === agent.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <TeamSuggestions onCompose={(archs) => handleCompose(archs)} />
+
+          <div className="flex items-center justify-center gap-2 text-xs text-syzygy-grey/40">
+            <span>{agents.filter((a: any) => a.polarity === "masculine").length} Masculine</span>
+            <span className="text-syzygy-grey/20">•</span>
+            <span>{agents.filter((a: any) => a.polarity === "feminine").length} Feminine</span>
+            <span className="text-syzygy-grey/20">•</span>
+            <span>{agents.filter((a: any) => a.polarity === "unified").length} Unified</span>
+          </div>
+        </>
       )}
 
-      {agents.length > 0 && (
-        <div className="flex items-center justify-center gap-2 text-xs text-syzygy-grey/40">
-          <span>{agents.filter((a: any) => a.polarity === "masculine").length} Masculine</span>
-          <span className="text-syzygy-grey/20">•</span>
-          <span>{agents.filter((a: any) => a.polarity === "feminine").length} Feminine</span>
-          <span className="text-syzygy-grey/20">•</span>
-          <span>{agents.filter((a: any) => a.polarity === "unified").length} Unified</span>
-        </div>
-      )}
+      <CreateAgentModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={fetchAgents}
+      />
     </div>
   );
 }

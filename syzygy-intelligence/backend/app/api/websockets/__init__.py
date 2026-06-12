@@ -6,6 +6,7 @@ Integrates with the notification system for persistent message delivery.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -19,24 +20,24 @@ from app.orchestration.consensus_integration import run_consensus_with_memory
 class ConnectionManager:
     """Manages WebSocket connections for live streaming with health tracking."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: dict[str, WebSocket] = {}
         self._connection_health: dict[str, int] = {}
 
-    async def connect(self, websocket: WebSocket, client_id: str = ""):
+    async def connect(self, websocket: WebSocket, client_id: str = "") -> str:
         await websocket.accept()
         cid = client_id or f"ws_{id(websocket)}"
         self.active_connections[cid] = websocket
         self._connection_health[cid] = 0
 
-        async def send_json(data: dict):
+        async def send_json(data: dict[str, Any]) -> None:
             await websocket.send_json(data)
 
         notification_manager.register_ws(cid, send_json)
         logger.info("WebSocket client connected", client_id=cid, active_connections=len(self.active_connections))
         return cid
 
-    def disconnect(self, client_id: str):
+    def disconnect(self, client_id: str) -> None:
         self.active_connections.pop(client_id, None)
         self._connection_health.pop(client_id, None)
         notification_manager.unregister_ws(client_id)
@@ -45,7 +46,7 @@ class ConnectionManager:
             client_id=client_id, active_connections=len(self.active_connections),
         )
 
-    async def send_to(self, client_id: str, message: dict):
+    async def send_to(self, client_id: str, message: dict[str, Any]) -> bool:
         ws = self.active_connections.get(client_id)
         if ws:
             try:
@@ -56,7 +57,7 @@ class ConnectionManager:
                 self.disconnect(client_id)
         return False
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: dict[str, Any]) -> None:
         disconnected = []
         for cid, ws in self.active_connections.items():
             try:
@@ -76,7 +77,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-async def ws_handler(websocket: WebSocket):
+async def ws_handler(websocket: WebSocket) -> None:
     client_id = await manager.connect(websocket)
     engine = ConsensusEngine()
 
@@ -112,7 +113,7 @@ async def ws_handler(websocket: WebSocket):
                     data={"task": task},
                 )
 
-                async def on_event(event_type: str, payload: dict):
+                async def on_event(event_type: str, payload: dict[str, Any]) -> None:
                     await manager.send_to(client_id, {
                         "type": f"consensus_{event_type}",
                         **payload,

@@ -13,12 +13,12 @@ from app.logging_setup import logger
 class VectorMemory:
     """Chroma-based vector memory with real embedding generation for semantic retrieval."""
 
-    def __init__(self):
-        self._collection = None
-        self._embedding_function = None
+    def __init__(self) -> None:
+        self._collection: Any = None
+        self._embedding_function: Any = None
         self._initialized = False
 
-    async def _ensure_init(self):
+    async def _ensure_init(self) -> None:
         if not self._initialized:
             try:
                 import chromadb
@@ -49,8 +49,8 @@ class VectorMemory:
         agent_id: str = "",
         session_id: str = "",
         polarity: str = "",
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Store memory with embedding for semantic search."""
         await self._ensure_init()
@@ -85,7 +85,7 @@ class VectorMemory:
     ) -> list[dict[str, Any]]:
         """Semantic search using vector similarity. Returns results sorted by relevance."""
         await self._ensure_init()
-        results = []
+        results: list[dict[str, Any]] = []
 
         if self._collection:
             try:
@@ -141,7 +141,7 @@ class VectorMemory:
         await self._ensure_init()
         if self._collection:
             try:
-                return self._collection.count()
+                return self._collection.count()  # type: ignore[no-any-return]
             except Exception:
                 pass
         return 0

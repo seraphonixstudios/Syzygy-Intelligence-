@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -37,7 +38,7 @@ async def ingest(
     file: UploadFile | None = File(None),
     text: str | None = Form(None),
     source: str = Form(""),
-):
+) -> dict[str, Any]:
     """Ingest a document via file upload or raw text (multipart/form-data)."""
     if file is not None:
         ext = Path(file.filename or "").suffix.lower()
@@ -60,13 +61,13 @@ async def ingest(
 
 
 @router.post("/ingest/batch")
-async def ingest_batch(files: list[UploadFile] = File(...)):
+async def ingest_batch(files: list[UploadFile] = File(...)) -> dict[str, Any]:
     """Ingest multiple documents in a single request (multipart/form-data)."""
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
-    results: list[dict] = []
-    errors: list[dict] = []
+    results: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
 
     for f in files:
         ext = Path(f.filename or "").suffix.lower()
@@ -91,7 +92,7 @@ async def ingest_batch(files: list[UploadFile] = File(...)):
 
 
 @router.post("/query")
-async def search(payload: QueryRequest):
+async def search(payload: QueryRequest) -> dict[str, Any]:
     """Semantic search over ingested documents."""
     if not payload.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
@@ -100,14 +101,14 @@ async def search(payload: QueryRequest):
 
 
 @router.get("/documents")
-async def list_docs():
+async def list_docs() -> dict[str, Any]:
     """List all ingested documents with chunk counts."""
     docs = await retriever.list_documents()
     return {"documents": docs, "count": len(docs)}
 
 
 @router.delete("/documents")
-async def delete_doc(payload: DeleteRequest):
+async def delete_doc(payload: DeleteRequest) -> dict[str, Any]:
     """Delete a document and all its chunks by source identifier."""
     if not payload.source.strip():
         raise HTTPException(status_code=400, detail="Source is required")

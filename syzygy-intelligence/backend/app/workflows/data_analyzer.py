@@ -23,11 +23,12 @@ class DataAnalyzerWorkflow:
     )
     llm: OllamaClient | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.llm is None:
             self.llm = OllamaClient()
 
     async def describe_data(self, data: str, format: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Analyze the following {format} data and provide a statistical summary:\n\n"
             f"{data[:3000]}\n\n"
@@ -42,6 +43,7 @@ class DataAnalyzerWorkflow:
         return {"summary": summary, "format": format}
 
     async def detect_anomalies(self, data: str, format: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Detect anomalies in the following {format} data:\n\n"
             f"{data[:3000]}\n\n"
@@ -57,6 +59,7 @@ class DataAnalyzerWorkflow:
         return {"anomalies": anomalies}
 
     async def find_correlations(self, data: str, format: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Discover correlations and relationships in the following {format} data:\n\n"
             f"{data[:3000]}\n\n"
@@ -71,7 +74,11 @@ class DataAnalyzerWorkflow:
         correlations = await self.llm.generate(prompt, temperature=0.3)
         return {"correlations": correlations}
 
-    async def recommend_visualizations(self, data: str, summary: dict, anomalies: dict, correlations: dict) -> str:
+    async def recommend_visualizations(
+        self, data: str, summary: dict[str, Any],
+        anomalies: dict[str, Any], correlations: dict[str, Any],
+    ) -> str:
+        assert self.llm is not None
         combined = (
             f"Data Summary:\n{summary.get('summary', 'N/A')[:1000]}\n\n"
             f"Anomalies:\n{anomalies.get('anomalies', 'N/A')[:1000]}\n\n"
@@ -87,7 +94,7 @@ class DataAnalyzerWorkflow:
         )
         return await self.llm.generate(prompt, temperature=0.3)
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         data = ctx.get("data", task)
         format = ctx.get("format", "CSV")

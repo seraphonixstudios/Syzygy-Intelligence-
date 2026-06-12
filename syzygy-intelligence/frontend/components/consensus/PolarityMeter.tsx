@@ -14,9 +14,9 @@ export function PolarityMeter({
   unified,
 }: PolarityMeterProps) {
   const total = masculine + feminine + unified;
-  const mascPct = (masculine / total) * 100;
-  const femPct = (feminine / total) * 100;
-  const uniPct = (unified / total) * 100;
+  const mascPct = total > 0 ? (masculine / total) * 100 : 33.33;
+  const femPct = total > 0 ? (feminine / total) * 100 : 33.33;
+  const uniPct = total > 0 ? (unified / total) * 100 : 33.34;
 
   const balance = 1 - Math.abs(mascPct - femPct) / 100;
 

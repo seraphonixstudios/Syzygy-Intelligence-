@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 
 class PersonaStyle(StrEnum):
@@ -36,7 +37,7 @@ class Persona:
     voice_instructions: str = ""
     greeting: str = ""
     traits: list[str] = field(default_factory=list)
-    communication_preferences: dict = field(default_factory=dict)
+    communication_preferences: dict[str, Any] = field(default_factory=dict)
 
     def to_system_prompt_fragment(self) -> str:
         parts = [

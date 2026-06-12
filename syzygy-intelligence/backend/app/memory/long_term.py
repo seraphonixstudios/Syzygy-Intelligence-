@@ -20,13 +20,13 @@ class LongTermMemory:
         self._index_path = self.storage_path / "_index.json"
         self._load_index()
 
-    def _load_index(self):
+    def _load_index(self) -> None:
         if self._index_path.exists():
             self._index = json.loads(self._index_path.read_text())
         else:
             self._index = {}
 
-    def _save_index(self):
+    def _save_index(self) -> None:
         self._index_path.write_text(json.dumps(self._index, indent=2))
 
     async def store(
@@ -37,8 +37,8 @@ class LongTermMemory:
         polarity: str = "",
         archetype: str = "",
         importance: float = 0.5,
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         memory_id = str(uuid.uuid4())
         entry = {
@@ -77,7 +77,7 @@ class LongTermMemory:
         polarity: str = "",
         archetype: str = "",
         min_importance: float = 0.0,
-        tags: list[str] = None,
+        tags: list[str] | None = None,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         results = []

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -49,7 +50,7 @@ async def list_users(
     per_page: int = 50,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[UserListItem]:
     offset = (page - 1) * per_page
     result = await db.execute(
         select(User).order_by(User.created_at.desc()).offset(offset).limit(per_page)
@@ -68,14 +69,14 @@ async def list_users(
 
         items.append(UserListItem(
             id=str(u.id),
-            email=u.email,
-            display_name=u.display_name,
-            is_active=u.is_active,
-            is_superuser=u.is_superuser,
+            email=u.email,  # type: ignore[arg-type]
+            display_name=u.display_name,  # type: ignore[arg-type]
+            is_active=u.is_active,  # type: ignore[arg-type]
+            is_superuser=u.is_superuser,  # type: ignore[arg-type]
             verified_at=u.verified_at.isoformat() if u.verified_at else None,
             trial_ends_at=u.trial_ends_at.isoformat() if u.trial_ends_at else None,
             subscription_tier=u.subscription_tier.value,
-            message_count=u.message_count,
+            message_count=u.message_count,  # type: ignore[arg-type]
             monthly_message_limit=limit,
             created_at=u.created_at.isoformat(),
             last_active_at=u.updated_at.isoformat() if u.updated_at else None,
@@ -88,7 +89,7 @@ async def get_user(
     user_id: str,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-):
+) -> UserListItem:
     result = await db.execute(select(User).where(User.id == user_id))
     u = result.scalar_one_or_none()
     if not u:
@@ -104,14 +105,14 @@ async def get_user(
 
     return UserListItem(
         id=str(u.id),
-        email=u.email,
-        display_name=u.display_name,
-        is_active=u.is_active,
-        is_superuser=u.is_superuser,
+        email=u.email,  # type: ignore[arg-type]
+        display_name=u.display_name,  # type: ignore[arg-type]
+        is_active=u.is_active,  # type: ignore[arg-type]
+        is_superuser=u.is_superuser,  # type: ignore[arg-type]
         verified_at=u.verified_at.isoformat() if u.verified_at else None,
         trial_ends_at=u.trial_ends_at.isoformat() if u.trial_ends_at else None,
         subscription_tier=u.subscription_tier.value,
-        message_count=u.message_count,
+        message_count=u.message_count,  # type: ignore[arg-type]
         monthly_message_limit=limit,
         created_at=u.created_at.isoformat(),
         last_active_at=u.updated_at.isoformat() if u.updated_at else None,
@@ -131,23 +132,23 @@ async def update_user(
     req: UpdateUserRequest,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     result = await db.execute(select(User).where(User.id == user_id))
     u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if req.is_active is not None:
-        u.is_active = req.is_active
+        u.is_active = req.is_active  # type: ignore[assignment]
     if req.is_superuser is not None:
-        u.is_superuser = req.is_superuser
+        u.is_superuser = req.is_superuser  # type: ignore[assignment]
     if req.subscription_tier is not None:
         try:
-            u.subscription_tier = SubscriptionTier(req.subscription_tier)
+            u.subscription_tier = SubscriptionTier(req.subscription_tier)  # type: ignore[assignment]
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid tier: {req.subscription_tier}")
     if req.display_name is not None:
-        u.display_name = req.display_name
+        u.display_name = req.display_name  # type: ignore[assignment]
 
     db.add(u)
     await db.commit()
@@ -159,13 +160,13 @@ async def delete_user(
     user_id: str,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     result = await db.execute(select(User).where(User.id == user_id))
     u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    u.is_active = False
+    u.is_active = False  # type: ignore[assignment]
     db.add(u)
     await db.commit()
     return {"status": "ok", "detail": "User disabled"}
@@ -175,7 +176,7 @@ async def delete_user(
 async def system_stats(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-):
+) -> SystemStats:
     now = datetime.now(UTC)
 
     total = await db.execute(select(func.count(User.id)))

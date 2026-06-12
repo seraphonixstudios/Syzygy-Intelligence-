@@ -45,7 +45,7 @@ WORKFLOW_REGISTRY: dict[str, Any] = {
 }
 
 
-def get_workflow(name: str):
+def get_workflow(name: str) -> Any:
     return WORKFLOW_REGISTRY.get(name)
 
 

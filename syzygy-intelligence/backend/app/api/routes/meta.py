@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from app.meta import meta_engine
@@ -10,12 +12,12 @@ router = APIRouter()
 
 
 @router.get("/summary")
-async def get_meta_summary():
+async def get_meta_summary() -> dict[str, Any]:
     return meta_engine.get_summary()
 
 
 @router.post("/evaluate")
-async def evaluate_output(data: dict):
+async def evaluate_output(data: dict[str, Any]) -> dict[str, Any]:
     output = data.get("output", "")
     context = data.get("context", {})
     result = meta_engine.evaluate_output(output, context)
@@ -41,7 +43,7 @@ async def evaluate_output(data: dict):
 
 
 @router.get("/history")
-async def get_evaluation_history():
+async def get_evaluation_history() -> dict[str, Any]:
     return {
         "evaluations": [
             {
@@ -67,7 +69,7 @@ async def get_evaluation_history():
 
 
 @router.post("/proposals/{proposal_id}/apply")
-async def apply_proposal(proposal_id: str):
+async def apply_proposal(proposal_id: str) -> dict[str, Any]:
     proposal = meta_engine.apply_proposal(proposal_id)
     if not proposal:
         return {"status": "error", "message": "Proposal not found or already applied"}
@@ -75,7 +77,7 @@ async def apply_proposal(proposal_id: str):
 
 
 @router.post("/improve")
-async def run_self_improvement(data: dict):
+async def run_self_improvement(data: dict[str, Any]) -> dict[str, Any]:
     """Run a full self-improvement cycle: evaluate, propose, and apply."""
     output = data.get("output", "")
     context = data.get("context", {})

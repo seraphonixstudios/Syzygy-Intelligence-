@@ -22,7 +22,7 @@ class ResearchWorkflow:
         default_factory=lambda: ["web_search", "analysis", "fact_checking"]
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.search_tool = SearchTool()
         self.browser_tool = BrowserTool()
         self.llm = OllamaClient()
@@ -67,7 +67,7 @@ class ResearchWorkflow:
         )
         return unique_results[:15]
 
-    async def validate(self, findings: list[dict]) -> list[dict]:
+    async def validate(self, findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Cross-validate findings for consistency and conflicts."""
         if not findings:
             return []
@@ -91,7 +91,7 @@ class ResearchWorkflow:
             f["validated"] = True
         return findings
 
-    async def synthesize(self, findings: list[dict], original_query: str) -> str:
+    async def synthesize(self, findings: list[dict[str, Any]], original_query: str) -> str:
         """Synthesize findings into a coherent analysis."""
         sources_summary = "\n\n".join(
             f"- {r.get('title', 'Untitled')} ({r.get('url', 'no url')}): {r.get('snippet', '')[:300]}"
@@ -111,7 +111,7 @@ class ResearchWorkflow:
         synthesis = await self.llm.generate(prompt, temperature=0.4)
         return synthesis
 
-    async def execute(self, task: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         """Execute full research workflow."""
         logger.info("Research workflow started", task=task[:100])
 

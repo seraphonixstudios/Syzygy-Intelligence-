@@ -34,7 +34,7 @@ class ImprovementProposal:
 class MetaCognitionEngine:
     """Evaluates system outputs and proposes improvements."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._history: list[EvaluationResult] = []
         self._proposals: list[ImprovementProposal] = []
         self._improvement_count = 0

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from sqlalchemy import select
 
@@ -27,7 +28,7 @@ from app.logging_setup import logger
 from app.memory import MemorySystem
 from app.orchestration.checkpointing import CheckpointManager
 
-ConsensusEventCallback = Callable[[str, dict], Awaitable[None]]
+ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 memory_system = MemorySystem()
 checkpoint_manager = CheckpointManager()
@@ -51,11 +52,11 @@ async def run_consensus_with_memory(
 
     original_agent_propose = engine._agent_propose
 
-    async def _agent_propose_with_memory(agent, task_text, ctx):
+    async def _agent_propose_with_memory(agent: Any, task_text: str, ctx: str) -> Any:
         enriched = f"{ctx}\n\nRelevant context from past work:\n{context}" if context else ctx
         return await original_agent_propose(agent, task_text, enriched)
 
-    engine._agent_propose = _agent_propose_with_memory  # type: ignore
+    engine._agent_propose = _agent_propose_with_memory  # type: ignore[assignment,unused-ignore]
 
     session = await engine.run_consensus(
         task=task,

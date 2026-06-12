@@ -68,4 +68,4 @@ async def embed(
         count=len(embeddings),
         dim=len(embeddings[0]) if embeddings else 0,
     )
-    return embeddings
+    return embeddings  # type: ignore[no-any-return]

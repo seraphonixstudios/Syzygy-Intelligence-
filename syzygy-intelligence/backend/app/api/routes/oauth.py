@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx
@@ -18,7 +19,7 @@ from app.logging_setup import logger
 
 router = APIRouter(prefix="/oauth")
 
-PROVIDER_CONFIGS: dict[str, dict] = {
+PROVIDER_CONFIGS: dict[str, dict[str, Any]] = {
     "google": {
         "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
@@ -39,7 +40,7 @@ PROVIDER_CONFIGS: dict[str, dict] = {
 
 
 @router.get("/{provider}")
-async def oauth_redirect(provider: str, request: Request):
+async def oauth_redirect(provider: str, request: Request) -> RedirectResponse:
     cfg = PROVIDER_CONFIGS.get(provider)
     if not cfg:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown provider: {provider}")
@@ -68,7 +69,7 @@ async def oauth_redirect(provider: str, request: Request):
 
 
 @router.get("/{provider}/callback")
-async def oauth_callback(provider: str, code: str, request: Request):
+async def oauth_callback(provider: str, code: str, request: Request) -> RedirectResponse:
     cfg = PROVIDER_CONFIGS.get(provider)
     if not cfg:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown provider: {provider}")
@@ -162,12 +163,12 @@ async def oauth_callback(provider: str, code: str, request: Request):
             await db.commit()
             await db.refresh(user)
         elif not user.verified_at:
-            user.verified_at = datetime.now(UTC)
+            user.verified_at = datetime.now(UTC)  # type: ignore[assignment]
             db.add(user)
             await db.commit()
 
-        our_access = create_access_token(str(user.id), user.email)
-        our_refresh = create_refresh_token(str(user.id), user.email)
+        our_access = create_access_token(str(user.id), user.email)  # type: ignore[arg-type]
+        our_refresh = create_refresh_token(str(user.id), user.email)  # type: ignore[arg-type]
 
     # Redirect back to frontend with tokens in hash fragment
     frontend_url = (settings.cors_origins.split(",")[0].strip() if settings.cors_origins else "http://localhost:3000")

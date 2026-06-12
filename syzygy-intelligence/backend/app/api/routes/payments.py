@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
@@ -38,7 +40,7 @@ class PortalResponse(BaseModel):
 async def create_checkout(
     req: CreateCheckoutRequest,
     user: User = Depends(require_user),
-):
+) -> CheckoutResponse:
     if not get_stripe_config() and settings.env == "production":
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -47,7 +49,7 @@ async def create_checkout(
 
     result = await create_checkout_session(
         user_id=str(user.id),
-        user_email=user.email,
+        user_email=user.email,  # type: ignore[arg-type]
         price_id=req.price_id,
         success_url=req.success_url,
         cancel_url=req.cancel_url,
@@ -59,21 +61,21 @@ async def create_checkout(
 @router.post("/customer-portal", response_model=PortalResponse)
 async def customer_portal(
     user: User = Depends(require_user),
-):
+) -> PortalResponse:
     if not user.stripe_customer_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No active subscription found",
         )
     url = await create_customer_portal_url(
-        customer_id=user.stripe_customer_id,
+        customer_id=user.stripe_customer_id,  # type: ignore[arg-type]
         return_url="http://localhost:3000/settings",
     )
     return PortalResponse(url=url)
 
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request) -> dict[str, Any]:
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
