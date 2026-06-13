@@ -55,6 +55,7 @@ FROM base AS runner
 
 ENV NODE_ENV=production \
     PORT=3000 \
+    HOSTNAME=0.0.0.0 \
     NODE_OPTIONS="--max-old-space-size=256 --no-warnings" \
     NEXT_TELEMETRY_DISABLED=1
 
@@ -78,7 +79,7 @@ EXPOSE 3000
 
 # Health check with HTTP probing
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD wget --quiet --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 # Metadata labels
 LABEL org.opencontainers.image.title="Syzygy Intelligence Frontend" \
