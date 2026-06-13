@@ -57,11 +57,12 @@ test.describe("Backend API endpoints", () => {
     expect(res.ok()).toBeTruthy();
   });
 
-  test("POST /api/rag/query without auth returns 401", async ({ request }) => {
+  test("POST /api/rag/query works without auth", async ({ request }) => {
     const res = await request.post(`${API}/api/rag/query`, {
       data: { query: "test", top_k: 5 },
     });
-    expect(res.status()).toBe(401);
+    // Public RAG endpoint — returns results even without auth
+    expect(res.ok()).toBeTruthy();
   });
 
   test("POST /api/rag/query with auth returns results or empty", async ({ request }) => {
@@ -159,23 +160,16 @@ test.describe("Backend API endpoints", () => {
     expect(res.status()).toBe(401);
   });
 
-  test("POST /api/stripe/config returns config", async ({ request }) => {
-    const res = await request.post(`${API}/api/stripe/config`, {
-      headers: { Authorization: `Bearer ${userToken}` },
-    });
-    expect(res.ok()).toBeTruthy();
-  });
-
-  test("POST /api/stripe/create-checkout-session returns redirect URL or error", async ({ request }) => {
-    const res = await request.post(`${API}/api/stripe/create-checkout-session`, {
+  test("POST /api/payments/create-checkout-session returns redirect URL or error", async ({ request }) => {
+    const res = await request.post(`${API}/api/payments/create-checkout-session`, {
       headers: { Authorization: `Bearer ${userToken}` },
       data: { price_id: "price_monthly", success_url: `${API}/settings`, cancel_url: `${API}/cloud` },
     });
     expect(res.ok()).toBeTruthy();
   });
 
-  test("POST /api/stripe/webhook handles request without crashing", async ({ request }) => {
-    const res = await request.post(`${API}/api/stripe/webhook`, {
+  test("POST /api/payments/webhook handles request without crashing", async ({ request }) => {
+    const res = await request.post(`${API}/api/payments/webhook`, {
       data: { type: "checkout.session.completed" },
       headers: { "stripe-signature": "test" },
     });

@@ -78,10 +78,10 @@ async def chat_completion(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Chat completion with optional RAG and consensus."""
-    # Track usage BEFORE LLM calls to prevent bypass
-    if user is not None:
-        await check_usage_limit(user, db)
-        await _track_usage(user, db)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    await check_usage_limit(user, db)
+    await _track_usage(user, db)
 
     message = request.message
     model = request.model
@@ -194,22 +194,22 @@ async def chat_multi_model(
 @router.get("/models")
 async def list_configured_models() -> dict[str, Any]:
     """Return all configured model names and their roles."""
-    try:
-        roles = {}
-        for role in ModelManager.MODEL_ROLES:
-            roles[role] = model_manager.get_model_for_role(role)
+    roles = {}
+    for role in ModelManager.MODEL_ROLES:
+        roles[role] = model_manager.get_model_for_role(role)
 
+    try:
         available = await model_manager.list_available_models()
         available_names = [m.get("name") for m in available]
+    except Exception:
+        logger.warning("Failed to list available models from Ollama — returning empty")
+        available_names = []
 
-        return {
-            "configured": roles,
-            "available": available_names,
-            "all_models": model_manager.get_all_model_names(),
-        }
-    except Exception as e:
-        logger.error("Failed to list models", error=str(e))
-        raise HTTPException(status_code=500, detail="Failed to list configured models")
+    return {
+        "configured": roles,
+        "available": available_names,
+        "all_models": model_manager.get_all_model_names(),
+    }
 
 
 @router.post("/stream")

@@ -401,7 +401,7 @@ async def create_api_key(
         user_id=str(user.id),
         user_email=user.email,
         result="success",
-        api_key_id=str(api_key.id),
+        details={"api_key_id": str(api_key.id)},
     )
     metrics_registry.auth_api_keys_created.inc()
 
@@ -457,7 +457,7 @@ async def revoke_api_key(
     db.add(api_key)
     await db.commit()
 
-    log_auth_event("api_key_revoked", user_id=str(user.id), api_key_id=key_id, result="success")
+    log_auth_event("api_key_revoked", user_id=str(user.id), result="success", details={"api_key_id": key_id})
     metrics_registry.auth_api_keys_revoked.inc()
     return {"status": "revoked"}
 

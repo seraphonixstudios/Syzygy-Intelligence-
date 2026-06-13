@@ -97,6 +97,20 @@ async def run_consensus(
         raise HTTPException(500, f"Consensus execution failed: {str(e)[:200]}")
 
 
+@router.get("/sessions")
+async def list_sessions() -> dict[str, Any]:
+    """List all active consensus sessions."""
+    sessions = []
+    for sid, session in engine.active_sessions.items():
+        sessions.append({
+            "session_id": sid,
+            "task": session.task[:100] if session.task else "",
+            "rounds_completed": session.current_round,
+            "status": session.status,
+        })
+    return {"sessions": sessions, "count": len(sessions)}
+
+
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str) -> dict[str, Any]:
     try:
