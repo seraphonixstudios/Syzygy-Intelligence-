@@ -227,7 +227,7 @@ The Docker production entrypoint runs `alembic upgrade head` automatically befor
 ### Run Tests
 
 ```bash
-# Backend tests (pytest, 392 tests)
+# Backend tests (pytest, 482 tests — 90 self-improvement)
 cd backend
 pip install -r requirements.txt
 pytest                         # All tests
@@ -243,7 +243,7 @@ npx playwright test e2e/auth.spec.ts  # Single file
 **CI pipeline** (`.github/workflows/e2e.yml`): On every push to `main`, three parallel jobs run:
 
 1. **frontend-lint** — `next lint --strict` + `tsc --noEmit`
-2. **backend-lint-and-test** — pytest 392 tests with PostgreSQL service + mock Ollama server
+2. **backend-lint-and-test** — pytest 482 tests with PostgreSQL service + mock Ollama server
 3. **e2e** — Playwright full-stack tests (3 shards × 2 workers, ~5min wall-clock) against live backend + frontend + PostgreSQL
 
 A lightweight mock Ollama server lives at `backend/tests/mock_ollama_server.py` — it responds to `/api/generate`, `/api/embed`, and `/api/tags` with plausible JSON so workflow execution tests pass in CI without requiring a GPU or model downloads. The backend config also accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed), making CI integration straightforward.
@@ -505,7 +505,7 @@ syzygy-intelligence/
 │   │   │   └── 0002_add_remaining_tables.py
 │   │   ├── env.py
 │   │   └── script.py.mako
-│   ├── tests/                   # pytest test suite (392 tests)
+│   ├── tests/                   # pytest test suite (482 tests)
 │   │   ├── conftest.py
 │   │   ├── mock_ollama_server.py
 │   │   ├── test_chat.py

@@ -12,6 +12,7 @@ from app.api.routes.sessions import router as sessions_router
 from app.api.routes.tools import router as tools_router
 from app.api.routes.uploads import router as uploads_router
 from app.api.routes.workflows import router as workflows_router
+from app.api.routes.self_improvement import router as self_improvement_router
 
 __all__ = [
     "agents_router",
@@ -22,6 +23,7 @@ __all__ = [
     "memory_router",
     "meta_router",
     "rag_router",
+    "self_improvement_router",
     "sessions_router",
     "tools_router",
     "uploads_router",

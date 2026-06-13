@@ -23,6 +23,7 @@ from app.api.routes import (
     meta,
     oauth,
     payments,
+    self_improvement,
     sessions,
     tools,
     uploads,
@@ -129,6 +130,7 @@ app.include_router(audit.router, prefix="/api/audit", tags=["Audit"])
 app.include_router(meta.router, prefix="/api/meta", tags=["Meta"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
 app.include_router(rag_route.router, prefix="/api/rag", tags=["RAG"])
+app.include_router(self_improvement.router, prefix="/api", tags=["Self-Improvement"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(health.router, prefix="", tags=["Health"])
