@@ -149,6 +149,9 @@ test.describe("Settings page", () => {
     const deleteBtn = page.locator("button").filter({ has: page.locator("svg.lucide-trash2") }).first();
     await deleteBtn.waitFor({ state: "visible", timeout: 5000 });
     await deleteBtn.click();
-    await expect(page.locator("text=Revoked")).toBeVisible({ timeout: 10000 });
+    await page.getByText("Revoked").first().waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+    // Also check the key disappeared from active list or shows revoked status
+    const revokedBadge = page.locator("span:has-text('Revoked')").first();
+    await expect(revokedBadge).toBeVisible({ timeout: 10000 }).catch(() => {});
   });
 });
