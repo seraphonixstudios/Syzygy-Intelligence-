@@ -16,11 +16,12 @@ from app.api.auth import check_usage_limit, get_current_user
 from app.consensus.engine import ConsensusEngine
 from app.db.models import User
 from app.db.session import get_db
-from app.errors import LLMConnectionError
+from app.errors import LLMConnectionError, ValidationError
 from app.llm.model_manager import ModelManager
 from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
 from app.rag.injector import build_rag_context
+from app.config import settings
 
 
 # Request validation models
@@ -49,7 +50,21 @@ model_manager = ModelManager()
 engine = ConsensusEngine()
 
 
+def _sanitize_rag_context(rag_context: str) -> str:
+    """Sanitize RAG context to prevent prompt injection."""
+    # Use explicit delimiters to prevent injection
+    return f"[RAG_CONTEXT_START]\n{rag_context}\n[RAG_CONTEXT_END]"
+
+
+def _build_augmented_prompt(rag_context: str, user_message: str) -> str:
+    """Build augmented prompt with clear separation between RAG and user input."""
+    if rag_context:
+        return f"{_sanitize_rag_context(rag_context)}\n\n[USER_MESSAGE]\n{user_message}\n[END_USER_MESSAGE]"
+    return user_message
+
+
 async def _track_usage(user: User | None, db: AsyncSession) -> None:
+    """Track message usage for the current user."""
     if user is not None:
         user.message_count += 1  # type: ignore
         db.add(user)
@@ -63,12 +78,14 @@ async def chat_completion(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Chat completion with optional RAG and consensus."""
+    # Track usage BEFORE LLM calls to prevent bypass
+    if user is not None:
+        await check_usage_limit(user, db)
+        await _track_usage(user, db)
+
     message = request.message
     model = request.model
     use_rag = request.use_rag
-
-    if user is not None:
-        await check_usage_limit(user, db)
 
     try:
         # Optionally inject RAG context
@@ -78,11 +95,9 @@ async def chat_completion(
 
         # Route "syzygy" model through the consensus engine
         if model == "syzygy" or request.use_consensus:
-            CONSENSUS_TIMEOUT = 600.0  # noqa: N806
+            CONSENSUS_TIMEOUT = settings.consensus_timeout if hasattr(settings, 'consensus_timeout') else 600.0
             try:
-                augmented_task = message
-                if rag_context:
-                    augmented_task = f"{rag_context}\n\nUser question: {message}"
+                augmented_task = _build_augmented_prompt(rag_context, message)
                 session = await asyncio.wait_for(
                     engine.run_consensus(
                         task=augmented_task,
@@ -90,7 +105,6 @@ async def chat_completion(
                     ),
                     timeout=CONSENSUS_TIMEOUT,
                 )
-                await _track_usage(user, db)
                 return {
                     "response": session.final_synthesis,
                     "session_id": session.id,
@@ -114,14 +128,13 @@ async def chat_completion(
         # Direct LLM response with optional RAG context
         messages = []
         if rag_context:
-            messages.append({"role": "system", "content": rag_context})
+            messages.append({"role": "system", "content": _sanitize_rag_context(rag_context)})
         messages.append({"role": "user", "content": message})
 
         response = await llm.chat(
             messages=messages,
             model=model or "",
         )
-        await _track_usage(user, db)
         return {"response": response, "rag_context_used": bool(rag_context)}
 
     except LLMConnectionError as e:
@@ -143,6 +156,11 @@ async def chat_multi_model(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Query multiple models in parallel and return all responses."""
+    # Track usage BEFORE LLM calls
+    if user is not None:
+        await check_usage_limit(user, db)
+        await _track_usage(user, db)
+
     try:
         message = request.message
         models = request.models
@@ -150,18 +168,24 @@ async def chat_multi_model(
         if not models:
             models = model_manager.get_all_model_names()
 
-        if user is not None:
-            await check_usage_limit(user, db)
-
         logger.info("Multi-model chat requested", models=models)
 
-        results = await model_manager.generate_multi_model(
-            prompt=message,
-            models=models,
+        # Add timeout to prevent indefinite blocking
+        MULTI_MODEL_TIMEOUT = settings.multi_model_timeout if hasattr(settings, 'multi_model_timeout') else 120.0
+        results = await asyncio.wait_for(
+            model_manager.generate_multi_model(
+                prompt=message,
+                models=models,
+            ),
+            timeout=MULTI_MODEL_TIMEOUT,
         )
-        if user is not None:
-            await _track_usage(user, db)
         return {"responses": results}
+    except asyncio.TimeoutError:
+        logger.error("Multi-model request timed out", models=request.models)
+        raise HTTPException(
+            status_code=504,
+            detail="Multi-model request exceeded timeout. Some models may be slow.",
+        )
     except Exception as e:
         logger.error("Multi-model chat failed", error=str(e), models=request.models)
         raise HTTPException(status_code=500, detail=f"Multi-model request failed: {str(e)[:200]}")
@@ -195,13 +219,14 @@ async def chat_stream(
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """SSE streaming chat completion with optional RAG context injection."""
-    message = request.message
-    model = request.model
-    use_rag = request.use_rag
-
+    # Track usage BEFORE streaming starts
     if user is not None:
         await check_usage_limit(user, db)
         await _track_usage(user, db)
+
+    message = request.message
+    model = request.model
+    use_rag = request.use_rag
 
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
@@ -213,22 +238,25 @@ async def chat_stream(
                 if rag_context:
                     yield f"data: {json.dumps({'rag_context': True})}\n\n"
 
-            augmented_prompt = message
-            if rag_context:
-                augmented_prompt = f"{rag_context}\n\nUser question: {message}"
+            augmented_prompt = _build_augmented_prompt(rag_context, message)
 
-            async for token in llm.generate_stream(
-                prompt=augmented_prompt,
-                model=model or llm.default_model,
-            ):
-                full_response += token
-                yield f"data: {json.dumps({'token': token})}\n\n"
+            try:
+                async for token in llm.generate_stream(
+                    prompt=augmented_prompt,
+                    model=model or llm.default_model,
+                ):
+                    full_response += token
+                    yield f"data: {json.dumps({'token': token})}\n\n"
+            except Exception as stream_error:
+                logger.error("Stream generation error", error=str(stream_error))
+                raise
 
             yield f"data: {json.dumps({'done': True, 'full': full_response, 'rag_context_used': bool(rag_context)})}"
             yield "\n\n"
         except LLMConnectionError as e:
             yield f"data: {json.dumps({'error': e.message})}\n\n"
         except Exception as e:
+            logger.error("Event generator error", error=str(e))
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(

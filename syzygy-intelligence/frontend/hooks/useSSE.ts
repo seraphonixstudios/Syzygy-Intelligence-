@@ -67,8 +67,9 @@ export function useSSE() {
             if (data.error) {
               onError(data.error);
             }
-          } catch {
-            // skip unparseable lines
+          } catch (parseErr) {
+            // Log parse errors instead of silently failing
+            logger.warn("Failed to parse SSE event data", { line, error: String(parseErr) }, "SSE");
           }
         }
       }
@@ -83,8 +84,8 @@ export function useSSE() {
           if (data.done || data.full) {
             onDone(data.full || full);
           }
-        } catch {
-          // ignore trailing partial
+        } catch (parseErr) {
+          logger.warn("Failed to parse trailing SSE data", { buffer, error: String(parseErr) }, "SSE");
         }
       }
     } catch (err: unknown) {

@@ -146,6 +146,8 @@ class SyzygyConfig(BaseSettings):
     min_consensus_rounds: int = Field(default=2, description="Minimum consensus iterations")
     convergence_threshold: float = Field(default=0.85, description="Consensus convergence threshold")
     variance_threshold: float = Field(default=0.1, description="Variance threshold")
+    consensus_timeout: float = Field(default=600.0, description="Consensus engine timeout (seconds)")
+    multi_model_timeout: float = Field(default=120.0, description="Multi-model query timeout (seconds)")
 
     # ──── Sandbox Execution ────
     sandbox_docker_image: str = Field(default="syzygy-sandbox:latest", description="Sandbox image")
@@ -252,7 +254,7 @@ class SyzygyConfig(BaseSettings):
             errors.append("SYZYGY_NEO4J_PASSWORD must be set to a secure value")
 
         if errors:
-            error_msg = "Production configuration validation failed:\n" + "\n".join(f"  • {e}" for e in errors)
+            error_msg = "Production configuration validation failed:\n" + "\n".join(f"  \u2022 {e}" for e in errors)
             _get_logger().error("Production secrets not configured", details="\n".join(errors))
             raise ValueError(error_msg)
 

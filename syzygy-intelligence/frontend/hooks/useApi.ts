@@ -5,12 +5,12 @@ import { logger } from "@/lib/logger";
 import { useAuthStore } from "@/store/authStore";
 
 import { API_URL } from "@/lib/config";
-let refreshPromise: Promise<void> | null = null;
 
 export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
 
   const fetchApi = useCallback(async (path: string, options?: RequestInit, _retried = false) => {
     setLoading(true);
@@ -32,12 +32,12 @@ export function useApi() {
       });
 
       if (res.status === 401 && !_retried) {
-        if (!refreshPromise) {
-          refreshPromise = useAuthStore.getState().refreshAuth().finally(() => {
-            refreshPromise = null;
+        if (!refreshPromiseRef.current) {
+          refreshPromiseRef.current = useAuthStore.getState().refreshAuth().finally(() => {
+            refreshPromiseRef.current = null;
           });
         }
-        await refreshPromise;
+        await refreshPromiseRef.current;
         if (useAuthStore.getState().isAuthenticated) {
           return fetchApi(path, options, true);
         }

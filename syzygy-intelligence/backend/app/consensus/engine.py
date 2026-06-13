@@ -26,7 +26,9 @@ from app.config import settings
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
 from app.consensus.phases import ShadowCritiquePhase, ShadowIntegrationPhase
+from app.errors import ValidationError
 from app.llm.ollama_client import OllamaClient
+from app.logging_setup import logger
 
 ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 
@@ -120,7 +122,8 @@ class ConsensusEngine:
         session.status = "running"
 
         for agent in agents:
-            assert agent.archetype is not None
+            if agent.archetype is None:
+                raise ValidationError(f"Agent {agent.id} missing archetype")
 
         for round_num in range(1, max_rounds + 1):
             round_data = ConsensusRound(round_number=round_num)
@@ -364,9 +367,20 @@ class ConsensusEngine:
     async def _evaluation_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 4: Multi-axis scoring of all refinements/proposals."""
         contents = round_data.refinements or round_data.proposals
+        # Filter out error proposals before scoring
+        filtered_contents = {
+            agent_id: content
+            for agent_id, content in contents.items()
+            if content and not content.startswith("[Error")
+        }
+        
+        if not filtered_contents:
+            logger.warning("All proposals contained errors, using original proposals for evaluation")
+            filtered_contents = contents
+        
         evaluations = await self.scorer.evaluate_all(
             session.task,
-            contents,
+            filtered_contents,
             session.agents,
             self.llm,
         )
@@ -395,11 +409,11 @@ class ConsensusEngine:
         # Polarity balance check
         round_data.convergence_score = 1.0 - min(variance / 5.0, 1.0)
 
-        # Converged if scores are stable and polarity is balanced
+        # Converged only if BOTH scores are stable AND polarity is balanced
         high_agreement = round_data.convergence_score >= session.convergence_threshold
         low_variance = variance <= session.variance_threshold
 
-        return high_agreement or low_variance
+        return high_agreement and low_variance
 
     def _generate_fusion_report(self, session: ConsensusSession) -> dict[str, Any]:
         """Generate polarity fusion report with individuation notes and shadow contributions."""
@@ -452,7 +466,8 @@ class ConsensusEngine:
         }
 
     async def _agent_propose(self, agent: SyzygyAgent, task: str, context: str) -> str:
-        assert agent.archetype is not None
+        if agent.archetype is None:
+            raise ValidationError(f"Agent {agent.id} missing archetype for proposal phase")
         prompt = (
             f"As a {agent.archetype.name} agent ({agent.polarity.value} polarity), "
             f"propose your approach to the following task:\n\n{task}\n\n"
@@ -498,7 +513,8 @@ class ConsensusEngine:
         own_proposal: str,
         critiques: dict[str, str],
     ) -> str:
-        assert agent.archetype is not None
+        if agent.archetype is None:
+            raise ValidationError(f"Agent {agent.id} missing archetype for refinement phase")
         critiques_text = "\n\n".join(
             f"Critique from {cid}: {c}" for cid, c in critiques.items()
         )

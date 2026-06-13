@@ -14,6 +14,9 @@ interface UseWebSocketReturn {
   send: (data: Record<string, unknown>) => void;
 }
 
+const RATE_LIMIT_WINDOW = 1000; // milliseconds
+const RATE_LIMIT_MAX_MESSAGES = 10; // max messages per window
+
 export function useWebSocket(autoConnect = true): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<Record<string, unknown> | null>(null);
@@ -21,6 +24,10 @@ export function useWebSocket(autoConnect = true): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+
+  // Rate limiting tracking
+  const messageCountRef = useRef(0);
+  const windowStartRef = useRef(Date.now());
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -33,6 +40,8 @@ export function useWebSocket(autoConnect = true): UseWebSocketReturn {
         if (mountedRef.current) {
           setIsConnected(true);
           setError(null);
+          messageCountRef.current = 0;
+          windowStartRef.current = Date.now();
         }
       };
 
@@ -79,6 +88,26 @@ export function useWebSocket(autoConnect = true): UseWebSocketReturn {
 
   const send = useCallback((data: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // Check rate limit
+      const now = Date.now();
+      const timeSinceWindowStart = now - windowStartRef.current;
+
+      if (timeSinceWindowStart >= RATE_LIMIT_WINDOW) {
+        // New window
+        messageCountRef.current = 1;
+        windowStartRef.current = now;
+      } else if (messageCountRef.current >= RATE_LIMIT_MAX_MESSAGES) {
+        // Rate limited
+        logger.warn(
+          `WebSocket rate limited: ${RATE_LIMIT_MAX_MESSAGES} messages per ${RATE_LIMIT_WINDOW}ms`,
+          undefined,
+          "WS"
+        );
+        return;
+      } else {
+        messageCountRef.current++;
+      }
+
       wsRef.current.send(JSON.stringify(data));
     } else {
       logger.warn("WebSocket not connected, cannot send", undefined, "WS");

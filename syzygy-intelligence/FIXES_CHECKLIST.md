@@ -2,6 +2,16 @@
 
 ## Critical Fixes (Must Implement)
 
+### 0. Backend Docker Container Stabilization
+- [x] Redis: removed `--requirepass` (empty arg rejected by Redis 7.4.9)
+- [x] Alembic: CMD fallback `alembic upgrade head 2>/dev/null || alembic stamp head`
+- [x] Migrations env.py: fixed `sync_database_url` → `database_url_sync`
+- [x] RequestTracingMiddleware: rewrote to ASGI `(scope, receive, send)` for Starlette 1.3.1
+- [x] Missing deps: added `aiosqlite` and `deprecated` to requirements.txt
+- [x] Jaeger import: wrapped `setup_tracing()` in try/except to handle incompatible OTel SDK
+- **Files**: `docker-compose.yml`, `backend/Dockerfile`, `backend/app/observability.py`, `backend/migrations/env.py`, `backend/requirements.txt`
+- **Priority**: 🔴 CRITICAL
+
 ### 1. Configuration Validation
 - [x] Explicit `neo4j_password` field definition
 - [x] Pydantic validators for all numeric fields
@@ -103,6 +113,26 @@
 - **File**: `BUG_FIXES.md`
 - **Priority**: 🟡 MEDIUM
 
+### 12. Self-Improvement Test Suite
+- [x] Score parsing clamped to [0, 100] with negative lookbehind
+- [x] `compute_metrics()` made async
+- [x] `estimate_convergence_cycle()` checks `len < 2` before target access
+- [x] Learning rate formulas corrected (linear, cosine, performance-adaptive)
+- [x] Tri wave expectations fixed for cyclical schedule
+- **Files**: `backend/app/self_improvement/assessment.py`, `learning_optimizer.py`, `performance_tracker.py`, `tests/`
+- **Priority**: 🟡 MEDIUM
+
+### 13. Circular Import — config.py / logging_setup
+- [x] Replaced top-level `from app.logging_setup import logger` with lazy `_get_logger()`
+- [x] Falls back to stdlib logging if import fails
+- **File**: `backend/app/config.py`
+- **Priority**: 🟡 MEDIUM
+
+### 14. Missing Agent Fields
+- [x] Added `system_prompt_adjustments`, `role_adjustments`, `requested_tools`, `consensus_weight` to `SyzygyAgent`
+- **File**: `backend/app/agents/base.py`
+- **Priority**: 🟡 MEDIUM
+
 ---
 
 ## Verification Steps
@@ -135,13 +165,13 @@
 
 | Category | Count |
 |----------|-------|
-| Critical Bugs Fixed | 5 |
-| High Priority Issues | 2 |
-| Medium Priority Issues | 1 |
+| Critical Bugs Fixed | 6 |
+| High Priority Issues | 3 |
+| Medium Priority Issues | 5 |
 | Security Enhancements | 8+ |
-| New Files Created | 3 |
-| Files Modified | 6 |
-| Total Lines Added | ~1,500 |
+| New Files Created | 4 |
+| Files Modified | 20 |
+| Total Lines Added | ~2,800 |
 | Documentation Added | 17 KB |
 
 ---

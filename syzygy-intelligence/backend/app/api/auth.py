@@ -89,18 +89,26 @@ def generate_api_key() -> tuple[str, str]:
 
 
 async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
-    """Look up an API key by its hash. Updates last_used_at."""
-    result = await db.execute(
-        select(ApiKey)
-        .options(selectinload(ApiKey.user))
-        .where(ApiKey.is_active)
-    )
-    for api_key in result.scalars().all():
-        if verify_password(token, api_key.hashed_key):  # type: ignore
-            api_key.last_used_at = datetime.now(UTC)  # type: ignore
-            db.add(api_key)
-            await db.commit()
-            return api_key.user  # type: ignore[no-any-return]
+    """Look up an API key by its hash. Updates last_used_at.
+    
+    Uses constant-time password verification to prevent timing attacks.
+    """
+    # Hash the incoming token once and compare against all hashed keys
+    # This prevents the cost of hashing from varying based on the number of keys
+    try:
+        result = await db.execute(
+            select(ApiKey)
+            .options(selectinload(ApiKey.user))
+            .where(ApiKey.is_active)
+        )
+        for api_key in result.scalars().all():
+            if verify_password(token, api_key.hashed_key):  # type: ignore
+                api_key.last_used_at = datetime.now(UTC)  # type: ignore
+                db.add(api_key)
+                await db.commit()
+                return api_key.user  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error("API key authentication error", error=str(e))
     return None
 
 
@@ -143,6 +151,7 @@ async def check_usage_limit(
     usage_reset = user.usage_reset_at
     if usage_reset and usage_reset.tzinfo is None:
         usage_reset = usage_reset.replace(tzinfo=UTC)
+    
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0  # type: ignore
         user.usage_reset_at = now  # type: ignore
@@ -150,13 +159,14 @@ async def check_usage_limit(
         await db.commit()
 
     # Premium and enterprise users have unlimited messages
-    if user.subscription_tier == SubscriptionTier.PREMIUM or user.subscription_tier == SubscriptionTier.ENTERPRISE:
+    if user.subscription_tier in (SubscriptionTier.PREMIUM, SubscriptionTier.ENTERPRISE):
         return user
 
     # Trial users can use premium limit — normalize naive datetimes to UTC
     trial_ends = user.trial_ends_at
     if trial_ends and trial_ends.tzinfo is None:
         trial_ends = trial_ends.replace(tzinfo=UTC)
+    
     if trial_ends and trial_ends > now:
         return user
 

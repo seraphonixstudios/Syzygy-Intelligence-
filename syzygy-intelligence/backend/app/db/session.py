@@ -128,7 +128,7 @@ async def get_db_context() -> AsyncIterator[AsyncSession]:
             result = await session.execute(select(User))
 
     Behavior:
-        - On successful exit: commits the transaction
+        - On successful exit: commits the transaction if one is active
         - On exception: rolls back automatically
         - Always closes the session in finally block
     """
@@ -145,7 +145,9 @@ async def get_db_context() -> AsyncIterator[AsyncSession]:
             )
             raise
         else:
-            await session.commit()
+            # Only commit if a transaction is active (not already committed)
+            if session.in_transaction():
+                await session.commit()
         finally:
             await session.close()
 
@@ -160,7 +162,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             return result.scalars().all()
 
     Behavior:
-        - On successful yield: commits the transaction
+        - On successful yield: commits the transaction if one is active
         - On exception: rolls back automatically
         - Always closes the session in finally block
     """
@@ -177,7 +179,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             )
             raise
         else:
-            await session.commit()
+            # Only commit if a transaction is active (not already committed)
+            if session.in_transaction():
+                await session.commit()
         finally:
             await session.close()
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -124,15 +126,14 @@ class OllamaClient:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line:
-                        import json as j
                         try:
-                            data = j.loads(line)
+                            data = json.loads(line)
                             token = data.get("response", "")
                             if token:
                                 yield token
                             if data.get("done"):
                                 break
-                        except j.JSONDecodeError:
+                        except json.JSONDecodeError:
                             continue
             logger.info("Ollama generate stream complete", model=model)
         except httpx.HTTPStatusError as e:
@@ -215,7 +216,6 @@ class OllamaClient:
         max_tokens: int = 2048,
     ) -> dict[str, str]:
         """Query multiple models in parallel and return results keyed by model name."""
-        import asyncio
 
         async def _query(model: str) -> tuple[str, str]:
             try:
@@ -248,18 +248,17 @@ class OllamaClient:
 
     def _parse_json(self, response: httpx.Response) -> dict[str, Any]:
         """Parse JSON response, handling trailing data gracefully."""
-        import json as json_mod
         raw = response.content.decode("utf-8", errors="replace").strip()
         try:
-            return json_mod.loads(raw)  # type: ignore
-        except json_mod.JSONDecodeError:
+            return json.loads(raw)  # type: ignore
+        except json.JSONDecodeError:
             first_brace = raw.find("{")
             last_brace = raw.rfind("}")
             if first_brace >= 0 and last_brace > first_brace:
                 candidate = raw[first_brace:last_brace + 1]
                 try:
-                    return json_mod.loads(candidate)  # type: ignore
-                except json_mod.JSONDecodeError:
+                    return json.loads(candidate)  # type: ignore
+                except json.JSONDecodeError:
                     # Last resort: try to find a complete top-level JSON object
                     depth = 0
                     start = -1
@@ -271,7 +270,7 @@ class OllamaClient:
                         elif ch == "}":
                             depth -= 1
                             if depth == 0 and start >= 0:
-                                return json_mod.loads(raw[start:i + 1])  # type: ignore
+                                return json.loads(raw[start:i + 1])  # type: ignore
                     raise
             raise
 
@@ -279,7 +278,6 @@ class OllamaClient:
         full_response = ""
         async for line in response.aiter_lines():
             if line:
-                import json
                 try:
                     data = json.loads(line)
                     full_response += data.get("response", "")

@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.logging_setup import logger
 
 
@@ -135,17 +136,24 @@ def setup_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_handler(request: Request, exc: Exception) -> JSONResponse:
         tb = traceback.format_exc()
+        # Log full traceback to server logs only
         logger.error(
             f"Unhandled exception: {exc}",
             path=str(request.url.path),
             traceback=tb,
         )
+        # In production, don't expose internal details to client
+        if settings.env == "production":
+            detail = "An unexpected error occurred"
+        else:
+            detail = str(exc) if str(exc) else "An unexpected error occurred"
+        
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "An unexpected error occurred",
+                    "message": detail,
                     "details": {},
                 }
             },
