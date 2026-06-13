@@ -225,3 +225,162 @@ class TestAgentRegistry:
         registry.clear()
         team = registry.create_polarity_balanced_team("test task", num_agents=5)
         assert len(team) == 5
+
+
+class TestShadowAgent:
+    def test_create_shadow_agent(self):
+        from app.agents.shadow import ShadowAgent
+
+        shadow = ShadowAgent.create("sage")
+        assert shadow.parent_archetype_key == "sage"
+        assert shadow.name == "Shadow Sage"
+        assert shadow.shadow_archetype is not None
+        assert shadow.shadow_archetype.name == "Shadow Sage"
+        assert shadow.alignment_score == 0.5
+
+    def test_shadow_polarity_matches_parent(self):
+        shadow = ShadowAgent.create("hero")
+        assert shadow.polarity == PolarityType.MASCULINE
+
+        shadow = ShadowAgent.create("great_mother")
+        assert shadow.polarity == PolarityType.FEMININE
+
+        shadow = ShadowAgent.create("self")
+        assert shadow.polarity == PolarityType.UNIFIED
+
+    def test_shadow_system_prompt(self):
+        shadow = ShadowAgent.create("sage")
+        prompt = shadow.build_system_prompt()
+        assert "Shadow Sage" in prompt
+        assert "dogmatist" in prompt.lower() or "Dogmatist" in prompt
+
+    def test_shadow_system_prompt_alignment_levels(self):
+        low = ShadowAgent.create("sage", alignment_score=0.3)
+        low_prompt = low.build_system_prompt()
+        assert "unintegrated" in low_prompt
+
+        mid = ShadowAgent.create("sage", alignment_score=0.5)
+        mid_prompt = mid.build_system_prompt()
+        assert "partially integrated" in mid_prompt
+
+        high = ShadowAgent.create("sage", alignment_score=0.8)
+        high_prompt = high.build_system_prompt()
+        assert "highly integrated" in high_prompt
+
+    def test_align_increases_score(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.5)
+        new_score = shadow.align(0.2)
+        assert new_score == 0.7
+        assert shadow.alignment_score == 0.7
+
+    def test_align_caps_at_one(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.95)
+        new_score = shadow.align(0.1)
+        assert new_score == 1.0
+
+    def test_misalign_decreases_score(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.5)
+        new_score = shadow.misalign(0.2)
+        assert new_score == 0.3
+
+    def test_misalign_floors_at_zero(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.05)
+        new_score = shadow.misalign(0.1)
+        assert new_score == 0.0
+
+    def test_integrate_produces_report(self):
+        parent = SyzygyAgent.create("sage")
+        shadow = ShadowAgent.create("sage", alignment_score=0.5)
+        report = shadow.integrate(parent)
+
+        assert report.parent_agent_id == parent.id
+        assert report.shadow_agent_id == shadow.id
+        assert len(report.insights) > 0
+        assert report.alignment_delta > 0
+        assert report.new_alignment_score > 0.5
+
+    def test_integration_alignment_improves(self):
+        parent = SyzygyAgent.create("sage")
+        shadow = ShadowAgent.create("sage", alignment_score=0.5)
+        before = shadow.alignment_score
+        shadow.integrate(parent)
+        assert shadow.alignment_score > before
+
+    def test_get_critique_prompt(self):
+        shadow = ShadowAgent.create("sage")
+        prompt = shadow.get_critique_prompt(
+            "Test task", {"agent1": "Some proposal"}
+        )
+        assert "Shadow Sage" in prompt
+        assert "Test task" in prompt
+        assert "Some proposal" in prompt
+
+    def test_to_dict(self):
+        shadow = ShadowAgent.create("sage", name="Custom Shadow")
+        d = shadow.to_dict()
+        assert d["name"] == "Custom Shadow"
+        assert d["parent_archetype"] == "sage"
+        assert d["alignment_score"] == 0.5
+        assert "polarity" in d
+
+    def test_create_with_custom_name(self):
+        shadow = ShadowAgent.create("hero", name="Custom Shadow Hero")
+        assert shadow.name == "Custom Shadow Hero"
+
+    def test_create_all_archetype_shadows(self):
+        archetypes = ["hero", "sage", "ruler", "magician", "explorer",
+                      "great_mother", "lover", "innocent", "creator", "anima",
+                      "self", "hermes", "trickster"]
+        for key in archetypes:
+            shadow = ShadowAgent.create(key)
+            assert shadow.shadow_archetype is not None
+            assert shadow.polarity in (
+                PolarityType.MASCULINE, PolarityType.FEMININE, PolarityType.UNIFIED
+            )
+
+
+class TestShadowRegistry:
+    def test_create_shadow_in_registry(self):
+        registry = AgentRegistry()
+        registry.clear_shadows()
+        shadow = registry.create_shadow_agent("sage")
+        assert shadow.id in registry._shadow_agents
+        assert registry.get_shadow(shadow.id) is shadow
+
+    def test_list_shadow_agents(self):
+        registry = AgentRegistry()
+        registry.clear_shadows()
+        registry.create_shadow_agent("sage")
+        registry.create_shadow_agent("hero")
+        all_agents = registry.list_shadow_agents()
+        assert len(all_agents) == 2
+
+    def test_list_shadow_agents_by_parent(self):
+        registry = AgentRegistry()
+        registry.clear_shadows()
+        registry.create_shadow_agent("sage")
+        registry.create_shadow_agent("sage")
+        registry.create_shadow_agent("hero")
+        sages = registry.list_shadow_agents("sage")
+        assert len(sages) == 2
+
+    def test_remove_shadow_agent(self):
+        registry = AgentRegistry()
+        registry.clear_shadows()
+        shadow = registry.create_shadow_agent("sage")
+        assert registry.remove_shadow(shadow.id)
+        assert not registry.remove_shadow("nonexistent")
+
+    def test_create_shadow_balanced_team(self):
+        registry = AgentRegistry()
+        registry.clear_shadows()
+        team = registry.create_shadow_balanced_team(3)
+        assert len(team) == 3
+        # Each should have different alignment scores
+        scores = [a.alignment_score for a in team]
+        assert len(set(scores)) > 1
+
+    def test_shadow_agent_invalid_archetype(self):
+        registry = AgentRegistry()
+        with pytest.raises(ValueError):
+            registry.create_shadow_agent("nonexistent")

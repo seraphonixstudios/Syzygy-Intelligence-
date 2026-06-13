@@ -7,6 +7,7 @@ and LLM calls happen in the ConsensusEngine.
 from __future__ import annotations
 
 from app.agents.base import SyzygyAgent
+from app.agents.shadow import ShadowAgent
 
 
 class ProposalPhase:
@@ -102,9 +103,46 @@ class EvaluationPhase:
         )
 
 
+class ShadowCritiquePhase:
+    """Phase 2b: Shadow agent critique — distinct from parent archetype critique.
+
+    Shadow agents provide a perspective that the parent archetype cannot access
+    on its own, revealing blind spots, denied truths, and unintegrated edges.
+    """
+
+    @staticmethod
+    def build_prompt(
+        task: str,
+        shadow: ShadowAgent,
+        target_proposals: dict[str, str],
+    ) -> str:
+        return shadow.get_critique_prompt(task, target_proposals)
+
+
+class ShadowIntegrationPhase:
+    """Phase 6b: After synthesis, shadow agents integrate insights back to parents."""
+
+    @staticmethod
+    def build_integration_summary(
+        reports: list,
+    ) -> str:
+        if not reports:
+            return "No shadow integration occurred."
+        lines = ["Shadow Integration Summary:", ""]
+        for report in reports:
+            lines.append(f"Shadow {report.shadow_agent_id} → Parent {report.parent_agent_id}:")
+            for insight in report.insights:
+                lines.append(f"  • {insight}")
+            lines.append(f"  Alignment delta: +{report.alignment_delta} → {report.new_alignment_score}")
+            lines.append("")
+        return "\n".join(lines)
+
+
 __all__ = [
     "ProposalPhase",
     "CritiquePhase",
+    "ShadowCritiquePhase",
+    "ShadowIntegrationPhase",
     "RefinementPhase",
     "EvaluationPhase",
 ]

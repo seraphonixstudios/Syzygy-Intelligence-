@@ -21,9 +21,11 @@ from typing import Any
 from app.agents.base import SyzygyAgent
 from app.agents.polarity import PolarityType, compute_polarity_balance
 from app.agents.registry import agent_registry
+from app.agents.shadow import ShadowAgent
 from app.config import settings
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
+from app.consensus.phases import ShadowCritiquePhase, ShadowIntegrationPhase
 from app.llm.ollama_client import OllamaClient
 
 ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -52,6 +54,7 @@ class ConsensusSession:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task: str = ""
     agents: list[SyzygyAgent] = field(default_factory=list)
+    shadow_agents: list[ShadowAgent] = field(default_factory=list)
     rounds: list[ConsensusRound] = field(default_factory=list)
     current_round: int = 0
     max_rounds: int = 6
@@ -60,6 +63,7 @@ class ConsensusSession:
     variance_threshold: float = 0.1
     final_synthesis: str = ""
     polarity_fusion_report: dict[str, Any] = field(default_factory=dict)
+    shadow_integration_reports: list[Any] = field(default_factory=list)
     status: str = "pending"
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
@@ -90,13 +94,14 @@ class ConsensusEngine:
         self,
         task: str,
         agents: list[SyzygyAgent] | None = None,
+        shadow_agents: list[ShadowAgent] | None = None,
         max_rounds: int = 6,
         min_rounds: int = 2,
         convergence_threshold: float = 0.85,
         timeout: float = 0,
         on_event: ConsensusEventCallback | None = None,
     ) -> ConsensusSession:
-        """Run the full consensus process with all phases."""
+        """Run the full consensus process with all phases and optional shadow agent participation."""
 
         if agents is None:
             agents = agent_registry.create_default_team()
@@ -104,6 +109,7 @@ class ConsensusEngine:
         session = ConsensusSession(
             task=task,
             agents=agents,
+            shadow_agents=shadow_agents or [],
             max_rounds=min(max_rounds, settings.max_consensus_rounds),
             min_rounds=min_rounds,
             convergence_threshold=convergence_threshold,
@@ -142,6 +148,19 @@ class ConsensusEngine:
                             "archetype": agent.archetype.name if agent.archetype else "",
                             "polarity": agent.polarity.value,
                             "content": round_data.critiques.get(agent.id, ""),
+                        })
+
+            # Phase 2b: Shadow Agent critique (distinct from parent archetypes)
+            if session.shadow_agents and round_num >= 2:
+                await self._shadow_critique_phase(session, round_data)
+                if on_event:
+                    for shadow in session.shadow_agents:
+                        await on_event("shadow_critique", {
+                            "shadow": shadow.name,
+                            "parent_archetype": shadow.parent_archetype_key,
+                            "polarity": shadow.polarity.value,
+                            "alignment": round(shadow.alignment_score, 2),
+                            "content": round_data.critiques.get(shadow.id, ""),
                         })
 
             # Phase 3: Refinement
@@ -190,6 +209,22 @@ class ConsensusEngine:
             await on_event("synthesis", {
                 "content": session.final_synthesis,
             })
+
+        # Phase 6b: Shadow Integration — integrate shadow insights back to parent agents
+        if session.shadow_agents:
+            await self._shadow_integration_phase(session)
+            if on_event:
+                await on_event("shadow_integration", {
+                    "reports": [
+                        {
+                            "shadow_agent_id": r.shadow_agent_id,
+                            "parent_agent_id": r.parent_agent_id,
+                            "insights": r.insights,
+                            "new_alignment_score": r.new_alignment_score,
+                        }
+                        for r in session.shadow_integration_reports
+                    ],
+                })
 
         # Polarity Fusion Report
         session.polarity_fusion_report = self._generate_fusion_report(session)
@@ -249,6 +284,56 @@ class ConsensusEngine:
             else:
                 round_data.critiques[agent.id] = str(result)
             agent.deactivate_shadow()
+
+    async def _shadow_critique_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
+        """Phase 2b: Shadow agents critique proposals from their unique perspective.
+
+        Shadow agents operate as distinct entities — they are not the boolean
+        shadow flag on a parent agent but independent agents with their own
+        alignment score and system prompt.
+        """
+        tasks = []
+        for shadow in session.shadow_agents:
+            targets = [
+                a for a in session.agents
+                if a.archetype_key != shadow.parent_archetype_key
+            ]
+            target_proposals = {
+                t.id: round_data.proposals.get(t.id, "")
+                for t in targets[:3]
+            }
+            prompt = ShadowCritiquePhase.build_prompt(
+                session.task, shadow, target_proposals
+            )
+            tasks.append(
+                self._call_llm(prompt, system=shadow.build_system_prompt())
+            )
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for shadow, result in zip(session.shadow_agents, results):
+            if isinstance(result, Exception):
+                round_data.critiques[shadow.id] = f"[Error in shadow critique: {result}]"
+            else:
+                round_data.critiques[shadow.id] = str(result)
+                # Moderate alignment gain for participating
+                shadow.align(0.02)
+
+    async def _shadow_integration_phase(self, session: ConsensusSession) -> None:
+        """Phase 6b: Integrate shadow insights back to parent agents.
+
+        Each shadow agent generates structured insights for its parent archetype
+        based on the consensus session outcomes. Alignment scores increase
+        as shadows are integrated.
+        """
+        session.shadow_integration_reports = []
+        for shadow in session.shadow_agents:
+            parents = [
+                a for a in session.agents
+                if a.archetype_key == shadow.parent_archetype_key
+            ]
+            for parent in parents:
+                report = shadow.integrate(parent)
+                session.shadow_integration_reports.append(report)
 
     async def _refinement_phase(self, session: ConsensusSession, round_data: ConsensusRound) -> None:
         """Phase 3: Agents revise proposals based on received critiques."""
@@ -317,7 +402,7 @@ class ConsensusEngine:
         return high_agreement or low_variance
 
     def _generate_fusion_report(self, session: ConsensusSession) -> dict[str, Any]:
-        """Generate polarity fusion report with individuation notes."""
+        """Generate polarity fusion report with individuation notes and shadow contributions."""
         masc_contributions = []
         fem_contributions = []
         unified_contributions = []
@@ -330,21 +415,40 @@ class ConsensusEngine:
             else:
                 unified_contributions.append(agent.name)
 
+        shadow_contributions = [
+            s.name for s in session.shadow_agents
+        ] if session.shadow_agents else []
+
+        individuation = (
+            f"The {' and '.join(fem_contributions) if fem_contributions else 'feminine'} "
+            f"and {' and '.join(masc_contributions) if masc_contributions else 'masculine'} "
+            f"perspectives were integrated through {session.current_round} rounds of "
+            f"structured dialogue. {len(unified_contributions)} unified agent(s) "
+            f"facilitated the synthesis."
+        )
+
+        if shadow_contributions:
+            avg_alignment = (
+                sum(s.alignment_score for s in session.shadow_agents)
+                / len(session.shadow_agents)
+            )
+            individuation += (
+                f" {len(shadow_contributions)} shadow agent(s) "
+                f"({' and '.join(shadow_contributions)}) participated, "
+                f"revealing blind spots inaccessible to parent archetypes alone. "
+                f"Mean shadow alignment: {avg_alignment:.2f}."
+            )
+
         return {
             "masculine_forces": masc_contributions,
             "feminine_forces": fem_contributions,
             "unified_perspective": unified_contributions,
+            "shadow_forces": shadow_contributions,
             "polarity_balance_scores": [
                 r.polarity_balance for r in session.rounds if r.polarity_balance
             ],
             "rounds_completed": session.current_round,
-            "individuation_notes": (
-                f"The {' and '.join(fem_contributions) if fem_contributions else 'feminine'} "
-                f"and {' and '.join(masc_contributions) if masc_contributions else 'masculine'} "
-                f"perspectives were integrated through {session.current_round} rounds of "
-                f"structured dialogue. {len(unified_contributions)} unified agent(s) "
-                f"facilitated the synthesis."
-            ),
+            "individuation_notes": individuation,
         }
 
     async def _agent_propose(self, agent: SyzygyAgent, task: str, context: str) -> str:
