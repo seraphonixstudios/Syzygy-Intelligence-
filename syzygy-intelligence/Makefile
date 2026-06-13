@@ -16,7 +16,7 @@ test-all:
 	cd $(BACKEND) && OLLAMA_BASE_URL=http://localhost:11435 python -m pytest tests/ -q --tb=short
 
 e2e:
-	cd $(FRONTEND) && set NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8001 && npx playwright test
+	cd $(FRONTEND) && set NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8000 && npx playwright test
 
 ollama:
 	@echo "Run: .\scripts\setup-ollama.ps1  (Windows)"

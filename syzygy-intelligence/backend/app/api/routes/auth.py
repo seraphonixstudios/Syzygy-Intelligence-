@@ -302,7 +302,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)) -> 
     await db.commit()
     await db.refresh(user)
 
-    log_auth_event("register", user_email=req.email, user_id=str(user.id), result="success", subscription_tier="free")
+    log_auth_event("register", user_email=req.email, user_id=str(user.id), result="success", details={"subscription_tier": "free"})
     metrics_registry.auth_login_attempts.labels(status="success").inc()
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.email),  # type: ignore

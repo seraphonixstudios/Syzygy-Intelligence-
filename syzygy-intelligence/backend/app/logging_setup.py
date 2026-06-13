@@ -163,7 +163,6 @@ class SyzygyLogger:
         self._log(
             logging.INFO,
             f"AUDIT | {action}",
-            event_type="audit",
             audit_action=action,
             **kwargs,
         )
