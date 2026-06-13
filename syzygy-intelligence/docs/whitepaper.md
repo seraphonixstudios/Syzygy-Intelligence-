@@ -4,7 +4,7 @@
 
 ---
 
-**Version 1.0 | June 2026**
+**Version 1.1 | June 2026**
 
 **Authors:** The Syzygy Intelligence Team
 
@@ -201,15 +201,30 @@ Syzygy implements a multi-layer memory system:
 
 ### 3.5 Workflow System
 
-Syzygy provides five built-in workflow types:
+Syzygy provides **18 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
 
-1. **Coding**: Full software development pipeline — specification analysis, code generation, review, testing, debugging
-2. **Research**: Multi-source parallel search with cross-validation and synthesis
-3. **Content**: End-to-end content creation — research, outline, draft, edit, polish
-4. **Debate**: Structured multi-position debate with opening, rebuttal, cross-examination, closing, and synthesis
-5. **Task Decomposition**: Recursive breakdown of complex tasks with dependency tracking
+| Workflow | Description | Agent Team |
+|----------|-------------|------------|
+| **Code** | Scaffold, edit, test, debug with polarity-aware pair programming | Hero + Sage |
+| **Research** | Parallel search with multi-source validation and synthesis | Explorer + Sage |
+| **Content** | Research → Outline → Draft → Edit → Polish pipeline | Creator + Weaver |
+| **Debate** | Multi-round structured debate between agents | Sage + Trickster |
+| **Task Decomposition** | Break complex tasks into dependency-tracked subtasks | Ruler + Explorer |
+| **Audit** | Security scanning, code review, anti-pattern detection, compliance | Sage (critic) + Magician (tester) |
+| **Test Gen** | Automated unit, integration, and edge-case test generation | Trickster (edge cases) + Sage (validation) |
+| **Summary** | Multi-document summarization with key insight extraction | Rebis (synthesis) + Sage (extraction) |
+| **Compliance** | Regulatory checks — GDPR, SOC2, HIPAA, PCI-DSS, CCPA | Ruler (governance) + Sage (analysis) |
+| **QA Bot** | Knowledge-base Q&A — ingest docs, retrieve context, answer questions | Sage (retrieval) + Rebis (synthesis) |
+| **Translate** | Multi-language translation with cultural adaptation | Weaver (pattern) + Hermes (linguistic) |
+| **Interview Coach** | Role-specific questions, answer scoring, feedback coaching | Sage (evaluator) + Weaver (communication) |
+| **Data Analyzer** | Statistical analysis, anomaly detection, correlation discovery, viz | Sage (analyst) + Magician (patterns) |
+| **API Designer** | REST/GraphQL API design, OpenAPI specs, stubs, validation tests | Ruler (structure) + Hero (implementation) |
+| **Agentic RAG** | Query decomposition, multi-hop retrieval, source-grounded synthesis | Explorer (retrieval) + Rebis (synthesis) |
+| **Report Gen** | Multi-format structured reports with charts, tables, exec summaries | Creator (writing) + Sage (analysis) |
+| **Data Pipeline** | ETL — ingest, clean, transform, validate schema, load to target | Magician (transformation) + Ruler (governance) |
+| **CI Piper** | CI/CD configs — GitHub Actions, GitLab CI, Jenkins with matrix builds | Hero (automation) + Sage (quality) |
 
-Each workflow is polarity-aware: workflows can be configured with preferred polarity balance, and task decomposition assigns subtasks to appropriate archetypes.
+Each workflow is polarity-aware: workflows can be configured with preferred polarity balance, and task decomposition assigns subtasks to appropriate archetypes. Workflows support human-in-the-loop gates, parallel execution, and priority queuing.
 
 ---
 
@@ -235,30 +250,41 @@ The color palette — deep indigo (#0a0620), gold (#c9a84c), silver (#b0b0c0), c
 
 | Component | Technology |
 |-----------|-----------|
-| Backend Framework | Python 3.11+, FastAPI |
+| Backend Framework | Python 3.14+, FastAPI |
 | Agent Orchestration | LangGraph |
 | LLM Integration | Ollama (local), LiteLLM (cloud fallback) |
 | Vector Database | ChromaDB |
 | Graph Database | Neo4j |
 | Relational Database | PostgreSQL + pgvector |
+| Cache & Queues | Redis 7 |
 | Frontend | Next.js 15, React 19, shadcn/ui |
 | Styling | Tailwind CSS, Framer Motion |
 | Containerization | Docker Compose |
 | Sandbox | Docker (restricted execution) |
+| Monitoring | Prometheus, Grafana, Jaeger, Alertmanager |
 
 ### 5.2 API Surface
 
 The system exposes a comprehensive REST API plus WebSocket streaming:
 
-- `/api/agents/` — Agent CRUD, shadow toggling
-- `/api/sessions/` — Session management
-- `/api/consensus/run` — Execute full consensus pipeline
-- `/api/memory/` — Memory storage and retrieval
-- `/api/tools/` — Tool listing and execution
-- `/api/workflows/` — Workflow execution
-- `/api/chat/completions` — Chat interface (OpenAI-compatible)
-- `/api/audit/` — Audit log querying
-- `/v1/chat/completions` — Full OpenAI compatibility
+| Category | Endpoints | Description |
+|----------|-----------|-------------|
+| **Auth** | `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/auth/verify-email`, `/api/auth/api-keys` | Full authentication with JWT, OAuth (Google/GitHub), password reset, email verification, API key management |
+| **Agents** | `/api/agents/` | Agent CRUD, shadow toggling |
+| **Sessions** | `/api/sessions/` | Session management |
+| **Consensus** | `/api/consensus/run`, `/api/consensus/sessions/{id}` | Full consensus pipeline execution |
+| **Chat** | `/api/chat/completions`, `/api/chat/stream`, `/api/chat/multi-model`, `/api/chat/models` | Chat with streaming SSE, multi-model, model listing |
+| **Memory** | `/api/memory/store`, `/api/memory/recall`, `/api/memory/recent` | Multi-layer memory storage and retrieval |
+| **RAG** | `/api/rag/ingest`, `/api/rag/ingest/batch`, `/api/rag/query`, `/api/rag/documents` | Document ingestion, semantic search, document management |
+| **Workflows** | `/api/workflows/` | 18 workflow types with execution |
+| **Tools** | `/api/tools/` | Tool listing and execution |
+| **Admin** | `/api/admin/users` | User management dashboard (superuser only) |
+| **Payments** | `/api/payments/create-checkout-session`, `/api/payments/customer-portal`, `/api/payments/webhook` | Stripe subscription management |
+| **Uploads** | `/api/uploads/` | File upload handling |
+| **Meta** | `/api/meta/summary`, `/api/meta/history` | System metadata and history |
+| **Audit** | `/api/audit/` | Audit log querying |
+| **Health** | `/health`, `/metrics` | Health check, Prometheus metrics |
+| **OpenAI Compat** | `/v1/chat/completions` | Full OpenAI-compatible chat endpoint |
 
 ### 5.3 Model Integration
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -17,6 +18,7 @@ from app.api.routes import (
     auth,
     chat,
     consensus,
+    health,
     memory,
     meta,
     oauth,
@@ -34,6 +36,8 @@ from app.errors import setup_error_handlers
 from app.logging_setup import logger
 from app.middleware.rate_limiter import setup_rate_limiter
 from app.observability import RequestTracingMiddleware, metrics_endpoint, setup_tracing
+
+_start_time = time.time()
 
 
 @asynccontextmanager
@@ -127,6 +131,7 @@ app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
 app.include_router(rag_route.router, prefix="/api/rag", tags=["RAG"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(health.router, prefix="", tags=["Health"])
 
 app.add_api_websocket_route("/ws", ws_handler)
 
@@ -139,11 +144,6 @@ async def root() -> dict[str, Any]:
         "tagline": "Aligning opposites into unified intelligence",
         "status": "operational",
     }
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "healthy", "env": settings.env}
 
 
 @app.get("/metrics")

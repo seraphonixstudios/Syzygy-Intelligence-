@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import check_usage_limit, require_user
 from app.db.models import User
 from app.db.session import get_db
+from app.logging_setup import logger
 from app.workflows import WORKFLOW_REGISTRY, get_workflow
 
 router = APIRouter()
@@ -32,19 +33,25 @@ async def execute_workflow(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    workflow = get_workflow(workflow_name)
-    if not workflow:
-        raise HTTPException(404, f"Workflow '{workflow_name}' not found")
+    try:
+        workflow = get_workflow(workflow_name)
+        if not workflow:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Workflow '{workflow_name}' not found")
 
-    await check_usage_limit(user, db)
+        await check_usage_limit(user, db)
 
-    result = await workflow.execute(
-        task=data.get("task", ""),
-        context=data.get("context", {}),
-    )
+        result = await workflow.execute(
+            task=data.get("task", ""),
+            context=data.get("context", {}),
+        )
 
-    user.message_count += 1  # type: ignore
-    db.add(user)
-    await db.commit()
+        user.message_count += 1
+        db.add(user)
+        await db.commit()
 
-    return {"workflow": workflow_name, "result": result}
+        return {"workflow": workflow_name, "result": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Workflow execution failed", error=str(e), workflow=workflow_name, user_id=str(user.id))
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Workflow execution failed: {str(e)[:200]}")

@@ -132,6 +132,7 @@ export default function ChatPage() {
       })
       .catch(() => {
         logger.warn("Could not fetch model list — using defaults", undefined, "Chat");
+        toast.error("Could not load models");
         setAvailableModels(["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"]);
       });
   }, []);

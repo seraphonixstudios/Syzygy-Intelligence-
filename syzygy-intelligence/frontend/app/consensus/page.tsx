@@ -139,7 +139,7 @@ export default function ConsensusPage() {
           setRunning(false);
           setLiveAgents((prev) => prev.map((a) => ({ ...a, done: true })));
         }
-      } catch (e) { logger.error("Failed to parse WebSocket message: %s", e); }
+      } catch (e) { logger.error("Failed to parse WebSocket message", e); }
     };
     return () => {
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {

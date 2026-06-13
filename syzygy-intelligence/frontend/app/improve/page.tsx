@@ -52,6 +52,7 @@ export default function ImprovePage() {
       .then(setSummary)
       .catch(() => {
         logger.warn("Could not fetch improvement summary", undefined, "Improve");
+        toast.error("Could not load improvement data");
       });
     fetch(`${API}/api/meta/history`)
       .then((r) => r.json())

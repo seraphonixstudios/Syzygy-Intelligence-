@@ -143,41 +143,49 @@ async def chat_multi_model(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Query multiple models in parallel and return all responses."""
-    message = request.message
-    models = request.models
+    try:
+        message = request.message
+        models = request.models
 
-    if not models:
-        models = model_manager.get_all_model_names()
+        if not models:
+            models = model_manager.get_all_model_names()
 
-    if user is not None:
-        await check_usage_limit(user, db)
+        if user is not None:
+            await check_usage_limit(user, db)
 
-    logger.info("Multi-model chat requested", models=models)
+        logger.info("Multi-model chat requested", models=models)
 
-    results = await model_manager.generate_multi_model(
-        prompt=message,
-        models=models,
-    )
-    if user is not None:
-        await _track_usage(user, db)
-    return {"responses": results}
+        results = await model_manager.generate_multi_model(
+            prompt=message,
+            models=models,
+        )
+        if user is not None:
+            await _track_usage(user, db)
+        return {"responses": results}
+    except Exception as e:
+        logger.error("Multi-model chat failed", error=str(e), models=request.models)
+        raise HTTPException(status_code=500, detail=f"Multi-model request failed: {str(e)[:200]}")
 
 
 @router.get("/models")
 async def list_configured_models() -> dict[str, Any]:
     """Return all configured model names and their roles."""
-    roles = {}
-    for role in ModelManager.MODEL_ROLES:
-        roles[role] = model_manager.get_model_for_role(role)
+    try:
+        roles = {}
+        for role in ModelManager.MODEL_ROLES:
+            roles[role] = model_manager.get_model_for_role(role)
 
-    available = await model_manager.list_available_models()
-    available_names = [m.get("name") for m in available]
+        available = await model_manager.list_available_models()
+        available_names = [m.get("name") for m in available]
 
-    return {
-        "configured": roles,
-        "available": available_names,
-        "all_models": model_manager.get_all_model_names(),
-    }
+        return {
+            "configured": roles,
+            "available": available_names,
+            "all_models": model_manager.get_all_model_names(),
+        }
+    except Exception as e:
+        logger.error("Failed to list models", error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to list configured models")
 
 
 @router.post("/stream")

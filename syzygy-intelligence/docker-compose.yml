@@ -1,20 +1,18 @@
 x-shared: &shared
   networks:
     - syzygy-net
+  restart: unless-stopped
 
 services:
-  # ─── Database ──────────────────────────────────────────────
+  # ─── PostgreSQL Database ────────────────────────────────────────
   postgres:
     image: pgvector/pgvector:pg16
     container_name: syzygy-postgres
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_DB: ${SYZYGY_DB_NAME:-syzygy}
       POSTGRES_USER: ${SYZYGY_DB_USER:-syzygy}
-      # WARNING: Override SYZYGY_DB_PASSWORD in production
       POSTGRES_PASSWORD: ${SYZYGY_DB_PASSWORD:-syzygy_secret}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,42 +20,55 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
     <<: *shared
 
+  # ─── Redis Cache ────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: syzygy-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s
+    ports:
+      - "6379:6379"
     <<: *shared
 
+  # ─── Neo4j Graph Database ───────────────────────────────────────
   neo4j:
     image: neo4j:5-community-ubi9
     container_name: syzygy-neo4j
-    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${SYZYGY_NEO4J_USER:-neo4j}/${SYZYGY_NEO4J_PASSWORD:-syzygy_secret}
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1g
+    volumes:
+      - neo4jdata:/data
+      - neo4jlogs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "${SYZYGY_NEO4J_USER:-neo4j}", "-p", "${SYZYGY_NEO4J_PASSWORD:-syzygy_secret}", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
       - "7474:7474"
       - "7687:7687"
-    environment:
-      # WARNING: Override SYZYGY_NEO4J_PASSWORD in production
-      NEO4J_AUTH: ${SYZYGY_NEO4J_USER:-neo4j}/${SYZYGY_NEO4J_PASSWORD:-syzygy_secret}
-    volumes:
-      - neo4jdata:/data
     <<: *shared
 
-  # ─── Ollama ────────────────────────────────────────────────
+  # ─── Ollama LLM Runtime ─────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: syzygy-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
@@ -66,6 +77,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    ports:
+      - "11434:11434"
     deploy:
       resources:
         reservations:
@@ -75,13 +88,14 @@ services:
               capabilities: [gpu]
     <<: *shared
 
-  # ─── Backend ───────────────────────────────────────────────
+  # ─── Backend API Server ─────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      cache_from:
+        - type=registry,ref=syzygy/backend:latest
     container_name: syzygy-backend
-    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
@@ -93,14 +107,15 @@ services:
       SYZYGY_DB_PORT: ${SYZYGY_DB_PORT:-5432}
       SYZYGY_DB_NAME: ${SYZYGY_DB_NAME:-syzygy}
       SYZYGY_DB_USER: ${SYZYGY_DB_USER:-syzygy}
-      # WARNING: Override SYZYGY_DB_PASSWORD in production
       SYZYGY_DB_PASSWORD: ${SYZYGY_DB_PASSWORD:-syzygy_secret}
       SYZYGY_REDIS_URL: ${SYZYGY_REDIS_URL_DOCKER:-redis://redis:6379/0}
       SYZYGY_NEO4J_URI: ${SYZYGY_NEO4J_URI_DOCKER:-bolt://neo4j:7687}
+      SYZYGY_NEO4J_USER: ${SYZYGY_NEO4J_USER:-neo4j}
+      SYZYGY_NEO4J_PASSWORD: ${SYZYGY_NEO4J_PASSWORD:-syzygy_secret}
       SYZYGY_OLLAMA_BASE_URL: ${SYZYGY_OLLAMA_BASE_URL_DOCKER:-http://ollama:11434}
-      # WARNING: Override SYZYGY_SECRET_KEY with a random value in production
       SYZYGY_SECRET_KEY: ${SYZYGY_SECRET_KEY:-change-me-to-a-random-secret}
       SYZYGY_CORS_ORIGINS: ${SYZYGY_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      SYZYGY_LOG_LEVEL: ${SYZYGY_LOG_LEVEL:-INFO}
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,38 +123,57 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_started
+      ollama:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - sandbox_data:/app/data/sandbox
       - chroma_data:/app/data/chroma
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - uploads_data:/app/data/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     <<: *shared
 
-  # ─── Frontend ──────────────────────────────────────────────
+  # ─── Frontend Web Server ────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
+      cache_from:
+        - type=registry,ref=syzygy/frontend:latest
     container_name: syzygy-frontend
-    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
+      NODE_ENV: production
     depends_on:
       backend:
         condition: service_healthy
-    volumes: []
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     <<: *shared
 
-  # ─── Sandbox Executor ──────────────────────────────────────
+  # ─── Sandbox Executor ───────────────────────────────────────────
   sandbox:
     build:
       context: ./sandbox
       dockerfile: Dockerfile
+      cache_from:
+        - type=registry,ref=syzygy/sandbox:latest
     container_name: syzygy-sandbox
-    restart: unless-stopped
     environment:
       SANDBOX_TIMEOUT: ${SYZYGY_SANDBOX_TIMEOUT:-120}
       SANDBOX_MEMORY_LIMIT: ${SYZYGY_SANDBOX_MEMORY_LIMIT:-512m}
@@ -149,11 +183,25 @@ services:
 
 volumes:
   pgdata:
+    driver: local
+  redis_data:
+    driver: local
   neo4jdata:
+    driver: local
+  neo4jlogs:
+    driver: local
   ollama_data:
+    driver: local
   sandbox_data:
+    driver: local
   chroma_data:
+    driver: local
+  uploads_data:
+    driver: local
 
 networks:
   syzygy-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

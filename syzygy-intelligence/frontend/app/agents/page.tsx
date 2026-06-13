@@ -7,8 +7,8 @@ import { TeamSuggestions } from "@/components/agents/TeamSuggestions";
 import { CreateAgentModal } from "@/components/agents/CreateAgentModal";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, Plus, Trash2, Zap, Sparkles } from "lucide-react";
-import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
 
 export default function AgentsPage() {
@@ -34,6 +34,7 @@ export default function AgentsPage() {
       setAgents(data.agents || []);
     } catch (err) {
       logger.error("Failed to fetch agents", err, "Agents");
+      toast.error("Could not load agents");
       setError("Backend unreachable");
     } finally {
       setLoading(false);

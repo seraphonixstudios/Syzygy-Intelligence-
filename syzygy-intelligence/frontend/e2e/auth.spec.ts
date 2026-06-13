@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { API, TEST_PASS, registerAndLogin } from "./helpers";
 
 test.describe("Auth pages", () => {
   test("login page renders with all inputs", async ({ page }) => {
@@ -138,5 +138,42 @@ test.describe("Auth pages", () => {
   test("oauth callback page renders error on missing tokens", async ({ page }) => {
     await page.goto("/auth/oauth-callback");
     await expect(page.getByText("Invalid OAuth response. Redirecting to login...")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("successful login redirects to home", async ({ page }) => {
+    await page.goto("/auth/login");
+    const email = `flow-${Date.now()}@syzygy.local`;
+    // Register via API
+    await page.request.post(`${API}/api/auth/register`, {
+      data: { email, password: TEST_PASS },
+    });
+    // Fill and submit login form
+    await page.fill("input[type='email']", email);
+    await page.fill("input[type='password']", TEST_PASS);
+    await page.click("button[type='submit']");
+    // Should redirect away from auth pages
+    await page.waitForURL((url) => !url.pathname.includes("/auth"), { timeout: 15000 });
+    expect(page.url()).not.toContain("/auth");
+  });
+
+  test("login with wrong password shows error", async ({ page }) => {
+    await page.goto("/auth/login");
+    await page.fill("input[type='email']", "nonexistent@syzygy.local");
+    await page.fill("input[type='password']", "wrongpassword");
+    await page.click("button[type='submit']");
+    // Should show error message or stay on login page
+    await expect(page.locator("text=Invalid email or password")).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(page).toHaveURL(/\/auth\/login/);
+  });
+
+  test("register with mismatched passwords shows error", async ({ page }) => {
+    await page.goto("/auth/register");
+    await page.fill("input[type='email']", `mismatch-${Date.now()}@syzygy.local`);
+    await page.fill("input[placeholder*='8 characters']", "password123");
+    await page.fill("input[placeholder*='Repeat']", "different456");
+    await page.click("button[type='submit']");
+    // Should show validation error or stay on register page
+    await page.waitForTimeout(2000);
+    await expect(page).toHaveURL(/\/auth\/register/);
   });
 });

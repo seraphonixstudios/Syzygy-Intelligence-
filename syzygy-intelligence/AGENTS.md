@@ -52,7 +52,7 @@ syzygy-intelligence/
 |-------|--------|-------|-------|
 | Backend unit | pytest | **392** | Consensus (95), Chat (17), WS (16), OpenAI compat (24), integration (6), + existing |
 | Frontend component | vitest | **38** | Consensus UI + agent UI presentational components |
-| E2E | Playwright | **24 specs** | 22 pages + auth + navigation |
+| E2E | Playwright | **28 specs** | 22 pages + auth + navigation + api + errors + journeys + submissions |
 
 CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (3 parallel shards × 2 workers each).
 

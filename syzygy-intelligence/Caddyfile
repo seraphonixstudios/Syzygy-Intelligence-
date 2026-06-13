@@ -1,0 +1,71 @@
+# Syzygy Intelligence — Caddy reverse proxy configuration
+#
+# Usage (production):
+#   Set DOMAIN=example.com in .env
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d
+#
+# Usage (local test without TLS):
+#   Set DOMAIN=localhost, SKIP_TLS=true in .env
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d
+
+{$DOMAIN:localhost} {
+    log {
+        output file /data/logs/access.log
+        format json
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Rate limiting (10 req/s burst 20)
+    rate_limit {
+        zone dynamic {
+            key {remote_host}
+            events 20
+            window 1s
+        }
+    }
+
+    # Backend API proxy
+    handle_path /api/* {
+        reverse_proxy backend:8000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # WebSocket proxy
+    handle_path /ws/* {
+        reverse_proxy backend:8000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # OpenAI-compatible endpoint
+    handle_path /v1/* {
+        reverse_proxy backend:8000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Frontend (Next.js)
+    handle {
+        reverse_proxy frontend:3000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+}

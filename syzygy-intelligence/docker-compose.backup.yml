@@ -1,0 +1,29 @@
+# Database backup service — runs pg_dump on a schedule.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.backup.yml up -d
+services:
+  db-backup:
+    image: postgres:16-alpine
+    container_name: syzygy-db-backup
+    restart: unless-stopped
+    environment:
+      PGUSER: ${SYZYGY_DB_USER:-syzygy}
+      PGPASSWORD: ${SYZYGY_DB_PASSWORD:-syzygy_secret}
+      PGHOST: postgres
+      PGPORT: ${SYZYGY_DB_PORT:-5432}
+      PGDATABASE: ${SYZYGY_DB_NAME:-syzygy}
+    volumes:
+      - db_backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: |
+      sh -c '
+        echo "0 */6 * * * /usr/local/bin/backup.sh" > /etc/crontabs/root
+        crond -f -l 2
+      '
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - syzygy-net
+
+volumes:
+  db_backups:

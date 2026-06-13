@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
+from app.logging_setup import logger
 from app.memory import memory_system
 
 router = APIRouter()
@@ -13,17 +14,21 @@ router = APIRouter()
 
 @router.post("/store")
 async def store_memory(data: dict[str, Any]) -> dict[str, Any]:
-    memory_id = await memory_system.store(
-        content=data.get("content", ""),
-        memory_type=data.get("type", "short_term"),
-        agent_id=data.get("agent_id", ""),
-        session_id=data.get("session_id", ""),
-        polarity=data.get("polarity", ""),
-        archetype=data.get("archetype", ""),
-        importance=data.get("importance", 0.5),
-        tags=data.get("tags", []),
-    )
-    return {"memory_id": memory_id}
+    try:
+        memory_id = await memory_system.store(
+            content=data.get("content", ""),
+            memory_type=data.get("type", "short_term"),
+            agent_id=data.get("agent_id", ""),
+            session_id=data.get("session_id", ""),
+            polarity=data.get("polarity", ""),
+            archetype=data.get("archetype", ""),
+            importance=data.get("importance", 0.5),
+            tags=data.get("tags", []),
+        )
+        return {"memory_id": memory_id}
+    except Exception as e:
+        logger.error("Failed to store memory", error=str(e), memory_type=data.get("type"))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to store memory")
 
 
 @router.get("/recall")
@@ -33,19 +38,27 @@ async def recall_memory(
     polarity: str = Query(""),
     limit: int = Query(10),
 ) -> dict[str, Any]:
-    results = await memory_system.recall(
-        query=query,
-        agent_id=agent_id,
-        polarity=polarity,
-        limit=limit,
-    )
-    return {"memories": results}
+    try:
+        results = await memory_system.recall(
+            query=query,
+            agent_id=agent_id,
+            polarity=polarity,
+            limit=limit,
+        )
+        return {"memories": results}
+    except Exception as e:
+        logger.error("Failed to recall memories", error=str(e), query=query[:100])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to recall memories")
 
 
 @router.get("/recent")
 async def recent_memories(session_id: str = Query(""), limit: int = Query(5)) -> dict[str, Any]:
-    results = await memory_system.remember_recent(
-        session_id=session_id,
-        limit=limit,
-    )
-    return {"memories": results}
+    try:
+        results = await memory_system.remember_recent(
+            session_id=session_id,
+            limit=limit,
+        )
+        return {"memories": results}
+    except Exception as e:
+        logger.error("Failed to get recent memories", error=str(e), session_id=session_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to get recent memories")

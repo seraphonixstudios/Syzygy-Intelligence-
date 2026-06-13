@@ -1,5 +1,6 @@
-# ─── Builder Stage ───────────────────────────────────────────
-FROM python:3.14-slim AS builder
+# ─── Builder Stage ────────────────────────────────────────────────
+# Compile Python dependencies and create virtual environment
+FROM python:3.13-slim AS builder
 
 WORKDIR /build
 
@@ -11,21 +12,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (leverage layer caching)
+# Copy requirements first for layer caching
 COPY requirements.txt .
 
-# Build venv with optimized pip settings and cache mount
+# Build venv with optimized pip settings
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip>=23.0 setuptools wheel && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# ─── Runtime Stage ────────────────────────────────────────────
-FROM python:3.14-slim
+# ─── Runtime Stage ────────────────────────────────────────────────
+# Minimal production image with only runtime dependencies
+FROM python:3.13-slim
 
 WORKDIR /app
 
-# Create non-root user early for layer caching and security
+# Create non-root user for security (before copying files)
 RUN groupadd -r syzygy && useradd -r -g syzygy syzygy
 
 # Install only essential runtime dependencies
@@ -36,30 +38,40 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for Python optimization
+# Set Python environment variables for optimization
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONHASHSEED=random
+    PYTHONHASHSEED=random \
+    PYTHONFAULTHANDLER=1
 
-# Copy pre-built virtual environment from builder (before app code for caching)
+# Copy pre-built virtual environment from builder
 COPY --from=builder --chown=syzygy:syzygy /opt/venv /opt/venv
 
 # Copy application code
 COPY --chown=syzygy:syzygy . .
+
+# Create data directories (readable/writable by app user)
+RUN mkdir -p data/chroma data/uploads data/sandbox && \
+    chown -R syzygy:syzygy data
 
 # Switch to non-root user
 USER syzygy
 
 EXPOSE 8000
 
-# Healthcheck with retries
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# Health check with reasonable timeouts
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -sf http://localhost:8000/health || exit 1
 
-# Labels for metadata
-LABEL org.opencontainers.image.description="Syzygy Intelligence Backend API" \
+# Metadata labels
+LABEL org.opencontainers.image.title="Syzygy Intelligence Backend" \
+      org.opencontainers.image.description="Multi-agent platform with consensus engine" \
       org.opencontainers.image.vendor="syzygy" \
-      org.opencontainers.image.version="1.0.0"
+      org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.source="https://github.com/syzygy/syzygy-intelligence"
 
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Entrypoint: init DB, then start server
+# If migration fails, container exits with error (Docker will restart it)
+CMD python migrate.py && \
+    uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info

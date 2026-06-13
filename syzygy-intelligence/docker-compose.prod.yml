@@ -1,5 +1,9 @@
 # Production overrides for syzygy-intelligence.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage:
+#   Basic:        docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   With HTTPS:   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d
+#   Build frontend with custom domain: docker compose build --build-arg NEXT_PUBLIC_SYZYGY_API_URL=https://api.example.com
+#   See Caddyfile for TLS config, rate limiting, and security headers.
 services:
   ollama:
     image: ollama/ollama:0.3.14

@@ -233,7 +233,7 @@ pip install -r requirements.txt
 pytest                         # All tests
 pytest -v --tb=short          # Verbose with short tracebacks
 
-# Frontend E2E tests (Playwright, 24 spec files)
+# Frontend E2E tests (Playwright, 28 spec files)
 cd frontend
 npx playwright test            # Headless CI mode (2 workers, 3 shards)
 npx playwright test --ui      # Interactive UI mode
@@ -453,10 +453,17 @@ curl http://localhost:8000/v1/chat/completions \
 syzygy-intelligence/
 ├── README.md
 ├── AGENTS.md                     # AI assistant guide
+├── OBSERVABILITY.md              # Prometheus/Grafana/Jaeger setup
+├── CONTRIBUTING.md               # Contribution guidelines
+├── CODE_OF_CONDUCT.md            # Code of conduct
 ├── docker-compose.yml
 ├── docker-compose.prod.yml       # Production overrides
 ├── docker-compose.ollama-cpu.yml # CPU-only Ollama override
+├── docker-compose.monitoring.yml # Prometheus/Grafana/Alertmanager/Jaeger
+├── docker-compose.backup.yml     # Backup automation
+├── docker-compose.caddy.yml      # Caddy reverse proxy
 ├── .env.example
+├── Caddyfile                     # Caddy config for reverse proxy
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point
@@ -485,6 +492,8 @@ syzygy-intelligence/
 │   │   │   └── ci_piper.py
 │   │   ├── rag/                 # RAG pipeline (ingester, embeddings, retriever)
 │   │   ├── api/                 # REST + WebSocket endpoints
+│   │   │   ├── routes/          # Route handlers
+│   │   │   └── openai_compat.py # OpenAI-compatible /v1/chat/completions
 │   │   ├── tools/               # Tool implementations
 │   │   ├── llm/                 # LLM abstraction layer
 │   │   ├── orchestration/       # Team formation, task queues
@@ -496,29 +505,61 @@ syzygy-intelligence/
 │   │   │   └── 0002_add_remaining_tables.py
 │   │   ├── env.py
 │   │   └── script.py.mako
+│   ├── tests/                   # pytest test suite (392 tests)
+│   │   ├── conftest.py
+│   │   ├── mock_ollama_server.py
+│   │   ├── test_chat.py
+│   │   ├── test_openai_compat.py
+│   │   ├── test_llm_integration.py
+│   │   └── ...
 │   ├── alembic.ini
 │   ├── requirements.txt
 │   └── pyproject.toml
 ├── frontend/
-│   ├── app/
-│   │   ├── auth/                # Login & register pages
-│   │   │   ├── login/
-│   │   │   └── register/
+│   ├── app/                     # Next.js 15 App Router
+│   │   ├── auth/                # Login, register, password reset
 │   │   ├── admin/               # Admin panel (superuser only)
-│   │   └── ...                  # App Router
+│   │   ├── chat/                # Chat interface
+│   │   ├── consensus/           # Consensus workspace
+│   │   ├── research/            # Research workflow
+│   │   ├── code/                # Code generation
+│   │   ├── content/             # Content creation
+│   │   ├── improve/             # Auto-improve
+│   │   ├── workflows/           # Workflow execution
+│   │   ├── memory/              # Memory browser
+│   │   ├── rag/                 # Knowledge base
+│   │   ├── settings/            # User settings
+│   │   ├── cloud/               # Pricing tiers
+│   │   └── ...                  # Additional routes
 │   ├── components/
 │   │   ├── AuthInitializer.tsx  # Session sync on app load
 │   │   ├── RouteGuard.tsx       # Protected route redirect
-│   │   └── ...                  # React components
 │   │   ├── ui/                  # Base UI (shadcn)
 │   │   ├── agents/              # Agent cards, glyphs
 │   │   ├── consensus/           # Consensus visualizations
 │   │   ├── memory/              # Memory browser
 │   │   ├── workflow/            # Workflow builder
 │   │   └── dashboard/           # Dashboard panels
-│   ├── hooks/                   # React hooks (useSSE, useWebSocket, etc.)
-│   └── lib/                     # Utilities & API client
-└── docs/
+│   ├── hooks/                   # React hooks (useSSE, useWebSocket, useApi, etc.)
+│   ├── lib/                     # Utilities & API client
+│   ├── e2e/                     # Playwright E2E tests (28 spec files)
+│   │   ├── helpers.ts
+│   │   ├── auth.spec.ts
+│   │   ├── chat.spec.ts
+│   │   ├── consensus.spec.ts
+│   │   └── ...
+│   └── playwright.config.ts
+├── docs/
+│   ├── whitepaper.md            # Full whitepaper — Version 1.1
+│   ├── api.md                   # API reference
+│   └── operations.md            # Operations guide
+├── scripts/
+│   ├── setup-ollama.ps1         # Ollama install/pull/tag automation
+│   ├── backup.ps1               # Windows backup script
+│   ├── backup.sh                # Linux backup script
+│   └── generate-secrets.ps1     # Generate secure random secrets
+└── sandbox/                     # Docker-exec sandbox for code execution
+    └── Dockerfile
 ```
 
 ---

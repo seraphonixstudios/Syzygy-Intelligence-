@@ -12,6 +12,169 @@ WebSocket endpoint at `ws://localhost:8000/ws`.
 
 ---
 
+## Authentication
+
+All authenticated endpoints require an `Authorization: Bearer <token>` header. Tokens are obtained via login or registration.
+
+### `POST /api/auth/register`
+Create a new user account.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepass123",
+  "display_name": "User"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "display_name": "User",
+  "subscription_tier": "free",
+  "messages_used": 0
+}
+```
+
+### `POST /api/auth/login`
+Authenticate and receive JWT tokens.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepass123"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "token_type": "bearer"
+}
+```
+
+### `GET /api/auth/me`
+Get the current user's profile. Requires authentication.
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "display_name": "User",
+  "subscription_tier": "free",
+  "messages_used": 5,
+  "messages_limit": 50,
+  "created_at": "2026-06-01T00:00:00Z"
+}
+```
+
+### `POST /api/auth/refresh`
+Refresh an expired access token using a refresh token.
+
+**Request:**
+```json
+{
+  "refresh_token": "eyJ..."
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer"
+}
+```
+
+### `POST /api/auth/logout`
+Invalidate the current session.
+
+### `POST /api/auth/forgot-password`
+Request a password reset email. In development mode, the reset token is copied to the response.
+
+**Request:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### `POST /api/auth/reset-password`
+Reset password using a reset token.
+
+**Request:**
+```json
+{
+  "token": "reset-token",
+  "password": "newsecurepass456"
+}
+```
+
+### `PUT /api/auth/me/settings`
+Update user profile or settings.
+
+**Request:**
+```json
+{
+  "display_name": "New Name"
+}
+```
+
+### API Keys
+
+#### `POST /api/auth/api-keys`
+Create a new API key. The raw key is returned only once.
+
+**Request:**
+```json
+{
+  "name": "My API Key"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "name": "My API Key",
+  "key": "syzygy_abc123...",
+  "created_at": "2026-06-07T00:00:00Z"
+}
+```
+
+#### `GET /api/auth/api-keys`
+List all API keys for the user (prefix only, not the full key).
+
+#### `DELETE /api/auth/api-keys/{id}`
+Revoke an API key.
+
+### OAuth Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/auth/oauth/{provider}` | Redirect to OAuth provider (google, github) |
+| GET | `/api/auth/oauth/{provider}/callback` | OAuth callback handler |
+
+### Rate Limiting
+
+All `/api/*` endpoints are rate-limited using token bucket:
+
+| Scope | Rate | Burst |
+|-------|------|-------|
+| Unauthenticated (per IP) | 10 req/s | 20 |
+| Authenticated (per user) | 30 req/s | 60 |
+
+Exceeded requests return `429 Too Many Requests` with a `Retry-After` header.
+
+---
+
 ## Agents
 
 ### `GET /api/agents/`
@@ -382,6 +545,93 @@ Delete a document and its chunks from the vector store.
 
 ---
 
+## Admin
+
+Admin endpoints require a user with `is_superuser = true`.
+
+### `GET /api/admin/users`
+List all users (admin only).
+
+**Response:**
+```json
+{
+  "users": [
+    {
+      "id": "uuid",
+      "email": "user@example.com",
+      "display_name": "User",
+      "subscription_tier": "free",
+      "is_superuser": false,
+      "created_at": "2026-06-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+## Payments / Stripe
+
+### `POST /api/payments/create-checkout-session`
+Create a Stripe Checkout Session for subscription purchase.
+
+**Request:**
+```json
+{
+  "price_id": "price_monthly",
+  "success_url": "http://localhost:3000/settings",
+  "cancel_url": "http://localhost:3000/cloud"
+}
+```
+
+**Response:**
+```json
+{
+  "url": "https://checkout.stripe.com/pay/..."
+}
+```
+
+### `POST /api/payments/customer-portal`
+Get the Stripe Customer Portal URL for managing subscriptions.
+
+### `POST /api/payments/webhook`
+Stripe webhook endpoint for subscription lifecycle events (requires Stripe signature header).
+
+---
+
+## Uploads
+
+### `POST /api/uploads/`
+Upload a file to the server.
+
+**Request:** `multipart/form-data` with a `file` field.
+
+**Response:**
+```json
+{
+  "file_id": "uuid",
+  "filename": "document.pdf",
+  "size": 12345,
+  "url": "/uploads/uuid/document.pdf"
+}
+```
+
+### `DELETE /api/uploads/{file_id}`
+Delete an uploaded file.
+
+---
+
+## Meta
+
+### `GET /api/meta/summary`
+Get system summary metadata.
+
+### `GET /api/meta/history`
+Get system history entries.
+
+---
+
 ## Health
 
 ### `GET /health`
@@ -398,3 +648,8 @@ Delete a document and its chunks from the vector store.
   "status": "operational"
 }
 ```
+
+### `GET /metrics`
+Prometheus metrics endpoint, available when observability is enabled.
+
+---

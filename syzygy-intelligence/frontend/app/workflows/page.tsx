@@ -61,6 +61,7 @@ export default function WorkflowsPage() {
       })
       .catch(() => {
         logger.warn("Could not fetch workflows from backend, using defaults", undefined, "Workflows");
+        toast.error("Could not load workflows");
         setWorkflows(Object.keys(WORKFLOW_DESCRIPTIONS));
       })
       .finally(() => setLoading(false));
