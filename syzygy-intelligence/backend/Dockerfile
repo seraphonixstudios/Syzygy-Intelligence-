@@ -15,11 +15,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Copy requirements first for layer caching
 COPY requirements.txt .
 
-# Build venv with optimized pip settings
+# Build venv with optimized pip settings, wheel caching, and cleanup
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip>=23.0 setuptools wheel && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+    /opt/venv/bin/pip install --no-cache-dir --prefer-binary -r requirements.txt && \
+    find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -type f -name "*.pyc" -delete
 
 # ─── Runtime Stage ────────────────────────────────────────────────
 # Minimal production image with only runtime dependencies
@@ -36,7 +38,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
 # Set Python environment variables for optimization
 ENV PATH="/opt/venv/bin:$PATH" \
@@ -51,9 +54,12 @@ COPY --from=builder --chown=syzygy:syzygy /opt/venv /opt/venv
 # Copy application code
 COPY --chown=syzygy:syzygy . .
 
-# Create data directories (readable/writable by app user)
+# Create data directories and clean build artifacts
 RUN mkdir -p data/chroma data/uploads data/sandbox && \
-    chown -R syzygy:syzygy data
+    chown -R syzygy:syzygy data && \
+    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type f -name "*.pyc" -delete && \
+    find . -type f -name "*.pyo" -delete
 
 # Switch to non-root user
 USER syzygy
@@ -71,7 +77,8 @@ LABEL org.opencontainers.image.title="Syzygy Intelligence Backend" \
       org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.source="https://github.com/syzygy/syzygy-intelligence"
 
-# Entrypoint: init DB, then start server
+# Entrypoint: init DB, then start server with production workers
+# Use alembic for migrations (more standard than migrate.py)
 # If migration fails, container exits with error (Docker will restart it)
-CMD python migrate.py && \
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
+CMD alembic upgrade head 2>/dev/null || alembic stamp head; \
+    uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info --workers 4

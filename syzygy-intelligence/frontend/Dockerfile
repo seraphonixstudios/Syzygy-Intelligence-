@@ -45,7 +45,9 @@ COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 
 # Build Next.js with output optimization
-RUN npm run build
+RUN npm run build && \
+    npm prune --production && \
+    npm cache clean --force
 
 # ─── Runtime Stage ────────────────────────────────────────────
 # Minimal production image with built application
@@ -62,7 +64,8 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
-# Copy built application from builder
+# Copy only production dependencies and built application
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -84,5 +87,5 @@ LABEL org.opencontainers.image.title="Syzygy Intelligence Frontend" \
       org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.source="https://github.com/syzygy/syzygy-intelligence"
 
-# Start Next.js server
+# Start Next.js server with optimized settings
 CMD ["node", "server.js"]

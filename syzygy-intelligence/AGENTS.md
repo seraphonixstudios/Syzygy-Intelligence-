@@ -50,7 +50,7 @@ syzygy-intelligence/
 
 | Layer | Runner | Count | Notes |
 |-------|--------|-------|-------|
-| Backend unit | pytest | **482** | Consensus (95), Chat (17), WS (16), OpenAI compat (24), integration (6), self-improvement (90), + existing |
+| Backend unit | pytest | **519** | Consensus (95), Chat (17), WS (16), OpenAI compat (24), integration (6), self-improvement (90), agents (52), API (6), RAG (20) + existing |
 | Frontend component | vitest | **38** | Consensus UI + agent UI presentational components |
 | E2E | Playwright | **29 specs** | 22 pages + auth + navigation + api + errors + journeys + submissions + shadow |
 

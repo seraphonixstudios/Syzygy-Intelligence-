@@ -35,6 +35,10 @@ class SyzygyAgent:
     custom_system_prompt: str = ""
     custom_persona: Persona | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    system_prompt_adjustments: dict[str, str] | None = None
+    role_adjustments: list[str] | None = None
+    requested_tools: list[str] | None = None
+    consensus_weight: float = 1.0
 
     # Derived / cached
     _archetype: Archetype | None = None

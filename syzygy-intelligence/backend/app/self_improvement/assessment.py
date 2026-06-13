@@ -334,23 +334,27 @@ class SelfAssessmentEngine:
         """Extract score from LLM response."""
 
         try:
-            # Find all numbers in 0.X format
-            numbers = re.findall(r"0\.\d+", text)
+            # Find all numbers in 0.X format (not preceded by minus)
+            numbers = re.findall(r"(?<!-)0\.\d+", text)
             if numbers:
                 score = float(numbers[0])
                 return max(0.0, min(1.0, score))
         except (ValueError, IndexError):
             pass
 
-        # Fallback: search for any decimal
+        # Fallback: search for any decimal (including negatives)
         try:
-            matches = re.findall(r"\d+\.?\d*", text)
+            matches = re.findall(r"-?\d+\.?\d*", text)
             if matches:
                 num = float(matches[0])
                 if 0 <= num <= 100:
                     return num / 100.0
                 elif 0 <= num <= 1:
                     return num
+                elif num > 100:
+                    return 1.0
+                elif num < 0:
+                    return 0.0
         except (ValueError, IndexError):
             pass
 

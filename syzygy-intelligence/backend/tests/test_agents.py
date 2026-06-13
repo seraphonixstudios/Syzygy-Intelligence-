@@ -15,6 +15,7 @@ from app.agents.archetypes import (
     get_shadow,
 )
 from app.agents.base import SyzygyAgent
+from app.agents.shadow import IntegrationReport, ShadowAgent
 from app.agents.personas import PERSONA_REGISTRY, get_persona
 from app.agents.polarity import (
     POLARITY_CONFIGS,

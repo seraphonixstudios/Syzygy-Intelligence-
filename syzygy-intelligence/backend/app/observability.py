@@ -6,12 +6,11 @@ from __future__ import annotations
 import contextvars
 import time
 import uuid
-from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Request, Response
+from fastapi import Request
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -160,10 +159,14 @@ metrics_registry = SyzygyMetrics()
 # ─── OpenTelemetry Setup ───────────────────────────────────────
 def setup_tracing() -> None:
     """Initialize OpenTelemetry tracing with Jaeger exporter."""
-    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.instrumentation.redis import RedisInstrumentor
-    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    try:
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.instrumentation.redis import RedisInstrumentor
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    except ImportError as e:
+        logger.warning(f"Tracing imports failed: {e}")
+        return
 
     if not settings.env == "production":
         logger.info("Tracing disabled outside production")
@@ -200,43 +203,38 @@ class RequestTracingMiddleware:
     def __init__(self, app: Any) -> None:
         self.app = app
 
-    async def __call__(self, request: Request, call_next: Callable) -> Response:
-        # Generate or extract request ID
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive=receive)
         req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         correlation_id = request.headers.get(
             "X-Correlation-ID",
             request.headers.get("X-Request-ID", str(uuid.uuid4())),
         )
 
-        # Set context for this request
         request_id_context.set(req_id)
         correlation_id_context.set(correlation_id)
 
-        # Extract user ID from token if available (will be populated by auth middleware)
-        user_id = ""
-        if hasattr(request.state, "user_id"):
-            user_id = request.state.user_id
-            user_id_context.set(user_id)
-
-        logger.with_context(
-            request_id=req_id,
-            correlation_id=correlation_id,
-            user_id=user_id,
-            method=request.method,
-            path=request.url.path,
-        )
-
+        status_code = [200]
         start_time = time.time()
-        try:
-            response = await call_next(request)
-            duration = time.time() - start_time
 
-            # Record HTTP metrics
+        async def wrapped_send(message):
+            if message["type"] == "http.response.start":
+                status_code[0] = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, wrapped_send)
+            duration = time.time() - start_time
             endpoint = request.url.path
+
             metrics_registry.http_requests.labels(
                 method=request.method,
                 endpoint=endpoint,
-                status=response.status_code,
+                status=status_code[0],
             ).inc()
             metrics_registry.http_request_duration_seconds.labels(
                 method=request.method,
@@ -245,10 +243,9 @@ class RequestTracingMiddleware:
 
             logger.info(
                 f"HTTP {request.method} {endpoint}",
-                status=response.status_code,
+                status=status_code[0],
                 duration_ms=int(duration * 1000),
             )
-            return response
         except Exception as e:
             duration = time.time() - start_time
             logger.error(

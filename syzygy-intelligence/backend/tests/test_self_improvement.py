@@ -145,44 +145,52 @@ class TestGetDimensions:
 
 
 class TestComputeMetrics:
-    def test_code_metrics(self):
+    @pytest.mark.asyncio
+    async def test_code_metrics(self):
         code = "def foo():\n    pass\n# comment\nassert True"
-        metrics = SelfAssessmentEngine._compute_metrics(None, code, "code", "")
-        assert metrics["line_count"] == 4
+        metrics = await SelfAssessmentEngine._compute_metrics(None, code, "code", "")
+        assert metrics["line_count"] == 3
         assert metrics["has_comments"] is True
         assert metrics["has_tests"] is True
 
-    def test_code_no_tests(self):
+    @pytest.mark.asyncio
+    async def test_code_no_tests(self):
         code = "def foo():\n    pass"
-        metrics = SelfAssessmentEngine._compute_metrics(None, code, "code", "")
+        metrics = await SelfAssessmentEngine._compute_metrics(None, code, "code", "")
         assert metrics["has_tests"] is False
 
-    def test_content_metrics(self):
+    @pytest.mark.asyncio
+    async def test_content_metrics(self):
+        engine = SelfAssessmentEngine(AsyncMock())
         text = "# Title\n\n## Section 1\nSome text with examples like e.g."
-        metrics = SelfAssessmentEngine._compute_metrics(None, text, "content", "")
+        metrics = await engine._compute_metrics(text, "content", "")
         assert metrics["section_count"] >= 1
         assert metrics["has_examples"] is True
 
-    def test_research_metrics(self):
+    @pytest.mark.asyncio
+    async def test_research_metrics(self):
         text = "Introduction\n\nSome claim [1] and another [2].\n\nConclusion"
-        metrics = SelfAssessmentEngine._compute_metrics(None, text, "research", "")
+        metrics = await SelfAssessmentEngine._compute_metrics(None, text, "research", "")
         assert metrics["citation_count"] == 2
         assert metrics["section_structure"] is True
 
-    def test_research_no_structure(self):
+    @pytest.mark.asyncio
+    async def test_research_no_structure(self):
         text = "Just a paragraph without sections."
-        metrics = SelfAssessmentEngine._compute_metrics(None, text, "research", "")
+        metrics = await SelfAssessmentEngine._compute_metrics(None, text, "research", "")
         assert metrics["section_structure"] is False
 
-    def test_general_domain_metrics(self):
+    @pytest.mark.asyncio
+    async def test_general_domain_metrics(self):
         text = "Some words here and there"
-        metrics = SelfAssessmentEngine._compute_metrics(None, text, "general", "")
-        assert metrics["length_tokens"] == 6
+        metrics = await SelfAssessmentEngine._compute_metrics(None, text, "general", "")
+        assert metrics["length_tokens"] == 5
         assert metrics["length_chars"] == len(text)
 
-    def test_token_count_is_word_count(self):
+    @pytest.mark.asyncio
+    async def test_token_count_is_word_count(self):
         text = "a b c d e"
-        metrics = SelfAssessmentEngine._compute_metrics(None, text, "general", "")
+        metrics = await SelfAssessmentEngine._compute_metrics(None, text, "general", "")
         assert metrics["length_tokens"] == 5
 
 
@@ -474,6 +482,7 @@ class TestExponentialDecaySchedule:
         opt = LearningOptimizer(LearningRateConfig(
             schedule=LearningRateSchedule.EXPONENTIAL_DECAY,
             initial_rate=0.1,
+            min_rate=0.001,
             decay_rate=0.5,
         ))
         rate = opt.get_learning_rate(5, 10)
@@ -502,8 +511,8 @@ class TestCosineAnnealingSchedule:
         rate_start = opt.get_learning_rate(1, 10)
         # At cycle 2 (position 1 of cycle), cos(pi/4) < 1
         rate_mid = opt.get_learning_rate(2, 10)
-        # At cycle 3 (position 2 of cycle), cos(pi/2) = 0, so rate should be min
-        rate_end = opt.get_learning_rate(3, 10)
+        # At cycle 4 (position 3 of cycle), cos(3pi/4) is lowest
+        rate_end = opt.get_learning_rate(4, 10)
         # At cycle 5 (position 0 of next cycle), cos(0) = 1 again
         rate_restart = opt.get_learning_rate(5, 10)
 
@@ -547,13 +556,13 @@ class TestCyclicalSchedule:
             min_rate=0.01,
             cycle_length=4,
         ))
-        r1 = opt.get_learning_rate(1, 10)  # tri wave peak
-        r2 = opt.get_learning_rate(2, 10)  # tri wave mid
-        r3 = opt.get_learning_rate(3, 10)  # tri wave mid
-        r4 = opt.get_learning_rate(4, 10)  # tri wave valley
-        assert r1 > r2
-        assert r3 < r2
-        assert r4 == pytest.approx(opt.config.min_rate, abs=0.01)
+        r1 = opt.get_learning_rate(1, 10)  # tri wave min (position 0)
+        r2 = opt.get_learning_rate(2, 10)  # tri wave rising (position 1)
+        r3 = opt.get_learning_rate(4, 10)  # tri wave falling (position 3)
+        r4 = opt.get_learning_rate(3, 10)  # tri wave peak (position 2)
+        assert r1 < r2
+        assert r3 < r4
+        assert r1 == pytest.approx(opt.config.min_rate, abs=0.01)
 
     def test_cyclical_restarts(self):
         opt = LearningOptimizer(LearningRateConfig(

@@ -17,6 +17,7 @@ alembic
 redis
 neo4j
 chromadb
+aiosqlite
 PyMuPDF
 pgvector
 
@@ -45,6 +46,7 @@ opentelemetry-exporter-jaeger
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-sqlalchemy
 opentelemetry-instrumentation-redis
+deprecated
 
 # Utilities
 networkx

@@ -9,7 +9,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     gcc \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
 # Create non-root user early for security
 RUN groupadd -r sandbox && useradd -r -g sandbox sandbox
@@ -17,7 +18,8 @@ RUN groupadd -r sandbox && useradd -r -g sandbox sandbox
 # Set environment variables for Python optimization
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONHASHSEED=random
+    PYTHONHASHSEED=random \
+    PYTHONFAULTHANDLER=1
 
 # Copy policy file
 COPY --chown=sandbox:sandbox sandbox_policy.json /sandbox/sandbox_policy.json
@@ -26,7 +28,9 @@ COPY --chown=sandbox:sandbox sandbox_policy.json /sandbox/sandbox_policy.json
 USER sandbox
 
 # Labels for metadata
-LABEL org.opencontainers.image.description="Syzygy Sandbox Environment" \
-      org.opencontainers.image.vendor="syzygy"
+LABEL org.opencontainers.image.title="Syzygy Sandbox Environment" \
+      org.opencontainers.image.description="Sandbox Environment for code execution" \
+      org.opencontainers.image.vendor="syzygy" \
+      org.opencontainers.image.version="0.1.0"
 
 CMD ["sleep", "infinity"]

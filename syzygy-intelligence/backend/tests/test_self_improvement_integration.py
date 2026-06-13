@@ -51,10 +51,18 @@ def mock_assessor():
 
 
 @pytest.fixture
-def workflow(mock_consensus, mock_assessor):
+def mock_llm():
+    llm = AsyncMock()
+    llm.generate.return_value = '{"type": "prompt-tuning", "target_agent": "Sage", "action": "Add more structure", "rationale": "Improve coherence"}'
+    return llm
+
+
+@pytest.fixture
+def workflow(mock_consensus, mock_assessor, mock_llm):
     wf = RecursiveSelfImprovementWorkflow(
         consensus_engine=mock_consensus,
         assessment_engine=mock_assessor,
+        llm=mock_llm,
     )
     return wf
 
@@ -154,13 +162,47 @@ class TestWorkflowNoConvergence:
 
 @pytest.fixture
 def test_client():
-    """Build a minimal FastAPI test client with the self-improvement router."""
+    """Build a minimal FastAPI test client with mocked workflow dependencies."""
+    from unittest.mock import AsyncMock, patch
+
     from fastapi import FastAPI
     from app.api.routes.self_improvement import router
 
     app = FastAPI()
     app.include_router(router, prefix="/api")
-    return TestClient(app)
+
+    # Patch real dependencies that would hang without a running server
+    patcher_consensus = patch("app.api.routes.self_improvement.ConsensusEngine")
+    patcher_llm = patch("app.api.routes.self_improvement.OllamaClient")
+    patcher_assessor = patch("app.api.routes.self_improvement.SelfAssessmentEngine")
+
+    mock_consensus = patcher_consensus.start()
+    mock_llm = patcher_llm.start()
+    mock_assessor = patcher_assessor.start()
+
+    # Wire mock returns so workflow.execute doesn't hang
+    mock_consensus_instance = AsyncMock()
+    mock_consensus_instance.run_consensus.side_effect = (
+        lambda task, agents, max_rounds=2: AsyncMock(
+            final_synthesis="Mocked output"
+        )
+    )
+    mock_consensus.return_value = mock_consensus_instance
+
+    mock_assessor_instance = AsyncMock()
+    mock_assessor_instance.assess.return_value = AssessmentResult(
+        overall_score=0.75,
+        dimension_scores={"accuracy": 0.8},
+        strengths=["accuracy"],
+        weaknesses=[],
+    )
+    mock_assessor.return_value = mock_assessor_instance
+
+    yield TestClient(app)
+
+    patcher_consensus.stop()
+    patcher_llm.stop()
+    patcher_assessor.stop()
 
 
 class TestSelfImprovementAPI:

@@ -17,7 +17,15 @@ from typing import Any, Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.logging_setup import logger
+# Lazy import to break circular dependency with logging_setup.py
+# logging_setup imports settings from this module at module level.
+def _get_logger():
+    try:
+        from app.logging_setup import logger
+        return logger
+    except ImportError:
+        import logging
+        return logging.getLogger("syzygy.config")
 
 
 class DatabaseConfig:
@@ -210,14 +218,14 @@ class SyzygyConfig(BaseSettings):
             try:
                 db_config = DatabaseConfig.parse_database_url(raw_url)
                 data.update(db_config)
-                logger.info(
+                _get_logger().info(
                     "Parsed DATABASE_URL",
                     host=db_config["db_host"],
                     port=db_config["db_port"],
                     database=db_config["db_name"],
                 )
             except ValueError as e:
-                logger.error("Failed to parse DATABASE_URL", error=str(e))
+                _get_logger().error("Failed to parse DATABASE_URL", error=str(e))
                 raise
 
         super().__init__(**data)
@@ -245,21 +253,21 @@ class SyzygyConfig(BaseSettings):
 
         if errors:
             error_msg = "Production configuration validation failed:\n" + "\n".join(f"  • {e}" for e in errors)
-            logger.error("Production secrets not configured", details="\n".join(errors))
+            _get_logger().error("Production secrets not configured", details="\n".join(errors))
             raise ValueError(error_msg)
 
-        logger.info("Production secrets validated")
+        _get_logger().info("Production secrets validated")
 
     def _validate_production_cors(self) -> None:
         """Warn if CORS origins contain localhost."""
         if "localhost" in self.cors_origins:
-            logger.warning(
+            _get_logger().warning(
                 "CORS origins contain localhost in production",
                 detail="Set SYZYGY_CORS_ORIGINS to your actual domain(s)",
             )
 
         if "localhost" in self.oauth_redirect_url:
-            logger.warning(
+            _get_logger().warning(
                 "OAuth redirect URL contains localhost in production",
                 detail="OAuth providers will not recognize redirect",
             )
@@ -267,7 +275,7 @@ class SyzygyConfig(BaseSettings):
     def _validate_production_email(self) -> None:
         """Warn if email not configured for production."""
         if self.email_provider == "console":
-            logger.warning(
+            _get_logger().warning(
                 "Email provider is 'console' in production",
                 detail="Email tokens will be exposed in API responses. "
                 "Configure SendGrid or AWS SES instead.",
@@ -308,7 +316,7 @@ class SyzygyConfig(BaseSettings):
         """Parse and validate CORS origins."""
         origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
         if not origins and self.env == "production":
-            logger.warning("CORS origins list is empty in production")
+            _get_logger().warning("CORS origins list is empty in production")
         return origins
 
     @property

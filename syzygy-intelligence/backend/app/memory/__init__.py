@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.logging_setup import logger
+from app.memory.base import Memory  # noqa: F401
 from app.memory.graph_memory import GraphMemory
 from app.memory.long_term import LongTermMemory
 from app.memory.short_term import ShortTermMemory

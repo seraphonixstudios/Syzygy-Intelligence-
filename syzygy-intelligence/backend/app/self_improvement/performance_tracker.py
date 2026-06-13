@@ -185,13 +185,16 @@ class PerformanceTracker:
     def estimate_convergence_cycle(self, target_score: float = 0.9) -> int | None:
         """Estimate how many more cycles needed to reach target score."""
 
-        if not self.metrics or len(self.metrics) < 2:
+        if not self.metrics:
             return None
 
         current_score = self.metrics[-1].score
 
         if current_score >= target_score:
             return 0
+
+        if len(self.metrics) < 2:
+            return None
 
         # Linear extrapolation from avg improvement rate
         avg_improvement = self.metrics[-1].improvement_rate

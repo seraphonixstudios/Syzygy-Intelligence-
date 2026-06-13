@@ -65,7 +65,7 @@ class LearningOptimizer:
 
         elif self.config.schedule == LearningRateSchedule.LINEAR_DECAY:
             # Linearly decay from initial to min over all cycles
-            progress = cycle / max_cycles
+            progress = (cycle - 1) / (max_cycles - 1) if max_cycles > 1 else 0
             self.current_rate = (
                 self.config.initial_rate
                 - (self.config.initial_rate - self.config.min_rate) * progress
@@ -81,7 +81,7 @@ class LearningOptimizer:
         elif self.config.schedule == LearningRateSchedule.COSINE_ANNEALING:
             # Cosine annealing: smooth decay with restart
             import math
-            progress = (cycle % self.config.cycle_length) / self.config.cycle_length
+            progress = ((cycle - 1) % self.config.cycle_length) / (self.config.cycle_length - 1) if self.config.cycle_length > 1 else 0
             self.current_rate = (
                 self.config.min_rate
                 + 0.5 * (self.config.initial_rate - self.config.min_rate)
@@ -103,8 +103,7 @@ class LearningOptimizer:
                 )
 
         elif self.config.schedule == LearningRateSchedule.CYCLICAL:
-            # Cyclically vary rate
-            import math
+            # Cyclically vary rate (triangular wave)
             cycle_pos = (cycle - 1) % self.config.cycle_length
             ratio = cycle_pos / self.config.cycle_length
             self.current_rate = (
@@ -117,7 +116,7 @@ class LearningOptimizer:
             # Adapt based on recent improvements
             if self.improvement_history:
                 recent_improvement = self.improvement_history[-1]
-                if recent_improvement > self.best_improvement:
+                if recent_improvement >= self.best_improvement:
                     # Improving: increase rate slightly
                     self.current_rate = min(
                         self.config.max_rate,

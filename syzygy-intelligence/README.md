@@ -289,6 +289,7 @@ Syzygy includes a built-in authentication system enabling user registration, log
 - **Rate Limiting** — Token-bucket rate limiter (per-IP 10/s burst 20, authenticated 30/s burst 60) with 429 responses and `Retry-After` headers
 - **Subscription Payments** — Stripe integration with checkout sessions, webhook handling, and customer portal; mock mode for development
 - **Memory-Integrated Consensus** — Consensus engine stores each round (proposals, critiques, refinements) to memory and recalls past context for informed agent reasoning
+- **Desktop App Preference** — Per-user preference toggle to indicate desktop application preference, with download link for native client
 
 ### Auth Flow
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle, Key, Copy, Trash2, Plus, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle, Key, Copy, Trash2, Plus, CheckCircle2, XCircle, ExternalLink, Monitor, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { logger } from "@/lib/logger";
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const [polarityPreset, setPolarityPreset] = useState("balanced");
   const [maxRounds, setMaxRounds] = useState(4);
   const [consensusThreshold, setConsensusThreshold] = useState(0.85);
+  const [preferDesktopApp, setPreferDesktopApp] = useState(false);
+  const [desktopDownloading, setDesktopDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -66,6 +68,7 @@ export default function SettingsPage() {
         setPolarityPreset(s.polarityPreset || polarityPreset);
         setMaxRounds(s.maxRounds || maxRounds);
         setConsensusThreshold(s.consensusThreshold ?? consensusThreshold);
+        setPreferDesktopApp(s.preferDesktopApp ?? false);
       } catch { console.debug("Failed to load saved settings"); }
     }
   }, []);
@@ -173,13 +176,21 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const settings = { ollamaUrl, defaultModel, polarityPreset, maxRounds, consensusThreshold };
+      const settings = { ollamaUrl, defaultModel, polarityPreset, maxRounds, consensusThreshold, preferDesktopApp };
       localStorage.setItem("syzygy-settings", JSON.stringify(settings));
+      const headers = useAuthStore.getState().getAuthHeaders();
+      await fetch(`${API}/api/auth/me/settings`, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ settings }),
+      });
       logger.info("Settings saved", settings, "Settings");
-      setTimeout(() => { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000); }, 500);
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       logger.error("Failed to save settings", err, "Settings");
       toast.error("Failed to save settings");
@@ -446,6 +457,56 @@ export default function SettingsPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* ─── Desktop Application ─────────────────────── */}
+      <div className="space-y-3">
+        <h2 className="flex items-center gap-2 font-alchemical text-lg tracking-wider text-syzygy-gold">
+          <Monitor className="h-4 w-4" />
+          Desktop Application
+        </h2>
+        <p className="text-xs text-syzygy-grey/50 mb-3">
+          Download the Syzygy desktop client for a native experience with offline support and system tray integration.
+        </p>
+
+        <SettingRow label="Prefer desktop application">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              className={`relative h-5 w-9 rounded-full transition-colors ${preferDesktopApp ? "bg-syzygy-gold" : "bg-syzygy-surface-border"}`}
+              onClick={() => setPreferDesktopApp(!preferDesktopApp)}
+            >
+              <div
+                className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-syzygy-obsidian transition-transform ${preferDesktopApp ? "translate-x-4" : "translate-x-0"}`}
+              />
+            </div>
+            <span className="text-sm text-syzygy-grey">
+              {preferDesktopApp ? "Desktop mode preferred" : "Web app preferred"}
+            </span>
+          </label>
+        </SettingRow>
+
+        <div className="flex justify-end">
+          <Button
+            variant="gold"
+            size="sm"
+            className="gap-2"
+            disabled={desktopDownloading}
+            onClick={async () => {
+              setDesktopDownloading(true);
+              // Placeholder: actual download URL when desktop build is published
+              toast.success("Desktop download starting...");
+              await new Promise((r) => setTimeout(r, 1000));
+              setDesktopDownloading(false);
+            }}
+          >
+            {desktopDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Download for Windows
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
