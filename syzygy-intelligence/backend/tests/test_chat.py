@@ -1,12 +1,14 @@
 """Tests for chat API routes — consensus mode, direct LLM, multi-model, streaming."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.auth import require_user
+from app.api.auth import get_current_user, require_user
+from app.db.models import SubscriptionTier
 from app.api.routes.chat import router as chat_router
 from app.consensus.engine import ConsensusRound, ConsensusSession
 from app.db.session import get_db
@@ -43,15 +45,26 @@ def _fake_session(task="Test task"):
     )
 
 
+def _make_mock_user():
+    user = MagicMock()
+    user.message_count = 0
+    user.subscription_tier = SubscriptionTier.PREMIUM
+    user.usage_reset_at = datetime.now(UTC)
+    user.trial_ends_at = None
+    user.id = "00000000-0000-0000-0000-000000000001"
+    user.email = "test@syzygy.local"
+    return user
+
+
 @pytest.fixture(autouse=True)
 def _override_auth_and_db():
     async def _mock_user():
-        return MagicMock()
+        return _make_mock_user()
 
     async def _mock_db():
         return AsyncMock()
 
-    test_app.dependency_overrides[require_user] = _mock_user
+    test_app.dependency_overrides[get_current_user] = _mock_user
     test_app.dependency_overrides[get_db] = _mock_db
     yield
     test_app.dependency_overrides.clear()
@@ -209,16 +222,13 @@ class TestChatCompletionsDirect:
         })
         assert resp.status_code == 422
 
-    def test_no_auth_optional(self, _patch_modules):
-        test_app.dependency_overrides[require_user] = lambda: None
-
-        from app.api.routes.chat import llm
-        llm.chat.return_value = "Response"
+    def test_completions_requires_auth(self, _patch_modules):
+        test_app.dependency_overrides.clear()
 
         resp = TestClient(test_app).post("/api/chat/completions", json={
             "message": "Hello",
         })
-        assert resp.status_code == 200
+        assert resp.status_code == 401
 
 
 # ===================================================================

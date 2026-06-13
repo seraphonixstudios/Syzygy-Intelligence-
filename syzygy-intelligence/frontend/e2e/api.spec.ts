@@ -31,7 +31,7 @@ test.describe("Backend API endpoints", () => {
     const body = await res.json();
     expect(body.email).toBe(userEmail);
     expect(body.subscription_tier).toBe("free");
-    expect(typeof body.messages_used).toBe("number");
+    expect(typeof body.message_count).toBe("number");
   });
 
   test("GET /api/auth/me returns 401 without token", async ({ request }) => {
@@ -39,8 +39,8 @@ test.describe("Backend API endpoints", () => {
     expect(res.status()).toBe(401);
   });
 
-  test("POST /api/chat/models returns model list", async ({ request }) => {
-    const res = await request.post(`${API}/api/chat/models`, {
+  test("GET /api/chat/models returns model list", async ({ request }) => {
+    const res = await request.get(`${API}/api/chat/models`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
     expect(res.ok()).toBeTruthy();
@@ -133,7 +133,7 @@ test.describe("Backend API endpoints", () => {
     });
     expect(createRes.ok()).toBeTruthy();
     const createBody = await createRes.json();
-    expect(createBody.key).toMatch(/^syzygy_/);
+    expect(createBody.raw_key).toMatch(/^syzygy_/);
 
     // List
     const listRes = await request.get(`${API}/api/auth/api-keys`, {
@@ -141,7 +141,7 @@ test.describe("Backend API endpoints", () => {
     });
     expect(listRes.ok()).toBeTruthy();
     const listBody = await listRes.json();
-    expect(Array.isArray(listBody.api_keys || listBody.keys)).toBeTruthy();
+    expect(Array.isArray(listBody.keys)).toBeTruthy();
 
     // Revoke
     const keyId = createBody.id || createBody.key_id;
