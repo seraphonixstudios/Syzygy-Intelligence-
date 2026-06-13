@@ -12,6 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import (
+    _to_utc,
     check_usage_limit,
     create_access_token,
     create_password_reset_token,
@@ -243,9 +244,7 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
 
 def _user_to_response(user: User) -> UserResponse:
     now = datetime.now(UTC)
-    trial_ends = user.trial_ends_at
-    if trial_ends and trial_ends.tzinfo is None:
-        trial_ends = trial_ends.replace(tzinfo=UTC)
+    trial_ends = _to_utc(user.trial_ends_at)
 
     if user.subscription_tier == SubscriptionTier.PREMIUM or user.subscription_tier == SubscriptionTier.ENTERPRISE:
         limit = settings.premium_monthly_messages
@@ -272,9 +271,7 @@ def _user_to_response(user: User) -> UserResponse:
 
 async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
     now = datetime.now(UTC)
-    usage_reset = user.usage_reset_at
-    if usage_reset and usage_reset.tzinfo is None:
-        usage_reset = usage_reset.replace(tzinfo=UTC)
+    usage_reset = _to_utc(user.usage_reset_at)
 
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0  # type: ignore
@@ -383,7 +380,7 @@ async def create_api_key(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> ApiKeyCreatedResponse:
-    raw_key, hashed_key = generate_api_key()
+    raw_key, hashed_key, searchable_hash = generate_api_key()
     prefix = raw_key[:12]
 
     api_key = ApiKey(
@@ -391,6 +388,7 @@ async def create_api_key(
         name=req.name,
         key_prefix=prefix,
         hashed_key=hashed_key,
+        searchable_key_hash=searchable_hash,
     )
     db.add(api_key)
     await db.commit()

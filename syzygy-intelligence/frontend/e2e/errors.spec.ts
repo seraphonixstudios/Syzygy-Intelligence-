@@ -134,19 +134,16 @@ test.describe("Error states and edge cases", () => {
   test("settings: discard changes without saving", async ({ page }) => {
     await page.goto("/settings");
     const modelSelect = page.locator("select").first();
-    if (await modelSelect.isVisible().catch(() => false)) {
-      const currentValue = await modelSelect.inputValue();
-      // Change but don't save
-      const options = await page.locator("select option").all();
-      if (options.length > 1) {
-        const newValue = await options[options.length - 1].getAttribute("value");
-        if (newValue && newValue !== currentValue) {
-          await modelSelect.selectOption(newValue);
-          await expect(modelSelect).toHaveValue(newValue);
-          // Reload page — value should revert
-          await page.reload();
-          await expect(modelSelect).toHaveValue(currentValue);
-        }
+    await modelSelect.waitFor({ state: "visible", timeout: 10000 });
+    const currentValue = await modelSelect.inputValue();
+    const options = await modelSelect.locator("option").all();
+    if (options.length > 1) {
+      const lastValue = await options[options.length - 1].getAttribute("value");
+      if (lastValue && lastValue !== currentValue) {
+        await modelSelect.selectOption(lastValue, { timeout: 5000 });
+        await expect(modelSelect).toHaveValue(lastValue);
+        await page.reload();
+        await expect(modelSelect).toHaveValue(currentValue);
       }
     }
   });

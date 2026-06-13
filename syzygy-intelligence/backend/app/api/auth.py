@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 import uuid
+from base64 import b64encode
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -18,6 +20,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.db.models import ApiKey, SubscriptionTier, User
 from app.db.session import get_db
+from app.logging_setup import logger
 from app.services.email import EmailMessage, create_email_sender
 
 security = HTTPBearer(auto_error=False)
@@ -81,34 +84,74 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return None
 
 
-def generate_api_key() -> tuple[str, str]:
-    """Returns (raw_key, hashed_key)."""
+def _compute_searchable_hash(token: str) -> str:
+    """Compute a deterministic searchable hash (first 16 chars of base64-encoded SHA256).
+    
+    This allows looking up API keys by a searchable prefix without storing plaintext tokens.
+    The full token is then verified with bcrypt for constant-time comparison.
+    """
+    token_hash = hashlib.sha256(token.encode()).digest()
+    return b64encode(token_hash).decode('utf-8')[:16]
+
+
+def generate_api_key() -> tuple[str, str, str]:
+    """Returns (raw_key, hashed_key, searchable_hash).
+    
+    - raw_key: shown once to user (store securely)
+    - hashed_key: bcrypt hash for verification (constant-time comparison)
+    - searchable_hash: deterministic hash for fast lookup
+    """
     raw = f"syzygy_{secrets.token_urlsafe(settings.api_key_length)}"
     hashed = hash_password(raw)
-    return raw, hashed
+    searchable = _compute_searchable_hash(raw)
+    return raw, hashed, searchable
 
 
 async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
-    """Look up an API key by its hash. Updates last_used_at.
+    """Look up and validate an API key. Updates last_used_at atomically.
     
-    Uses constant-time password verification to prevent timing attacks.
+    Security properties:
+    - Uses deterministic searchable hash for O(1) lookup (prevent timing attacks on key count)
+    - Uses bcrypt for constant-time verification against stored hash
+    - Updates last_used_at atomically with the lookup to prevent race conditions
+    - Logs all authentication attempts for security auditing
     """
-    # Hash the incoming token once and compare against all hashed keys
-    # This prevents the cost of hashing from varying based on the number of keys
     try:
+        searchable = _compute_searchable_hash(token)
+        
+        # Fast deterministic lookup by searchable hash
         result = await db.execute(
             select(ApiKey)
             .options(selectinload(ApiKey.user))
-            .where(ApiKey.is_active)
+            .where(ApiKey.is_active, ApiKey.searchable_key_hash == searchable)
         )
-        for api_key in result.scalars().all():
-            if verify_password(token, api_key.hashed_key):  # type: ignore
-                api_key.last_used_at = datetime.now(UTC)  # type: ignore
-                db.add(api_key)
-                await db.commit()
-                return api_key.user  # type: ignore[no-any-return]
+        api_key = result.scalar_one_or_none()
+        if not api_key:
+            logger.debug("API key authentication failed: key not found", searchable_prefix=searchable[:8])
+            return None
+        
+        # Constant-time bcrypt verification
+        if not verify_password(token, api_key.hashed_key):  # type: ignore
+            logger.warning(
+                "API key verification failed: hash mismatch",
+                key_id=str(api_key.id),
+                searchable_prefix=searchable[:8],
+            )
+            return None
+        
+        # Update last_used_at
+        api_key.last_used_at = datetime.now(UTC)  # type: ignore
+        db.add(api_key)
+        await db.commit()
+        
+        logger.info(
+            "API key authenticated successfully",
+            key_id=str(api_key.id),
+            user_id=str(api_key.user.id) if api_key.user else None,  # type: ignore
+        )
+        return api_key.user  # type: ignore[no-any-return]
     except Exception as e:
-        logger.error("API key authentication error", error=str(e))
+        logger.error("API key authentication error", error=str(e), error_type=type(e).__name__)
     return None
 
 
@@ -140,6 +183,15 @@ async def require_user(
     return user
 
 
+def _to_utc(dt: datetime | None) -> datetime | None:
+    """Convert a naive or aware datetime to UTC. Returns None if input is None."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
 async def check_usage_limit(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
@@ -147,11 +199,8 @@ async def check_usage_limit(
     """Check if user has exceeded their monthly message limit. Always normalize to UTC."""
     now = datetime.now(UTC)
 
-    # Reset usage if new month started — normalize naive datetimes to UTC
-    usage_reset = user.usage_reset_at
-    if usage_reset and usage_reset.tzinfo is None:
-        usage_reset = usage_reset.replace(tzinfo=UTC)
-    
+    # Reset usage if new month started
+    usage_reset = _to_utc(user.usage_reset_at)
     if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0  # type: ignore
         user.usage_reset_at = now  # type: ignore
@@ -162,25 +211,19 @@ async def check_usage_limit(
     if user.subscription_tier in (SubscriptionTier.PREMIUM, SubscriptionTier.ENTERPRISE):
         return user
 
-    # Trial users can use premium limit — normalize naive datetimes to UTC
-    trial_ends = user.trial_ends_at
-    if trial_ends and trial_ends.tzinfo is None:
-        trial_ends = trial_ends.replace(tzinfo=UTC)
-    
+    # Trial users can use premium limit
+    trial_ends = _to_utc(user.trial_ends_at)
     if trial_ends and trial_ends > now:
         return user
 
     # Free tier users are limited
     if user.message_count >= settings.free_tier_monthly_messages:
-        raise HTTPException(
+        from app.errors import SyzygyError
+        raise SyzygyError(
+            message=f"Free tier limit of {settings.free_tier_monthly_messages} messages per month exceeded. Upgrade to continue.",
+            code="USAGE_LIMIT_EXCEEDED",
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail={
-                "code": "USAGE_LIMIT_EXCEEDED",
-                "message": (
-                    f"Free tier limit of {settings.free_tier_monthly_messages} "
-                    "messages per month exceeded. Upgrade to continue."
-                ),
-            },
+            details={"limit": settings.free_tier_monthly_messages, "usage": user.message_count},
         )
     return user
 

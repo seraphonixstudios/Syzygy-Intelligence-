@@ -27,8 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
-
-from app.db.session import Base
+from sqlalchemy.sql import func
 
 try:
     from sqlalchemy.dialects.postgresql import VECTOR  # type: ignore[attr-defined]
@@ -139,6 +138,9 @@ class SubscriptionTier(enum.StrEnum):
     ENTERPRISE = "enterprise"
 
 
+from app.db.session import Base
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -150,14 +152,14 @@ class User(Base):
     is_superuser= Column(Boolean, default=False)
     verified_at= Column(DateTime(timezone=True), nullable=True)
     trial_ends_at= Column(DateTime(timezone=True), nullable=True)
-    usage_reset_at= Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    usage_reset_at= Column(DateTime(timezone=True), nullable=False, default=func.now())
     message_count= Column(Integer, default=0)
     subscription_tier= Column(SAEnum(SubscriptionTier), default=SubscriptionTier.FREE)
     stripe_customer_id= Column(String(255), nullable=True)
     stripe_subscription_id= Column(String(255), nullable=True)
     settings= Column(JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
+    updated_at= Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index("idx_user_email", "email"),
@@ -172,15 +174,17 @@ class ApiKey(Base):
     name= Column(String(100), nullable=False)
     key_prefix= Column(String(16), nullable=False)
     hashed_key= Column(String(255), nullable=False, unique=True)
+    searchable_key_hash= Column(String(16), nullable=False, index=True, unique=True)
     last_used_at= Column(DateTime(timezone=True), nullable=True)
     is_active= Column(Boolean, default=True)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
 
     user = relationship("User", backref="api_keys")
 
     __table_args__ = (
         Index("idx_api_key_user", "user_id"),
-        Index("idx_api_key_hash", "hashed_key"),
+        Index("idx_api_key_searchable", "searchable_key_hash"),
+        Index("idx_api_key_active", "is_active"),
     )
 
 
@@ -197,8 +201,8 @@ class Agent(Base):
     system_prompt= Column(Text, nullable=True)
     capabilities= Column(ARRAY(String), default=[])
     metadata_= Column("metadata", JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
+    updated_at= Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # Relationships
     sessions = relationship("Session", back_populates="agent")
@@ -223,8 +227,8 @@ class Session(Base):
     polarity_balance_score= Column(Float, nullable=True)
     final_synthesis= Column(Text, nullable=True)
     metadata_= Column("metadata", JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
+    updated_at= Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     agent = relationship("Agent", back_populates="sessions")
     consensus_rounds = relationship("ConsensusRound", back_populates="session")
@@ -253,8 +257,8 @@ class ConsensusRound(Base):
     polarity_balance= Column(Float, nullable=True)
     synthesis= Column(Text, nullable=True)
     metadata_= Column("metadata", JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
+    updated_at= Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     session = relationship("Session", back_populates="consensus_rounds")
 
@@ -279,7 +283,7 @@ class Memory(Base):
     tags= Column(ARRAY(String), default=[])
     source= Column(String(255), nullable=True)
     metadata_= Column("metadata", JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
     expires_at= Column(DateTime(timezone=True), nullable=True)
 
     agent = relationship("Agent", back_populates="memories")
@@ -309,7 +313,7 @@ class TaskResult(Base):
     execution_time_ms= Column(Integer, nullable=True)
     priority= Column(Integer, default=0)
     metadata_= Column("metadata", JSON, default=dict)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
     completed_at= Column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="task_results")
@@ -325,7 +329,7 @@ class AuditLog(Base):
     action= Column(String(255), nullable=False)
     details= Column(JSON, default=dict)
     ip_address= Column(String(45), nullable=True)
-    created_at= Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at= Column(DateTime(timezone=True), default=func.now())
 
     __table_args__ = (
         Index("idx_audit_event", "event_type"),

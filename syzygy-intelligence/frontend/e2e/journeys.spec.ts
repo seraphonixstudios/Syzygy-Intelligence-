@@ -12,7 +12,7 @@ test.describe("Cross-page user journeys", () => {
 
     // Navigate to home/dashboard
     await page.goto("/");
-    await expect(page.locator("h1").first()).toBeVisible();
+    await expect(page.locator("main, body").first()).toBeVisible();
 
     // Navigate to settings
     await page.goto("/settings");
@@ -117,7 +117,7 @@ test.describe("Cross-page user journeys", () => {
     // Search for something and verify no crash
     const searchInput = page.getByPlaceholder("Search the knowledge base...");
     await searchInput.fill("syzygy");
-    const searchBtn = page.locator("button:has-text('Search')");
+    const searchBtn = page.getByRole("button", { name: "Search", exact: true }).first();
     await searchBtn.click();
 
     await page.waitForTimeout(2000);

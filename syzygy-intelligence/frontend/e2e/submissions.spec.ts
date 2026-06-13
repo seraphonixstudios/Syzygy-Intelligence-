@@ -118,7 +118,7 @@ test.describe("Form submissions", () => {
 
   test("consensus: config panel toggles", async ({ page }) => {
     await page.goto("/consensus");
-    const settingsBtn = page.locator("button:has(svg.lucide-settings), button:has(svg.lucide-cog)");
+    const settingsBtn = page.locator("button:has(.lucide-settings2)");
     await settingsBtn.click();
     await expect(page.getByText("Consensus Configuration")).toBeVisible();
     await expect(page.getByText("Max Rounds")).toBeVisible();
@@ -148,7 +148,7 @@ test.describe("Form submissions", () => {
     await page.goto("/rag");
     const searchInput = page.getByPlaceholder("Search the knowledge base...");
     await searchInput.fill("syzygy");
-    const searchBtn = page.locator("button:has-text('Search')");
+    const searchBtn = page.getByRole("button", { name: "Search", exact: true }).first();
     await searchBtn.click();
 
     const results = page.locator("div.rounded-xl.border").first();
