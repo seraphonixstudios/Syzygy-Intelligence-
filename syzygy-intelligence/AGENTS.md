@@ -52,7 +52,7 @@ syzygy-intelligence/
 |-------|--------|-------|-------|
 | Backend unit | pytest | **520** | Consensus (95), Chat (17), WS (16), OpenAI compat (24), integration (6), self-improvement (90), agents (52), API (6), RAG (20) + existing |
 | Frontend component | vitest | **38** | Consensus UI + agent UI presentational components |
-| E2E | Playwright | **29 specs (272 tests)** | 271 passed, 0 failed, 1 flaky, 1 skipped — auth redirect handled via `gotoProtected` helper |
+| E2E | Playwright | **29 specs (272 tests)** | 272 passed, 0 failed, 0 flaky, 1 skipped — auth redirect handled via `gotoProtected` helper |
 
 CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (3 parallel shards × 2 workers each).
 
@@ -116,6 +116,6 @@ CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (392), `e2e` (3 paralle
   - `gating.spec.ts`: `body.detail.code` → `body.error.code` (SyzygyError handler wraps in `{ error: { code, ... } }`).
   - `journeys.spec.ts`: Auth redirect handling on /settings via `gotoProtected`.
   - `streaming.spec.ts`: Same redirect handling via `gotoProtected`.
-- **1 remaining flaky**: `submissions.spec.ts:88` (workflow execution timing — LLM response dependent, passes on retry).
+- **Last flaky killed**: `journeys:128` (strict mode card selector), `submissions:88` (auth redirect via `gotoProtected`).
 - **Docker**: Stack healthy (6 containers, native Ollama via `host.docker.internal:11434`).
-- **Git**: `main` at `0e86f8f` — pushed to `origin/main`.
+- **Git**: `main` at `6afdb88` — pushed to `origin/main`.
