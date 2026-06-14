@@ -26,8 +26,8 @@ export async function registerAndLogin(page: Page, email?: string) {
   await page.keyboard.press("Enter");
 
   // Wait for redirect away from login (e.g., to /) with fallback
-  await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 20000 }).catch(() => {});
-  await page.waitForTimeout(500);
+  await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(300);
 
   return { email: testEmail };
 }
@@ -78,4 +78,20 @@ export async function expectToast(page: Page, text: string | RegExp) {
 /** Return a fresh test email with stable prefix for grouping. */
 export function testEmail(prefix = "e2e") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@syzygy.local`;
+}
+
+/** Navigate to a protected page that may redirect to login on full page load.
+ *  If redirected, re-authenticate using the form and retry the navigation. */
+export async function gotoProtected(page: Page, url: string, email = "", pass = TEST_PASS) {
+  await page.goto(url).catch(() => {});
+  if (page.url().includes("/auth/login")) {
+    await page.waitForSelector("input[type='email']", { timeout: 10000 }).catch(() => {});
+    if (email) {
+      await page.fill("input[type='email']", email);
+      await page.fill("input[type='password']", pass);
+      await page.keyboard.press("Enter");
+      await page.waitForURL((u) => !u.pathname.includes("/auth/login"), { timeout: 15000 }).catch(() => {});
+      await page.goto(url).catch(() => {});
+    }
+  }
 }

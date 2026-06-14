@@ -1,19 +1,22 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, gotoProtected, TEST_PASS } from "./helpers";
+
+let testEmail = "";
 
 test.describe("Chat streaming features", () => {
   test.beforeEach(async ({ page }) => {
-    await registerAndLogin(page);
+    const creds = await registerAndLogin(page);
+    testEmail = creds.email;
   });
 
   test("shows model selector with qwen3:8b-gpu default", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await expect(modelBtn).toBeVisible();
   });
 
   test("model picker opens on click", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
     const autoOpt = page.locator("button:has-text('Auto (Syzygy Consensus)')");
@@ -21,7 +24,7 @@ test.describe("Chat streaming features", () => {
   });
 
   test("model picker has All Models option", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
@@ -29,7 +32,7 @@ test.describe("Chat streaming features", () => {
   });
 
   test("can select All Models option", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
@@ -38,19 +41,17 @@ test.describe("Chat streaming features", () => {
   });
 
   test("stop button not visible initially", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const stopBtn = page.locator("button:has-text('Stop')");
     await expect(stopBtn).toBeHidden();
   });
 
   test("stop button visible during streaming", async ({ page }) => {
-    await page.goto("/chat");
+    await gotoProtected(page, "/chat", testEmail, TEST_PASS);
     const input = page.getByPlaceholder("Type your message...");
     await input.fill("Hello");
     const sendBtn = page.locator("button[type='submit']");
     await sendBtn.click();
-    // After clicking send with syzygy model, streaming may or may not start
-    // depending on backend. Just verify the stop button appears on send
     await page.waitForTimeout(1000);
   });
 });

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, gotoProtected, TEST_PASS } from "./helpers";
 
 test.describe("Cross-page user journeys", () => {
   test("register -> login -> view dashboard -> navigate to settings", async ({ page }) => {
@@ -11,17 +11,11 @@ test.describe("Cross-page user journeys", () => {
     await expect(page.url()).not.toContain("/auth");
 
     // Navigate to home/dashboard
-    await page.goto("/").catch(() => {});
+    await gotoProtected(page, "/", email, TEST_PASS);
     await expect(page.locator("main, body").first()).toBeVisible();
 
-    // Navigate to settings (may redirect to login if auth lost on full nav)
-    await page.goto("/settings", { waitUntil: "load" }).catch(() => {});
-    if (page.url().includes("/auth/login")) {
-      await page.fill("input[type='email']", email);
-      await page.fill("input[type='password']", TEST_PASS);
-      await page.keyboard.press("Enter");
-      await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 15000 }).catch(() => {});
-    }
+    // Navigate to settings
+    await gotoProtected(page, "/settings", email, TEST_PASS);
     await expect(page.locator("h1")).toContainText("Settings");
 
     // Verify the email appears or subscription info is visible
