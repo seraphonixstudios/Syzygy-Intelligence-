@@ -246,3 +246,324 @@ class TestPaymentRoutes:
             mock_webhook.return_value = {"status": "ok"}
             result = await stripe_webhook(request)
             assert result["status"] == "ok"
+
+
+# ── Additional coverage for uncovered code paths ────────────────────────
+
+class TestCustomerPortalUrl:
+    @pytest.mark.asyncio
+    async def test_creates_portal_url(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(secret_key="sk_test_xyz")
+            portal_session = MagicMock()
+            portal_session.url = "https://billing.stripe.com/session/test"
+            stripe.billing_portal.Session.create.return_value = portal_session
+
+            from app.services.payments import create_customer_portal_url
+            url = await create_customer_portal_url("cus_abc123", "https://example.com/return")
+            assert url == "https://billing.stripe.com/session/test"
+
+    @pytest.mark.asyncio
+    async def test_raises_on_error(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(secret_key="sk_test_xyz")
+            stripe.billing_portal.Session.create.side_effect = ValueError("stripe error")
+
+            from app.services.payments import create_customer_portal_url
+            with pytest.raises(ValueError):
+                await create_customer_portal_url("cus_abc123", "https://example.com/return")
+
+
+class TestWebhookEventRouting:
+    @pytest.mark.asyncio
+    async def test_routes_checkout_completed(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+            patch("app.services.payments._handle_checkout_completed") as mock_handler,
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "checkout.session.completed",
+                "data": {"object": {"id": "cs_test"}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+            mock_handler.assert_awaited_once_with({"id": "cs_test"})
+
+    @pytest.mark.asyncio
+    async def test_routes_subscription_updated(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+            patch("app.services.payments._handle_subscription_updated") as mock_handler,
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "customer.subscription.updated",
+                "data": {"object": {"id": "sub_test"}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+            mock_handler.assert_awaited_once_with({"id": "sub_test"})
+
+    @pytest.mark.asyncio
+    async def test_routes_subscription_deleted(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+            patch("app.services.payments._handle_subscription_deleted") as mock_handler,
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "customer.subscription.deleted",
+                "data": {"object": {"id": "sub_del"}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+            mock_handler.assert_awaited_once_with({"id": "sub_del"})
+
+    @pytest.mark.asyncio
+    async def test_routes_invoice_payment_succeeded(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+            patch("app.services.payments._handle_invoice_paid") as mock_handler,
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "invoice.payment_succeeded",
+                "data": {"object": {"id": "in_test"}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+            mock_handler.assert_awaited_once_with({"id": "in_test"})
+
+    @pytest.mark.asyncio
+    async def test_routes_invoice_payment_failed(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+            patch("app.services.payments._handle_invoice_failed") as mock_handler,
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "invoice.payment_failed",
+                "data": {"object": {"id": "in_fail"}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+            mock_handler.assert_awaited_once_with({"id": "in_fail"})
+
+    @pytest.mark.asyncio
+    async def test_unhandled_event_type(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.return_value = {
+                "type": "unknown.event",
+                "data": {"object": {}},
+            }
+            from app.services.payments import handle_webhook
+            result = await handle_webhook(b"{}", "sig")
+            assert result["status"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_handles_webhook_verification_failure(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(
+                secret_key="sk_test_xyz", webhook_secret="whsec_xyz"
+            )
+            stripe.Webhook.construct_event.side_effect = ValueError("bad signature")
+            from app.services.payments import handle_webhook
+            with pytest.raises(ValueError):
+                await handle_webhook(b"{}", "bad_sig")
+
+
+class TestCheckoutCompletedEdgeCases:
+    @pytest.mark.asyncio
+    async def test_missing_user_id_logs_warning(self):
+        with patch("app.services.payments.logger.warning") as mock_log:
+            from app.services.payments import _handle_checkout_completed
+            await _handle_checkout_completed({"metadata": {}})
+            mock_log.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_low_amount_does_not_upgrade(self):
+        from app.services.payments import _handle_checkout_completed
+        user = MagicMock()
+        user.subscription_tier = "free"
+
+        with patch("app.db.session.get_db_context") as mock_db:
+            db = AsyncMock()
+            db.add = MagicMock()
+            mock_db.return_value.__aenter__.return_value = db
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = user
+            db.execute.return_value = result
+
+            session = {
+                "metadata": {"user_id": "user-1"},
+                "customer": "cus_abc",
+                "subscription": "sub_xyz",
+                "amount_total": 500,
+            }
+            await _handle_checkout_completed(session)
+            assert user.subscription_tier == "free"
+
+
+class TestSubscriptionUpdatedEdgeCases:
+    @pytest.mark.asyncio
+    async def test_no_customer_id_returns_early(self):
+        from app.services.payments import _handle_subscription_updated
+        await _handle_subscription_updated({"status": "active"})
+
+    @pytest.mark.asyncio
+    async def test_upgrades_to_enterprise_by_price_id(self):
+        user = MagicMock()
+        user.subscription_tier = "free"
+
+        with (
+            patch("app.db.session.get_db_context") as mock_db,
+            patch("app.services.payments.settings.stripe_enterprise_price_id", "price_enterprise"),
+        ):
+            db = AsyncMock()
+            db.add = MagicMock()
+            mock_db.return_value.__aenter__.return_value = db
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = user
+            db.execute.return_value = result
+
+            from app.services.payments import _handle_subscription_updated
+            sub = {
+                "customer": "cus_abc",
+                "status": "active",
+                "items": {"data": [{"price": {"id": "price_enterprise"}}]},
+            }
+            await _handle_subscription_updated(sub)
+            assert user.subscription_tier == "enterprise"
+
+    @pytest.mark.asyncio
+    async def test_upgrades_to_premium_by_price_id(self):
+        user = MagicMock()
+        user.subscription_tier = "free"
+
+        with (
+            patch("app.db.session.get_db_context") as mock_db,
+            patch("app.services.payments.settings.stripe_premium_price_id", "price_premium"),
+        ):
+            db = AsyncMock()
+            db.add = MagicMock()
+            mock_db.return_value.__aenter__.return_value = db
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = user
+            db.execute.return_value = result
+
+            from app.services.payments import _handle_subscription_updated
+            sub = {
+                "customer": "cus_abc",
+                "status": "active",
+                "items": {"data": [{"price": {"id": "price_premium"}}]},
+            }
+            await _handle_subscription_updated(sub)
+            assert user.subscription_tier == "premium"
+
+
+class TestSubscriptionDeletedEdgeCases:
+    @pytest.mark.asyncio
+    async def test_no_customer_id_returns_early(self):
+        from app.services.payments import _handle_subscription_deleted
+        await _handle_subscription_deleted({})
+
+
+class TestInvoiceFailed:
+    @pytest.mark.asyncio
+    async def test_logs_warning_for_user(self):
+        user = MagicMock()
+        user.id = "user-1"
+
+        with patch("app.db.session.get_db_context") as mock_db:
+            db = AsyncMock()
+            mock_db.return_value.__aenter__.return_value = db
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = user
+            db.execute.return_value = result
+
+            from app.services.payments import _handle_invoice_failed
+            await _handle_invoice_failed({"customer": "cus_abc", "id": "in_123"})
+
+    @pytest.mark.asyncio
+    async def test_no_customer_id_returns_early(self):
+        from app.services.payments import _handle_invoice_failed
+        await _handle_invoice_failed({})
+
+    @pytest.mark.asyncio
+    async def test_no_user_found_does_nothing(self):
+        with patch("app.db.session.get_db_context") as mock_db:
+            db = AsyncMock()
+            mock_db.return_value.__aenter__.return_value = db
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = None
+            db.execute.return_value = result
+
+            from app.services.payments import _handle_invoice_failed
+            await _handle_invoice_failed({"customer": "cus_nonexistent"})
+
+
+class TestStripeCheckoutFailure:
+    @pytest.mark.asyncio
+    async def test_raises_on_stripe_error(self):
+        with (
+            patch("app.services.payments.get_stripe_config") as mock_cfg,
+            patch.dict("sys.modules", {"stripe": MagicMock()}),
+        ):
+            import stripe
+            mock_cfg.return_value = MagicMock(secret_key="sk_test_xyz")
+            stripe.checkout.Session.create.side_effect = ValueError("stripe error")
+
+            from app.services.payments import create_checkout_session
+            with pytest.raises(ValueError):
+                await create_checkout_session(
+                    user_id="user-1",
+                    user_email="test@example.com",
+                    price_id="price_premium_monthly",
+                    success_url="http://localhost:3000/settings",
+                    cancel_url="http://localhost:3000/settings",
+                )
