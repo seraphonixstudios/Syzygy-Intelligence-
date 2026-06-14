@@ -126,11 +126,11 @@ test.describe("Cross-page user journeys", () => {
   });
 
   test("login -> workflows -> execute -> download results", async ({ page }) => {
-    await registerAndLogin(page);
-    await page.goto("/workflows");
+    const { email } = await registerAndLogin(page);
+    await gotoProtected(page, "/workflows", email, TEST_PASS);
 
     // Select a workflow
-    const card = page.locator("button:has-text('research')").first();
+    const card = page.locator("button.syzygy-card-glass:has-text('research')").first();
     await card.waitFor({ state: "visible", timeout: 5000 });
     await card.click();
 
