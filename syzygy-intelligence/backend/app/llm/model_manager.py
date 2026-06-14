@@ -32,18 +32,18 @@ class ModelManager:
     }
 
     TASK_MODEL_MAP: dict[str, str] = {
-        "vision": "vision_model",
-        "image": "vision_model",
-        "analyze": "critic_model",
-        "reason": "critic_model",
-        "code": "coding_model",
-        "programming": "coding_model",
-        "write": "creative_model",
-        "creative": "creative_model",
-        "synthesize": "synthesis_model",
-        "summarize": "synthesis_model",
-        "fast": "fast_model",
-        "quick": "fast_model",
+        "vision": "vision",
+        "image": "vision",
+        "analyze": "critic",
+        "reason": "critic",
+        "code": "coding",
+        "programming": "coding",
+        "write": "creative",
+        "creative": "creative",
+        "synthesize": "synthesis",
+        "summarize": "synthesis",
+        "fast": "fast",
+        "quick": "fast",
     }
 
     def __init__(self) -> None:
