@@ -7,25 +7,33 @@ export const WS_URL = process.env.NEXT_PUBLIC_SYZYGY_WS_URL || "ws://localhost:8
 export async function registerAndLogin(page: Page, email?: string) {
   const testEmail = email || `e2e-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@syzygy.local`;
 
-  try {
-    const regRes = await page.request.post(`${API}/api/auth/register`, {
-      data: { email: testEmail, password: TEST_PASS },
-    });
-    if (!regRes.ok() && regRes.status() !== 409) {
-      console.warn("Register failed", regRes.status());
+  // Try API registration + localStorage injection for reliability
+  const regRes = await page.request.post(`${API}/api/auth/register`, {
+    data: { email: testEmail, password: TEST_PASS },
+  });
+  if (regRes.ok() || regRes.status() === 409) {
+    const body = regRes.status() === 409 ? { access_token: "" } : await regRes.json().catch(() => ({ access_token: "" }));
+    const token = body.access_token || "";
+    if (token) {
+      // Inject token into localStorage so full page navigations keep auth
+      await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => {});
+      await page.evaluate((t) => {
+        localStorage.setItem("syzygy-auth", JSON.stringify({
+          state: { accessToken: t, refreshToken: "", isAuthenticated: true, rememberMe: true },
+          version: 0,
+        }));
+      }, token);
+      await page.goto("/");
+      return { email: testEmail };
     }
-  } catch {
-    // Backend unavailable
   }
 
+  // Fallback: form-based login
   await page.goto("/auth/login", { waitUntil: "load", timeout: 10000 }).catch(() => {});
   await page.waitForSelector("input[type='email']", { timeout: 10000 });
-
   await page.fill("input[type='email']", testEmail);
   await page.fill("input[type='password']", TEST_PASS);
   await page.keyboard.press("Enter");
-
-  // Wait for redirect away from login (e.g., to /) with fallback
   await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(300);
 
@@ -94,4 +102,38 @@ export async function gotoProtected(page: Page, url: string, email = "", pass = 
       await page.goto(url).catch(() => {});
     }
   }
+}
+
+/** Register + login via API directly and inject the auth token into localStorage.
+ *  Avoids the auth redirect race that can happen when relying on form-based login persistence. */
+export async function registerAndLoginDirect(page: Page, email?: string) {
+  const testEmail = email || `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@syzygy.local`;
+  const regRes = await page.request.post(`${API}/api/auth/register`, {
+    data: { email: testEmail, password: TEST_PASS },
+  });
+  if (!regRes.ok() && regRes.status() !== 409) {
+    console.warn("Register failed", regRes.status());
+    // Fall back to form-based login
+    return registerAndLogin(page, testEmail);
+  }
+  const body = await regRes.json().catch(() => ({ access_token: "", refresh_token: "" }));
+  const token = body.access_token;
+  if (!token) {
+    return registerAndLogin(page, testEmail);
+  }
+  // Inject token into localStorage so the React app finds it on next full page load
+  await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => {});
+  await page.evaluate((t) => {
+    const payload = JSON.stringify({
+      state: {
+        accessToken: t,
+        refreshToken: "",
+        isAuthenticated: true,
+        rememberMe: true,
+      },
+      version: 0,
+    });
+    localStorage.setItem("syzygy-auth", payload);
+  }, token);
+  return { email: testEmail };
 }

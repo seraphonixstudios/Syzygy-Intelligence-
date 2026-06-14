@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, gotoProtected, TEST_PASS } from "./helpers";
 
 test.describe("Form submissions", () => {
+  let testEmail = "";
+
   test.beforeEach(async ({ page }) => {
-    await registerAndLogin(page);
+    const creds = await registerAndLogin(page);
+    testEmail = creds.email;
   });
 
   test("chat: send message and receive response", async ({ page }) => {
@@ -86,7 +89,7 @@ test.describe("Form submissions", () => {
   });
 
   test("workflows: execute workflow and see output", async ({ page }) => {
-    await page.goto("/workflows");
+    await gotoProtected(page, "/workflows", testEmail, TEST_PASS);
     // Click a workflow card to select it
     const card = page.locator("button.syzygy-card-glass:has-text('code')");
     await card.waitFor({ state: "visible", timeout: 5000 });

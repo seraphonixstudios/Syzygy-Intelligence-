@@ -69,37 +69,92 @@ manager = ConnectionManager()
 
 
 async def ws_handler(websocket: WebSocket) -> None:
-    """Handle WebSocket connections for real-time updates."""
-    session_id = websocket.query_params.get("session_id", str(uuid.uuid4()))
+    """Handle WebSocket connections for real-time updates.
+    
+    Security:
+    - Requires JWT token in query params
+    - Verifies user owns the session (authorization)
+    - Logs all authentication attempts
+    """
+    session_id = websocket.query_params.get("session_id", "")
     user_token = websocket.query_params.get("token", "")
 
-    if not user_token:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
-        logger.warning("WebSocket rejected: missing token", session_id=session_id)
+    # Validate required parameters
+    if not session_id or not user_token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing session_id or token")
+        logger.warning("WebSocket rejected: missing parameters", session_id=session_id or "none")
         return
 
     # Verify user and session
+    user_id = None
     try:
+        # Import auth functions
+        from app.api.auth import decode_token
+
+        # Decode JWT token
+        payload = decode_token(user_token)
+        if not payload or payload.get("type") != "access":
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid or expired token",
+            )
+            logger.warning("WebSocket rejected: invalid token", session_id=session_id)
+            return
+
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid token claims",
+            )
+            logger.warning("WebSocket rejected: no user_id in token", session_id=session_id)
+            return
+
+        # Verify session exists and user owns it
         async with get_db_context() as db:
-            # In production, decode the token and verify user
-            # This is a simplified version — integrate with your auth system
-            result = await db.execute(select(Session).where(Session.id == session_id))
+            result = await db.execute(
+                select(Session).where(
+                    (Session.id == session_id) & (Session.user_id == uuid.UUID(user_id))
+                )
+            )
             session_obj = result.scalar_one_or_none()
 
             if not session_obj:
                 await websocket.close(
                     code=status.WS_1008_POLICY_VIOLATION,
-                    reason="Session not found",
+                    reason="Session not found or access denied",
                 )
-                logger.warning("WebSocket rejected: session not found", session_id=session_id)
+                logger.warning(
+                    "WebSocket rejected: session not found or user mismatch",
+                    session_id=session_id,
+                    user_id=user_id,
+                )
                 return
 
+        logger.info(
+            "WebSocket authenticated",
+            session_id=session_id,
+            user_id=user_id,
+        )
+
+    except ValueError as e:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Invalid session_id format",
+        )
+        logger.warning("WebSocket rejected: invalid UUID format", error=str(e))
+        return
     except Exception as e:
         await websocket.close(
             code=status.WS_1011_SERVER_ERROR,
             reason="Internal error",
         )
-        logger.error("WebSocket authentication error", session_id=session_id, error=str(e))
+        logger.error(
+            "WebSocket authentication error",
+            session_id=session_id,
+            user_id=user_id,
+            error=str(e),
+        )
         return
 
     await manager.connect(session_id, websocket)

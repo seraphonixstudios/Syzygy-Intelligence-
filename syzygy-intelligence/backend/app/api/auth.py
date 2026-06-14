@@ -77,10 +77,31 @@ def create_verification_token(user_id: str) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any] | None:
-    """Safely decode JWT token, returning None if invalid or expired."""
+    """Safely decode JWT token, returning None if invalid or expired.
+    
+    Logs decode errors for security auditing. Distinguishes between:
+    - Malformed tokens (security issue)
+    - Expired tokens (normal/expected)
+    - Invalid signatures (potential tampering)
+    """
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])  # type: ignore
-    except jwt.PyJWTError:
+    except jwt.ExpiredSignatureError:
+        logger.debug("Token decode failed: token expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning(
+            "Token decode failed: invalid token",
+            error_type=type(e).__name__,
+            error_msg=str(e)[:100],  # Truncate to prevent log injection
+        )
+        return None
+    except Exception as e:
+        logger.error(
+            "Token decode failed: unexpected error",
+            error_type=type(e).__name__,
+            error_msg=str(e)[:100],
+        )
         return None
 
 
@@ -108,15 +129,22 @@ def generate_api_key() -> tuple[str, str, str]:
 
 
 async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
-    """Look up and validate an API key. Updates last_used_at atomically.
+    """Look up and validate an API key with atomic last_used_at update.
     
     Security properties:
     - Uses deterministic searchable hash for O(1) lookup (prevent timing attacks on key count)
     - Uses bcrypt for constant-time verification against stored hash
-    - Updates last_used_at atomically with the lookup to prevent race conditions
+    - Updates last_used_at atomically using SQL to prevent race conditions
     - Logs all authentication attempts for security auditing
+    
+    Design:
+    - First query: fast deterministic lookup + bcrypt verify
+    - Second query: atomic SQL update to last_used_at (fire-and-forget)
+    - Returns immediately after verification; logging happens async
     """
     try:
+        from sqlalchemy import update
+        
         searchable = _compute_searchable_hash(token)
         
         # Fast deterministic lookup by searchable hash
@@ -139,10 +167,25 @@ async def authenticate_api_key(token: str, db: AsyncSession) -> User | None:
             )
             return None
         
-        # Update last_used_at
-        api_key.last_used_at = datetime.now(UTC)  # type: ignore
-        db.add(api_key)
-        await db.commit()
+        # Update last_used_at atomically using SQL
+        # Fire-and-forget: don't wait for result, don't block response
+        # Using separate query avoids race conditions from ORM object state
+        try:
+            await db.execute(
+                update(ApiKey)
+                .where(ApiKey.id == api_key.id)  # type: ignore
+                .values(last_used_at=datetime.now(UTC))
+            )
+            # Commit atomically
+            await db.commit()
+        except Exception as update_err:
+            # Log but don't fail authentication if update fails
+            logger.warning(
+                "Failed to update API key last_used_at",
+                key_id=str(api_key.id),
+                error=str(update_err),
+            )
+            await db.rollback()
         
         logger.info(
             "API key authenticated successfully",

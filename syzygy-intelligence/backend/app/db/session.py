@@ -34,7 +34,7 @@ class Base(DeclarativeBase):
 
 _engine: AsyncEngine | None = None
 _async_session_factory: async_sessionmaker[AsyncSession] | None = None
-_db_type: str | None = None
+_db_type: str = "unknown"  # Initialize to avoid unset variable errors
 
 
 def _get_sqlite_engine() -> AsyncEngine:
@@ -224,7 +224,7 @@ async def init_db() -> bool:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
 
-        logger.info("Database initialized successfully", db_type=_db_type)
+        logger.info("Database initialized successfully", db_type=_db_type or "unknown")
         return True
 
     except Exception as exc:
