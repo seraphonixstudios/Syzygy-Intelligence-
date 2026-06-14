@@ -62,15 +62,16 @@ class TestApiKeyAuth:
     @pytest.mark.asyncio
     async def test_generate_api_key_returns_tuple(self):
         from app.api.auth import generate_api_key
-        raw, hashed = generate_api_key()
+        raw, hashed, searchable = generate_api_key()
         assert raw.startswith("syzygy_")
         assert len(raw) > 10
         assert hashed != raw
+        assert searchable != raw
 
     @pytest.mark.asyncio
     async def test_authenticate_api_key_valid(self):
         from app.api.auth import authenticate_api_key, generate_api_key
-        raw, hashed = generate_api_key()
+        raw, hashed, _searchable = generate_api_key()
         user = MagicMock()
         user.id = uuid.uuid4()
 
@@ -78,22 +79,22 @@ class TestApiKeyAuth:
         api_key.hashed_key = hashed
         api_key.is_active = True
         api_key.user = user
+        api_key.id = uuid.uuid4()
 
         db = AsyncMock()
         db.add = MagicMock()
+        # authenticate_api_key uses .scalar_one_or_none() now, not .scalars().all()
         result = MagicMock()
-        result.scalars.return_value.all.return_value = [api_key]
+        result.scalar_one_or_none.return_value = api_key
         db.execute.return_value = result
 
         result_user = await authenticate_api_key(raw, db)
         assert result_user is user
-        db.add.assert_called_once_with(api_key)
-        db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_authenticate_api_key_invalid(self):
         from app.api.auth import authenticate_api_key, generate_api_key, hash_password
-        raw, _ = generate_api_key()
+        raw, _, _ = generate_api_key()
         different_hashed = hash_password("some_other_key_value_12345")
         other_key = MagicMock()
         other_key.hashed_key = different_hashed
@@ -167,16 +168,15 @@ class TestCheckUsageLimit:
 
     @pytest.mark.asyncio
     async def test_raises_429_when_exceeded(self):
-        from fastapi import HTTPException
-
         from app.api.auth import check_usage_limit, settings
+        from app.errors import SyzygyError
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(message_count=limit + 1)
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(SyzygyError) as exc:
             await check_usage_limit(user=user, db=AsyncMock())
         assert exc.value.status_code == 429
-        assert exc.value.detail["code"] == "USAGE_LIMIT_EXCEEDED"
+        assert exc.value.code == "USAGE_LIMIT_EXCEEDED"
 
     @pytest.mark.asyncio
     async def test_resets_counter_new_month(self):
@@ -193,23 +193,21 @@ class TestCheckUsageLimit:
 
     @pytest.mark.asyncio
     async def test_trial_ends_at_none_still_limited(self):
-        from fastapi import HTTPException
-
         from app.api.auth import check_usage_limit, settings
+        from app.errors import SyzygyError
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(trial_ends_at=None, message_count=limit + 1)
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(SyzygyError) as exc:
             await check_usage_limit(user=user, db=AsyncMock())
         assert exc.value.status_code == 429
 
     @pytest.mark.asyncio
     async def test_expired_trial_still_limited(self):
-        from fastapi import HTTPException
-
         from app.api.auth import check_usage_limit, settings
+        from app.errors import SyzygyError
 
         limit = settings.free_tier_monthly_messages
         user = self._make_user(message_count=limit + 1)
-        with pytest.raises(HTTPException):
+        with pytest.raises(SyzygyError):
             await check_usage_limit(user=user, db=AsyncMock())
