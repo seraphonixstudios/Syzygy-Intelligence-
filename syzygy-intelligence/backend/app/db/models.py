@@ -57,6 +57,11 @@ class UUID(TypeDecorator[Any]):
         return str(value)
 
     def process_result_value(self, value: Any, dialect: Any) -> Any:
+        if value is not None and isinstance(value, str) and dialect.name == "sqlite":
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                return value
         return value
 
 
