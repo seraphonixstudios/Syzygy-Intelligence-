@@ -1,5 +1,7 @@
 """Tests for WebSocket handler — ConnectionManager and ws_handler."""
 
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -40,12 +42,10 @@ def _fake_session(task="Test task"):
 
 
 # ===================================================================
-# ConnectionManager
+# ConnectionManager (client_id-based, from websockets/__init__.py)
 # ===================================================================
 
 class TestConnectionManager:
-    """Unit tests for ConnectionManager class."""
-
     @pytest.mark.asyncio
     async def test_connect_assigns_client_id(self):
         from app.api.websockets import ConnectionManager
@@ -123,6 +123,16 @@ class TestConnectionManager:
         ws1.send_json.assert_called_once_with({"type": "broadcast"})
         ws2.send_json.assert_called_once_with({"type": "broadcast"})
 
+    @pytest.mark.asyncio
+    async def test_broadcast_disconnects_on_failure(self):
+        from app.api.websockets import ConnectionManager
+        ws1 = AsyncMock()
+        ws1.send_json = AsyncMock(side_effect=Exception("closed"))
+        mgr = ConnectionManager()
+        mgr.active_connections["cid1"] = ws1
+        await mgr.broadcast({"type": "broadcast"})
+        assert mgr.get_connection_count() == 0
+
     def test_get_connection_ids(self):
         from app.api.websockets import ConnectionManager
         mgr = ConnectionManager()
@@ -134,7 +144,7 @@ class TestConnectionManager:
 
 
 # ===================================================================
-# WebSocket handler — ws_handler (registered once on module-level test_app)
+# WebSocket handler — ws_handler
 # ===================================================================
 
 if not any(r.path == "/ws" for r in test_app.routes):
@@ -143,11 +153,8 @@ if not any(r.path == "/ws" for r in test_app.routes):
 
 
 class TestWebSocketHandler:
-    """Integration tests for ws_handler using TestClient WebSocket."""
-
     @pytest.fixture(autouse=True)
     def _patch_deps(self):
-        """Patch external dependencies for all WebSocket tests."""
         with (
             patch("app.api.websockets.run_consensus_with_memory", new_callable=AsyncMock) as mock_run,
             patch("app.api.websockets.agent_registry") as mock_registry,
@@ -183,7 +190,6 @@ class TestWebSocketHandler:
             assert resp["event_types"] == ["consensus.*"]
 
     def test_run_consensus_success(self, _patch_deps):
-        """run_consensus action returns started + complete events with synthesis."""
         with TestClient(test_app).websocket_connect("/ws") as ws:
             ws.send_json({"action": "run_consensus", "task": "Test task"})
 
@@ -236,3 +242,40 @@ class TestWebSocketHandler:
             from app.api.websockets import run_consensus_with_memory
             _, kwargs = run_consensus_with_memory.call_args
             assert kwargs["agents"] == mock_agents
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_decode_error(self):
+        """Directly invoke ws_handler with invalid JSON — handler disconnects."""
+        from app.api.websockets import ws_handler
+
+        ws = AsyncMock()
+        ws.receive_text = AsyncMock(return_value="not json")
+        ws.send_json = AsyncMock()
+
+        await ws_handler(ws)
+        # Handler catches JSONDecodeError, logs warning, disconnects, returns
+        send_calls = [c[0][0] for c in ws.send_json.call_args_list]
+        assert all(c.get("type") != "pong" for c in send_calls)
+
+    @pytest.mark.asyncio
+    async def test_generic_exception(self):
+        """Directly invoke ws_handler with a generic exception path."""
+        from app.api.websockets import ws_handler, manager
+
+        ws = AsyncMock()
+        ws.receive_text = AsyncMock(side_effect=RuntimeError("unexpected"))
+        ws.send_json = AsyncMock()
+
+        await ws_handler(ws)
+
+    @pytest.mark.asyncio
+    async def test_websocket_disconnect(self):
+        """Directly invoke ws_handler with WebSocketDisconnect."""
+        from app.api.websockets import ws_handler
+        from fastapi import WebSocketDisconnect
+
+        ws = AsyncMock()
+        ws.receive_text = AsyncMock(side_effect=WebSocketDisconnect(code=1000))
+        ws.send_json = AsyncMock()
+
+        await ws_handler(ws)
