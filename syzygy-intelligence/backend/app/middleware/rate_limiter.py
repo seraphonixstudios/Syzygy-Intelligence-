@@ -143,10 +143,21 @@ class RedisRateLimiter:
             return True
 
         try:
+            # Sanitize key to prevent injection attacks
+            # Only allow alphanumeric, hyphens, underscores
+            safe_key = "".join(c for c in key if c.isalnum() or c in ("-", "_", ":"))
+            if not safe_key:
+                logger.warning(
+                    "Rate limiter: invalid key format after sanitization",
+                    original_key=key,
+                )
+                return True
+
+            redis_key = f"rl:{safe_key}"
             result = await r.evalsha(
                 self._sha,
                 1,
-                f"rl:{key}",
+                redis_key,
                 self.rate,
                 self.burst,
                 time.time(),

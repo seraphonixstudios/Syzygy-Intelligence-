@@ -254,7 +254,7 @@ class SyzygyConfig(BaseSettings):
             errors.append("SYZYGY_NEO4J_PASSWORD must be set to a secure value")
 
         if errors:
-            error_msg = "Production configuration validation failed:\n" + "\n".join(f"  \u2022 {e}" for e in errors)
+            error_msg = "Production configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
             _get_logger().error("Production secrets not configured", details="\n".join(errors))
             raise ValueError(error_msg)
 
@@ -317,8 +317,17 @@ class SyzygyConfig(BaseSettings):
     def allowed_origins(self) -> list[str]:
         """Parse and validate CORS origins."""
         origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
-        if not origins and self.env == "production":
-            _get_logger().warning("CORS origins list is empty in production")
+        if not origins:
+            if self.env == "production":
+                # In production, require explicit CORS configuration
+                _get_logger().error("CORS origins list is empty in production — requests will be blocked")
+                raise ValueError(
+                    "SYZYGY_CORS_ORIGINS must be set to valid domain(s) in production. "
+                    "Set via environment variable: SYZYGY_CORS_ORIGINS=https://your-domain.com"
+                )
+            # In development, allow localhost
+            origins = ["http://localhost:3000", "http://localhost:8000"]
+            _get_logger().info("CORS origins empty, using development defaults", origins=origins)
         return origins
 
     @property

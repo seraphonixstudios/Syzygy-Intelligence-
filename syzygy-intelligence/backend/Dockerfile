@@ -77,8 +77,6 @@ LABEL org.opencontainers.image.title="Syzygy Intelligence Backend" \
       org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.source="https://github.com/syzygy/syzygy-intelligence"
 
-# Entrypoint: init DB, then start server with production workers
-# Use alembic for migrations (more standard than migrate.py)
-# If migration fails, container exits with error (Docker will restart it)
-CMD alembic upgrade head 2>/dev/null || alembic stamp head; \
+# Entrypoint: init DB with migrations, then start server
+CMD alembic upgrade head && \
     uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info --workers 4

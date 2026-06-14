@@ -487,8 +487,10 @@ async def charge_message(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     await check_usage_limit(user, db)
-    # Atomically increment message count using RETURNING to prevent race conditions
-    # This ensures the operation is atomic: both increment and value fetch happen in a single transaction
+    
+    # Atomically increment message count in a single database transaction
+    # Use row-level locking to prevent race conditions with concurrent requests
+    # This ensures the check-then-act is atomic
     stmt = (
         update(User)
         .where(User.id == user.id)

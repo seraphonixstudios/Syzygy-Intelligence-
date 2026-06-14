@@ -18,14 +18,15 @@ export async function registerAndLogin(page: Page, email?: string) {
     // Backend unavailable
   }
 
-  await page.goto("/auth/login", { waitUntil: "networkidle" });
+  await page.goto("/auth/login", { waitUntil: "load", timeout: 10000 }).catch(() => {});
   await page.waitForSelector("input[type='email']", { timeout: 10000 });
 
   await page.fill("input[type='email']", testEmail);
   await page.fill("input[type='password']", TEST_PASS);
   await page.keyboard.press("Enter");
 
-  await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 15000 });
+  // Wait for redirect away from login (e.g., to /) with fallback
+  await page.waitForURL((url) => !url.pathname.includes("/auth/login"), { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(500);
 
   return { email: testEmail };

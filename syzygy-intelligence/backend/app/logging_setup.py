@@ -122,6 +122,10 @@ class SyzygyLogger:
             encoding="utf-8",
         )
         audit_handler.setLevel(logging.INFO)
+        # Add filter to only capture audit logs
+        audit_handler.addFilter(
+            lambda r: hasattr(r, "audit_action") or "AUDIT" in r.getMessage()
+        )
         audit_handler.setFormatter(
             JsonFormatter() if use_json
             else logging.Formatter(

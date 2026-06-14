@@ -83,9 +83,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if ok:
             logger.info("Database initialized successfully")
         else:
-            logger.warning("Database unavailable — features requiring DB will fail")
+            msg = "Database initialization failed — cannot start without database"
+            if settings.env == "production":
+                logger.error(msg)
+                raise RuntimeError(msg)
+            else:
+                logger.warning("Database unavailable — features requiring DB will fail")
     except Exception as e:
-        logger.warning(f"Database initialization error: {e}")
+        if settings.env == "production":
+            logger.error(f"Database initialization failed (production): {e}")
+            raise
+        else:
+            logger.warning(f"Database initialization error (dev): {e}")
 
     # Initialize tracing for production
     setup_tracing()

@@ -71,11 +71,15 @@ def _get_engine() -> AsyncEngine:
         _engine = _get_sqlite_engine()
     else:
         _db_type = "postgresql"
+        # Calculate optimal pool size based on number of workers
+        # Rule of thumb: pool_size = (db_connections / num_workers)
+        # With 4 workers, allocate ~3 connections per worker (12 total)
+        # max_overflow allows burst beyond pool_size
         _engine = create_async_engine(
             settings.database_url,
             echo=settings.env == "development",
-            pool_size=10,
-            max_overflow=20,
+            pool_size=12,
+            max_overflow=5,
             pool_pre_ping=True,
             pool_recycle=3600,
             connect_args={
@@ -91,6 +95,8 @@ def _get_engine() -> AsyncEngine:
             host=settings.db_host,
             port=settings.db_port,
             database=settings.db_name,
+            pool_size=12,
+            max_overflow=5,
         )
 
     return _engine

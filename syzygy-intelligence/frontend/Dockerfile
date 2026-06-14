@@ -7,8 +7,8 @@ ENV NPM_CONFIG_LOGLEVEL=error \
     NPM_CONFIG_AUDIT=false
 
 # Build-time environment variables for public Next.js config
-ARG NEXT_PUBLIC_SYZYGY_API_URL
-ARG NEXT_PUBLIC_SYZYGY_WS_URL
+ARG NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_SYZYGY_WS_URL=ws://localhost:8000/ws
 
 # ─── Dependencies Stage ───────────────────────────────────────
 # Install dependencies separately for layer caching
@@ -28,8 +28,8 @@ RUN --mount=type=cache,target=/root/.npm \
 # Compile Next.js application
 FROM base AS builder
 
-ARG NEXT_PUBLIC_SYZYGY_API_URL
-ARG NEXT_PUBLIC_SYZYGY_WS_URL
+ARG NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_SYZYGY_WS_URL=ws://localhost:8000/ws
 
 ENV NEXT_PUBLIC_SYZYGY_API_URL=${NEXT_PUBLIC_SYZYGY_API_URL} \
     NEXT_PUBLIC_SYZYGY_WS_URL=${NEXT_PUBLIC_SYZYGY_WS_URL} \
@@ -79,7 +79,7 @@ EXPOSE 3000
 
 # Health check with HTTP probing
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://127.0.0.1:3000/ || exit 1
+    CMD curl -f http://127.0.0.1:3000/ || exit 1
 
 # Metadata labels
 LABEL org.opencontainers.image.title="Syzygy Intelligence Frontend" \
