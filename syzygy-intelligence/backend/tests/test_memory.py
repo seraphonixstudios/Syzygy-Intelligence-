@@ -1,5 +1,7 @@
 """Unit tests for Syzygy Memory System."""
 
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
 import pytest
 
 from app.memory.long_term import LongTermMemory
@@ -166,4 +168,72 @@ class TestVectorMemory:
         mem = VectorMemory()
         long_text = "word " * 500
         mid = await mem.store(long_text, tags=["long"])
+        assert mid
+
+    # ─── Additional VectorMemory coverage ─────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_search_with_filters(self):
+        mem = VectorMemory()
+        mid = await mem.store("filtered content", agent_id="a1", polarity="masculine")
+        results = await mem.search("filtered", agent_id="a1", polarity="masculine")
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_search_returns_empty_when_collection_fails(self):
+        mem = VectorMemory()
+        with patch.object(mem, "_collection", None):
+            results = await mem.search("query")
+            assert results == []
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_false_when_no_collection(self):
+        mem = VectorMemory()
+        result = await mem.delete("nonexistent-id")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_count_returns_zero_when_no_collection(self):
+        mem = VectorMemory()
+        count = await mem.count()
+        assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_ensure_init_handles_import_error(self):
+        from app.memory import vector_store
+        mem = VectorMemory()
+        mem._initialized = False
+        # Make the import inside _ensure_init raise ImportError
+        import builtins
+        original_import = builtins.__import__
+
+        def _mock_import(name, *args, **kwargs):
+            if name == "chromadb":
+                raise ImportError("No chromadb")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = _mock_import
+        try:
+            await mem._ensure_init()
+            assert mem._initialized  # Should still set flag even on error
+        finally:
+            builtins.__import__ = original_import
+
+    @pytest.mark.asyncio
+    async def test_search_handles_chroma_exception(self):
+        mem = VectorMemory()
+        await mem._ensure_init()
+        if mem._collection:
+            mem._collection.query = MagicMock(side_effect=Exception("Chroma down"))
+        results = await mem.search("query")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_store_handles_chroma_exception(self):
+        mem = VectorMemory()
+        # Force initialized but no collection
+        mem._initialized = True
+        mem._collection = MagicMock()
+        mem._collection.add.side_effect = Exception("Chroma down")
+        mid = await mem.store("content")
         assert mid

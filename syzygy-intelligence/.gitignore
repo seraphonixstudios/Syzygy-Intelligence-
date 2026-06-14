@@ -17,3 +17,5 @@ chroma_data/
 *.log
 playwright-report/
 test-results/
+.coverage
+.coverage.*

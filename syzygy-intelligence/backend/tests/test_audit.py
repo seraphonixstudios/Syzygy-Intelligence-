@@ -111,3 +111,71 @@ class TestSyzygyLogger:
 
     def test_debug_logs(self, logger):
         logger.debug("debug msg")
+
+    def test_structured_message_with_kwargs(self):
+        from app.logging_setup import StructuredMessage
+        msg = StructuredMessage("test", key="value", count=42)
+        s = str(msg)
+        assert "test" in s
+        assert "value" in s
+        assert "42" in s
+
+    def test_json_formatter(self, logger):
+        from app.logging_setup import JsonFormatter
+        import logging
+        fmt = JsonFormatter()
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="json test", args=(), exc_info=None,
+        )
+        record.extra = {"user_email": "user@test.com"}
+        output = fmt.format(record)
+        assert "json test" in output
+        assert "user@test.com" in output
+
+    def test_json_formatter_with_exception(self, logger):
+        from app.logging_setup import JsonFormatter
+        import logging
+        fmt = JsonFormatter()
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            import sys
+            record = logging.LogRecord(
+                name="test", level=logging.ERROR, pathname="", lineno=0,
+                msg="error", args=(), exc_info=sys.exc_info(),
+            )
+            output = fmt.format(record)
+            assert "exception" in output
+            assert "ValueError" in output
+
+    def test_setup_handlers_json_format(self, tmp_path):
+        with patch("app.logging_setup.settings") as ms:
+            ms.data_dir = str(tmp_path)
+            ms.log_level = "DEBUG"
+            ms.effective_log_format = "json"
+            from app.logging_setup import SyzygyLogger
+            log = SyzygyLogger(name="json_logger", log_dir=str(tmp_path / "json_logs"))
+            log.info("json format test")
+            # Should not raise
+
+    def test_audit_with_action(self, logger):
+        import io
+        import logging
+        # Capture audit output
+        logger.audit("user_action", user_id="u1", details={"key": "val"})
+        # Should not raise; the audit handler uses a filter
+
+    def test_with_context_twice_merges(self, logger):
+        logger.with_context(env="prod")
+        logger.with_context(region="us-east")
+        ctx = logger._context.get()
+        assert ctx["env"] == "prod"
+        assert ctx["region"] == "us-east"
+
+    def test_log_exception_with_extra_context(self, logger):
+        try:
+            raise RuntimeError("system failure")
+        except RuntimeError as e:
+            logger.log_exception(e, "context", extra_field="value")
+            # Should not raise
