@@ -27,7 +27,7 @@ from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
 from app.consensus.phases import ShadowCritiquePhase, ShadowIntegrationPhase
 from app.errors import ValidationError
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -77,9 +77,9 @@ class ConsensusEngine:
 
     def __init__(
         self,
-        llm_client: OllamaClient | None = None,
+        llm_client: ModelManager | None = None,
     ):
-        self.llm = llm_client or OllamaClient()
+        self.llm = llm_client or ModelManager()
         self.scorer = ConsensusScorer()
         self.synthesizer = SynthesisGenerator(self.llm)
         self.active_sessions: dict[str, ConsensusSession] = {}

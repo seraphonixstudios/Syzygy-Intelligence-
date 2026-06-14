@@ -173,7 +173,7 @@ def test_client():
 
     # Patch real dependencies that would hang without a running server
     patcher_consensus = patch("app.api.routes.self_improvement.ConsensusEngine")
-    patcher_llm = patch("app.api.routes.self_improvement.OllamaClient")
+    patcher_llm = patch("app.api.routes.self_improvement.ModelManager")
     patcher_assessor = patch("app.api.routes.self_improvement.SelfAssessmentEngine")
 
     mock_consensus = patcher_consensus.start()

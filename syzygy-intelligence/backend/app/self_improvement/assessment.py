@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.agents.base import SyzygyAgent
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -87,8 +87,8 @@ class SelfAssessmentEngine:
         },
     }
 
-    def __init__(self, llm: OllamaClient | None = None):
-        self.llm = llm or OllamaClient()
+    def __init__(self, llm: ModelManager | None = None):
+        self.llm = llm or ModelManager()
 
     async def assess(
         self,

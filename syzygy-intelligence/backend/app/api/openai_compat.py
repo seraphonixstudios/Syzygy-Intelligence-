@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from app.consensus.engine import ConsensusEngine
 from app.errors import LLMConnectionError
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 router = APIRouter(prefix="/v1", tags=["OpenAI Compatible"])
@@ -81,11 +81,12 @@ async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
         content += f"Polarity balance: {session.polarity_fusion_report.get('individuation_notes', '')}"
     else:
         try:
-            llm = OllamaClient()
-            content = await llm.chat(
+            mm = ModelManager()
+            content = await mm.chat(
                 messages=[m.model_dump() for m in request.messages],
                 model=request.model,
                 temperature=request.temperature,
+                provider="openai_compat" if not request.model.startswith("qwen") else None,
             )
         except LLMConnectionError as e:
             raise HTTPException(503, detail={

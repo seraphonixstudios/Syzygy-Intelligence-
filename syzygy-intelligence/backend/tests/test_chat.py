@@ -72,20 +72,19 @@ def _override_auth_and_db():
 
 @pytest.fixture(autouse=True)
 def _patch_modules():
-    """Mock module-level llm, model_manager, and engine on chat route module."""
+    """Mock module-level model_manager and engine on chat route module."""
     with (
         patch("app.api.routes.chat.engine") as mock_engine,
-        patch("app.api.routes.chat.llm") as mock_llm,
         patch("app.api.routes.chat.model_manager") as mock_mm,
     ):
         mock_engine.run_consensus = AsyncMock()
-        mock_llm.chat = AsyncMock()
-        mock_llm.generate_stream = AsyncMock()
-        mock_llm.default_model = "qwen3:8b-gpu"
+        mock_mm.chat = AsyncMock(return_value="Mock LLM response")
+        mock_mm.generate = AsyncMock(return_value="Mock LLM response")
+        mock_mm.generate_stream = AsyncMock()
         mock_mm.get_all_model_names = MagicMock()
         mock_mm.generate_multi_model = AsyncMock()
         mock_mm.list_available_models = AsyncMock()
-        mock_mm.get_model_for_role = MagicMock()
+        mock_mm.get_model_for_role = MagicMock(return_value="qwen3:8b-gpu")
 
         # MODEL_ROLES is a dict mapping role names to config keys
         mock_mm.MODEL_ROLES = {
@@ -177,8 +176,8 @@ class TestChatCompletionsDirect:
     """Tests for direct LLM mode via POST /api/chat/completions."""
 
     def test_direct_llm_response(self, _patch_modules):
-        from app.api.routes.chat import llm
-        llm.chat.return_value = "Direct LLM response"
+        from app.api.routes.chat import model_manager
+        model_manager.chat.return_value = "Direct LLM response"
 
         resp = TestClient(test_app).post("/api/chat/completions", json={
             "message": "Hello",
@@ -189,8 +188,8 @@ class TestChatCompletionsDirect:
         assert resp.json()["rag_context_used"] is False
 
     def test_direct_llm_with_rag(self, _patch_modules):
-        from app.api.routes.chat import llm
-        llm.chat.return_value = "RAG-enhanced response"
+        from app.api.routes.chat import model_manager
+        model_manager.chat.return_value = "RAG-enhanced response"
 
         with patch("app.api.routes.chat.build_rag_context", new_callable=AsyncMock) as mock_rag:
             mock_rag.return_value = "RAG data"
@@ -204,9 +203,9 @@ class TestChatCompletionsDirect:
             assert resp.json()["rag_context_used"] is True
 
     def test_llm_connection_error_returns_503(self, _patch_modules):
-        from app.api.routes.chat import llm
+        from app.api.routes.chat import model_manager
         from app.errors import LLMConnectionError
-        llm.chat.side_effect = LLMConnectionError(model="qwen3:8b-gpu", original_error="Ollama not running")
+        model_manager.chat.side_effect = LLMConnectionError(model="qwen3:8b-gpu", original_error="Ollama not running")
 
         resp = TestClient(test_app).post("/api/chat/completions", json={
             "message": "Hello",
@@ -297,11 +296,11 @@ class TestChatStream:
     """Tests for POST /api/chat/stream (SSE streaming)."""
 
     def test_stream_yields_tokens(self, _patch_modules):
-        from app.api.routes.chat import llm
+        from app.api.routes.chat import model_manager
         async def mock_stream(*args, **kwargs):
             for token in ["Hello", " ", "World"]:
                 yield token
-        llm.generate_stream = mock_stream
+        model_manager.generate_stream = mock_stream
 
         resp = TestClient(test_app).post("/api/chat/stream", json={
             "message": "Hi",
@@ -315,10 +314,10 @@ class TestChatStream:
         assert '"done": true' in text
 
     def test_stream_with_rag(self, _patch_modules):
-        from app.api.routes.chat import llm
+        from app.api.routes.chat import model_manager
         async def mock_stream(*args, **kwargs):
             yield "Output"
-        llm.generate_stream = mock_stream
+        model_manager.generate_stream = mock_stream
 
         with patch("app.api.routes.chat.build_rag_context", new_callable=AsyncMock) as mock_rag:
             mock_rag.return_value = "RAG"
@@ -332,14 +331,13 @@ class TestChatStream:
             assert '"rag_context": true' in resp.text
 
     def test_stream_error_yields_error_event(self, _patch_modules):
-        from app.api.routes.chat import llm
+        from app.api.routes.chat import model_manager
         from app.errors import LLMConnectionError
         async def mock_stream(*args, **kwargs):
-            """Async generator that raises on first iteration."""
             if False:
                 yield
             raise LLMConnectionError(model="qwen3:8b-gpu", original_error="Connection failed")
-        llm.generate_stream = mock_stream
+        model_manager.generate_stream = mock_stream
 
         resp = TestClient(test_app).post("/api/chat/stream", json={
             "message": "Hi",
@@ -349,12 +347,12 @@ class TestChatStream:
         assert "Connection failed" in resp.text
 
     def test_stream_generic_exception_is_handled(self, _patch_modules):
-        from app.api.routes.chat import llm
+        from app.api.routes.chat import model_manager
         async def mock_stream(*args, **kwargs):
             if False:
                 yield
             raise RuntimeError("Unexpected")
-        llm.generate_stream = mock_stream
+        model_manager.generate_stream = mock_stream
 
         resp = TestClient(test_app).post("/api/chat/stream", json={
             "message": "Hi",

@@ -126,9 +126,9 @@ class TaskQueue:
 
     async def _default_execute(self, item: QueueItem) -> Any:
         """Default execution — uses LLM if available, otherwise simulates."""
-        from app.llm.ollama_client import OllamaClient
+        from app.llm.model_manager import ModelManager
         try:
-            llm = OllamaClient()
+            llm = ModelManager()
             result = await llm.generate(
                 f"Execute the following task:\n\n{item.task}\n\n"
                 f"Task type: {item.task_type}\n"

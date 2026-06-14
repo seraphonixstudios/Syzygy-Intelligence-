@@ -43,24 +43,24 @@ def _fake_session(task="Test task"):
 
 @pytest.fixture(autouse=True)
 def _patch_modules():
-    """Mock ConsensusEngine and OllamaClient on openai_compat module."""
+    """Mock ConsensusEngine and ModelManager on openai_compat module."""
     with (
         patch("app.api.openai_compat.ConsensusEngine") as mock_engine_cls,
-        patch("app.api.openai_compat.OllamaClient") as mock_llm_cls,
+        patch("app.api.openai_compat.ModelManager") as mock_mm_cls,
     ):
         mock_engine = MagicMock()
         mock_engine.run_consensus = AsyncMock()
         mock_engine_cls.return_value = mock_engine
 
-        mock_llm = MagicMock()
-        mock_llm.chat = AsyncMock()
-        mock_llm_cls.return_value = mock_llm
+        mock_mm = MagicMock()
+        mock_mm.chat = AsyncMock(return_value="Mock LLM response")
+        mock_mm_cls.return_value = mock_mm
 
         yield {
             "engine_cls": mock_engine_cls,
             "engine": mock_engine,
-            "llm_cls": mock_llm_cls,
-            "llm": mock_llm,
+            "mm_cls": mock_mm_cls,
+            "mm": mock_mm,
         }
 
 
@@ -174,18 +174,18 @@ class TestNonSyzygyModel:
 
     def test_uses_ollama_client(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Direct LLM response"
+        mocks["mm"].chat.return_value = "Direct LLM response"
 
         resp = TestClient(test_app).post("/v1/chat/completions", json={
             "model": "qwen3:8b-gpu",
             "messages": [{"role": "user", "content": "Hello"}],
         })
         assert resp.status_code == 200
-        mocks["llm"].chat.assert_called_once()
+        mocks["mm"].chat.assert_called_once()
 
     def test_passes_messages_and_model(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Response"
+        mocks["mm"].chat.return_value = "Response"
 
         TestClient(test_app).post("/v1/chat/completions", json={
             "model": "dolphin-llama3:8b-gpu",
@@ -194,26 +194,26 @@ class TestNonSyzygyModel:
                 {"role": "user", "content": "Hi"},
             ],
         })
-        _, kwargs = mocks["llm"].chat.call_args
+        _, kwargs = mocks["mm"].chat.call_args
         assert kwargs["model"] == "dolphin-llama3:8b-gpu"
         assert len(kwargs["messages"]) == 2
         assert kwargs["messages"][0]["role"] == "system"
 
     def test_passes_temperature(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Response"
+        mocks["mm"].chat.return_value = "Response"
 
         TestClient(test_app).post("/v1/chat/completions", json={
             "model": "qwen3:8b-gpu",
             "messages": [{"role": "user", "content": "Hi"}],
             "temperature": 0.3,
         })
-        _, kwargs = mocks["llm"].chat.call_args
+        _, kwargs = mocks["mm"].chat.call_args
         assert kwargs["temperature"] == 0.3
 
     def test_returns_direct_content(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Direct LLM response"
+        mocks["mm"].chat.return_value = "Direct LLM response"
 
         resp = TestClient(test_app).post("/v1/chat/completions", json={
             "model": "qwen3:8b-gpu",
@@ -224,7 +224,7 @@ class TestNonSyzygyModel:
 
     def test_no_fusion_report_for_non_syzygy(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Plain response"
+        mocks["mm"].chat.return_value = "Plain response"
 
         resp = TestClient(test_app).post("/v1/chat/completions", json={
             "model": "qwen3:8b-gpu",
@@ -235,7 +235,7 @@ class TestNonSyzygyModel:
 
     def test_returns_openai_format_non_syzygy(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.return_value = "Response"
+        mocks["mm"].chat.return_value = "Response"
 
         resp = TestClient(test_app).post("/v1/chat/completions", json={
             "model": "llama3",
@@ -295,7 +295,7 @@ class TestErrorHandling:
     def test_ollama_connection_error_returns_503(self, _patch_modules):
         mocks = _patch_modules
         from app.errors import LLMConnectionError
-        mocks["llm"].chat.side_effect = LLMConnectionError(
+        mocks["mm"].chat.side_effect = LLMConnectionError(
             model="qwen3:8b-gpu", original_error="Ollama not running"
         )
 
@@ -308,7 +308,7 @@ class TestErrorHandling:
 
     def test_generic_llm_exception_returns_500(self, _patch_modules):
         mocks = _patch_modules
-        mocks["llm"].chat.side_effect = RuntimeError("Unexpected error")
+        mocks["mm"].chat.side_effect = RuntimeError("Unexpected error")
 
         resp = TestClient(test_app).post("/v1/chat/completions", json={
             "model": "qwen3:8b-gpu",

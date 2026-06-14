@@ -18,7 +18,6 @@ from app.db.models import User
 from app.db.session import get_db
 from app.errors import LLMConnectionError, ValidationError
 from app.llm.model_manager import ModelManager
-from app.llm.ollama_client import OllamaClient
 from app.logging_setup import logger
 from app.rag.injector import build_rag_context
 from app.config import settings
@@ -31,6 +30,7 @@ class ChatCompletionRequest(BaseModel):
     use_rag: bool = Field(default=False, description="Inject RAG context")
     use_consensus: bool = Field(default=False, description="Use consensus engine")
     consensus_rounds: int = Field(default=2, ge=1, le=20, description="Max consensus rounds")
+    provider: str = Field(default="", description="LLM provider to use")
 
 
 class ChatMultiModelRequest(BaseModel):
@@ -42,10 +42,10 @@ class ChatStreamRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000, description="User message")
     model: str = Field(default="", description="Target model name")
     use_rag: bool = Field(default=False, description="Inject RAG context")
+    provider: str = Field(default="", description="LLM provider to use")
 
 
 router = APIRouter()
-llm = OllamaClient()
 model_manager = ModelManager()
 engine = ConsensusEngine()
 
@@ -131,9 +131,11 @@ async def chat_completion(
             messages.append({"role": "system", "content": _sanitize_rag_context(rag_context)})
         messages.append({"role": "user", "content": message})
 
-        response = await llm.chat(
+        provider = getattr(request, "provider", "") or None
+        response = await model_manager.chat(
             messages=messages,
             model=model or "",
+            provider=provider,
         )
         return {"response": response, "rag_context_used": bool(rag_context)}
 
@@ -241,9 +243,11 @@ async def chat_stream(
             augmented_prompt = _build_augmented_prompt(rag_context, message)
 
             try:
-                async for token in llm.generate_stream(
+                provider = getattr(request, "provider", "") or None
+                async for token in model_manager.generate_stream(
                     prompt=augmented_prompt,
-                    model=model or llm.default_model,
+                    model=model or model_manager.get_model_for_role("default"),
+                    provider=provider,
                 ):
                     full_response += token
                     yield f"data: {json.dumps({'token': token})}\n\n"

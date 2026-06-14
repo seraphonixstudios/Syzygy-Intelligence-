@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -20,11 +20,11 @@ class DebateWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["argumentation", "critique", "synthesis"]
     )
-    llm: OllamaClient | None = None
+    llm: ModelManager | None = None
 
     def __post_init__(self) -> None:
         if self.llm is None:
-            self.llm = OllamaClient()
+            self.llm: ModelManager = ModelManager()
 
     async def opening_statement(self, topic: str, position: str, archetype: str) -> str:
         assert self.llm is not None

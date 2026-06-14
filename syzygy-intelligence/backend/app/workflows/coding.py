@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 
 
 @dataclass
@@ -20,11 +20,11 @@ class CodingWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["code_generation", "code_review", "testing", "debugging"]
     )
-    llm: OllamaClient | None = None
+    llm: ModelManager | None = None
 
     def __post_init__(self) -> None:
         if self.llm is None:
-            self.llm = OllamaClient()
+            self.llm: ModelManager = ModelManager()
 
     async def scaffold(self, specification: str) -> dict[str, Any]:
         assert self.llm is not None

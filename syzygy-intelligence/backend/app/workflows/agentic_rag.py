@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -18,11 +18,11 @@ class AgenticRagWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["query_planning", "retrieval", "synthesis", "source_tracking"]
     )
-    llm: OllamaClient | None = None
+    llm: ModelManager | None = None
 
     def __post_init__(self) -> None:
         if self.llm is None:
-            self.llm = OllamaClient()
+            self.llm: ModelManager = ModelManager()
 
     async def decompose_query(self, query: str) -> dict[str, Any]:
         assert self.llm is not None

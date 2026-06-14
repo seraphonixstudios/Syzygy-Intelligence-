@@ -135,11 +135,32 @@ class SyzygyConfig(BaseSettings):
     gpu_model: str = Field(default="qwen3:8b-gpu", description="GPU-optimized model")
     fast_model: str = Field(default="qwen3:8b-gpu", description="Fast inference model")
 
+    # ──── Provider Selection ────
+    default_llm_provider: str = Field(
+        default="ollama",
+        description="Default LLM provider (ollama, openai_compat, litellm)",
+    )
+
     # ──── LiteLLM Fallback ────
     litellm_enabled: bool = Field(default=False, description="Enable LiteLLM fallback")
-    openai_api_key: str = Field(default="", description="OpenAI API key")
-    anthropic_api_key: str = Field(default="", description="Anthropic API key")
+    openai_api_key: str = Field(default="", description="OpenAI API key (LiteLLM)")
+    anthropic_api_key: str = Field(default="", description="Anthropic API key (LiteLLM)")
     fallback_model: str = Field(default="gpt-4o-mini", description="Fallback LLM model")
+
+    # ──── OpenAI-Compatible Provider ────
+    openai_compat_enabled: bool = Field(
+        default=False,
+        description="Enable OpenAI-compatible provider (OpenCode, Groq, Together AI, etc.)",
+    )
+    openai_compat_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="Base URL for OpenAI-compatible API",
+    )
+    openai_compat_api_key: str = Field(default="", description="API key for OpenAI-compatible provider")
+    openai_compat_default_model: str = Field(
+        default="gpt-4o-mini",
+        description="Default model for OpenAI-compatible provider",
+    )
 
     # ──── Consensus Engine ────
     max_consensus_rounds: int = Field(default=6, description="Maximum consensus iterations")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -18,11 +18,11 @@ class TestGenWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["test_generation", "code_analysis", "edge_case_detection"]
     )
-    llm: OllamaClient | None = None
+    llm: ModelManager | None = None
 
     def __post_init__(self) -> None:
         if self.llm is None:
-            self.llm = OllamaClient()
+            self.llm: ModelManager = ModelManager()
 
     async def analyze_code(self, code: str, language: str = "python") -> dict[str, Any]:
         assert self.llm is not None

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.registry import agent_registry
 from app.consensus.engine import ConsensusEngine
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 from app.self_improvement.assessment import SelfAssessmentEngine
 from app.self_improvement.learning_optimizer import LearningOptimizer
@@ -101,7 +101,7 @@ async def start_self_improvement(request: SelfImprovementRequest) -> dict:
     assessment_engine = SelfAssessmentEngine()
     performance_tracker = PerformanceTracker()
     learning_optimizer = LearningOptimizer()
-    llm = OllamaClient()
+    llm = ModelManager()
 
     workflow = RecursiveSelfImprovementWorkflow(
         consensus_engine=consensus_engine,

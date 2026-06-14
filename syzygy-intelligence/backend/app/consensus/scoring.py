@@ -6,7 +6,7 @@ import json
 import re
 
 from app.agents.base import SyzygyAgent
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -29,15 +29,15 @@ class ConsensusScorer:
         "polarity_balance": 0.15,
     }
 
-    def __init__(self, llm: OllamaClient | None = None):
-        self.llm = llm or OllamaClient()
+    def __init__(self, llm: ModelManager | None = None):
+        self.llm = llm or ModelManager()
 
     async def evaluate_all(
         self,
         task: str,
         contents: dict[str, str],
         agents: list[SyzygyAgent],
-        llm: OllamaClient | None = None,
+        llm: ModelManager | None = None,
     ) -> dict[str, dict[str, float]]:
         """Evaluate all proposals/refinements across all dimensions with LLM."""
         evaluations = {}
@@ -66,7 +66,7 @@ class ConsensusScorer:
         task: str,
         content: str,
         agent: SyzygyAgent,
-        llm: OllamaClient | None = None,
+        llm: ModelManager | None = None,
     ) -> dict[str, float]:
         """Evaluate a single agent's contribution across all dimensions using LLM."""
         scorer = llm or self.llm

@@ -5,14 +5,14 @@ from __future__ import annotations
 import asyncio
 
 from app.agents.base import SyzygyAgent
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 
 
 class SynthesisGenerator:
     """Generates unified synthesis from consensus rounds using Rebis perspective."""
 
-    def __init__(self, llm: OllamaClient | None = None):
-        self.llm = llm or OllamaClient()
+    def __init__(self, llm: ModelManager | None = None):
+        self.llm = llm or ModelManager()
 
     async def generate_synthesis(
         self,

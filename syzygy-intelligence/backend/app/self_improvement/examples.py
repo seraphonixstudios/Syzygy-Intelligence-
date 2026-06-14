@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 from app.agents.registry import agent_registry
 from app.consensus.engine import ConsensusEngine
-from app.llm.ollama_client import OllamaClient
+from app.llm.ollama_client import OllamaClient  # noqa: F401 — used in example configs; refactor planned
 from app.self_improvement.assessment import SelfAssessmentEngine
 from app.self_improvement.learning_optimizer import (
     LearningOptimizer,

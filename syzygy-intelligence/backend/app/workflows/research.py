@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 from app.tools.browser import BrowserTool
 from app.tools.search import SearchTool
@@ -25,7 +25,7 @@ class ResearchWorkflow:
     def __init__(self) -> None:
         self.search_tool = SearchTool()
         self.browser_tool = BrowserTool()
-        self.llm = OllamaClient()
+        self.llm: ModelManager = ModelManager()
 
     async def search(self, query: str) -> list[dict[str, Any]]:
         """Perform parallel searches across multiple queries derived from the main query."""

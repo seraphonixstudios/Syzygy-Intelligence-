@@ -26,7 +26,7 @@ from typing import Any
 
 from app.agents.base import SyzygyAgent
 from app.consensus.engine import ConsensusEngine, ConsensusSession
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 from app.memory.base import Memory
 from app.self_improvement.assessment import SelfAssessmentEngine, AssessmentResult
@@ -88,14 +88,14 @@ class RecursiveSelfImprovementWorkflow:
         performance_tracker: PerformanceTracker | None = None,
         learning_optimizer: LearningOptimizer | None = None,
         memory: Memory | None = None,
-        llm: OllamaClient | None = None,
+        llm: ModelManager | None = None,
     ):
         self.consensus = consensus_engine or ConsensusEngine()
         self.assessor = assessment_engine or SelfAssessmentEngine()
         self.tracker = performance_tracker or PerformanceTracker()
         self.optimizer = learning_optimizer or LearningOptimizer()
         self.memory = memory
-        self.llm = llm or OllamaClient()
+        self.llm = llm or ModelManager()
 
     async def execute(
         self,

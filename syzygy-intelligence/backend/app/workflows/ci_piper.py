@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
 
 
@@ -21,11 +21,11 @@ class CiPiperWorkflow:
     required_capabilities: list[str] = field(
         default_factory=lambda: ["ci_cd_design", "config_generation", "deployment_planning"]
     )
-    llm: OllamaClient | None = None
+    llm: ModelManager | None = None
 
     def __post_init__(self) -> None:
         if self.llm is None:
-            self.llm = OllamaClient()
+            self.llm: ModelManager = ModelManager()
 
     async def analyze_project(self, project_description: str, language: str, framework: str) -> dict[str, Any]:
         assert self.llm is not None
