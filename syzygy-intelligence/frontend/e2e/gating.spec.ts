@@ -30,6 +30,6 @@ test.describe("Usage gating", () => {
     });
     expect(chatRes.status()).toBe(429);
     const body = await chatRes.json();
-    expect(body.detail.code).toBe("USAGE_LIMIT_EXCEEDED");
+    expect(body.error.code).toBe("USAGE_LIMIT_EXCEEDED");
   });
 });

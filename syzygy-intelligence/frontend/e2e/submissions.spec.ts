@@ -88,7 +88,7 @@ test.describe("Form submissions", () => {
   test("workflows: execute workflow and see output", async ({ page }) => {
     await page.goto("/workflows");
     // Click a workflow card to select it
-    const card = page.locator("button:has-text('code')").first();
+    const card = page.locator("button.syzygy-card-glass:has-text('code')");
     await card.waitFor({ state: "visible", timeout: 5000 });
     await card.click();
 
