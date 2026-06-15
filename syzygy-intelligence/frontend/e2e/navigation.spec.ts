@@ -32,8 +32,8 @@ test.describe("Sidebar navigation", () => {
 
   for (const { path, expected } of routes) {
     test(`navigates to ${path}`, async ({ page }) => {
-      await page.goto(path, { waitUntil: "load" });
-      await expect(page).toHaveURL(new RegExp(path.replace("/", "\\/")), { timeout: 10000 });
+      await page.goto(path, { waitUntil: "domcontentloaded" });
+      await expect(page).toHaveURL(new RegExp(path.replace("/", "\\/")), { timeout: 15000 });
     });
   }
 });

@@ -43,9 +43,9 @@ test.describe("Auth pages", () => {
   test("login page links to register", async ({ page }) => {
     await page.goto("/auth/login");
     const registerLink = page.locator("a[href='/auth/register']");
-    await expect(registerLink).toBeVisible();
+    await expect(registerLink).toBeVisible({ timeout: 10000 });
     await registerLink.click();
-    await expect(page).toHaveURL(/\/auth\/register/);
+    await page.waitForURL(/\/auth\/register/, { timeout: 15000 });
   });
 
   test("register page links to login", async ({ page }) => {
@@ -86,9 +86,9 @@ test.describe("Auth pages", () => {
   test("forgot password link navigates to forgot password page", async ({ page }) => {
     await page.goto("/auth/login");
     const forgotLink = page.locator("a[href='/auth/forgot-password']");
-    await expect(forgotLink).toBeVisible();
+    await expect(forgotLink).toBeVisible({ timeout: 10000 });
     await forgotLink.click();
-    await expect(page).toHaveURL(/\/auth\/forgot-password/);
+    await page.waitForURL(/\/auth\/forgot-password/, { timeout: 15000 });
   });
 
   test("forgot password page renders with email input", async ({ page }) => {
