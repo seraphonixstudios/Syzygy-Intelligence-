@@ -29,17 +29,17 @@ if data[1] then
     ts = tonumber(data[2])
 else
     tokens = tonumber(ARGV[2])
-    ts = tonumber(ARGV[3])
+    ts = tonumber(ARGV[4])
 end
-local elapsed = tonumber(ARGV[3]) - ts
+local elapsed = tonumber(ARGV[4]) - ts
 tokens = math.min(tonumber(ARGV[2]), tokens + elapsed * tonumber(ARGV[1]))
 if tokens >= 1 then
     tokens = tokens - 1
-    redis.call('HMSET', KEYS[1], 'tokens', tokens, 'ts', ARGV[3])
+    redis.call('HMSET', KEYS[1], 'tokens', tokens, 'ts', ARGV[4])
     redis.call('EXPIRE', KEYS[1], math.ceil(tonumber(ARGV[2]) / tonumber(ARGV[1])) + 1)
     return 1
 end
-redis.call('HMSET', KEYS[1], 'tokens', tokens, 'ts', ARGV[3])
+redis.call('HMSET', KEYS[1], 'tokens', tokens, 'ts', ARGV[4])
 redis.call('EXPIRE', KEYS[1], math.ceil(tonumber(ARGV[2]) / tonumber(ARGV[1])) + 1)
 return 0
 """
@@ -159,6 +159,7 @@ class RedisRateLimiter:
                 1,
                 redis_key,
                 self.rate,
+                self.burst,
                 self.burst,
                 time.time(),
             )

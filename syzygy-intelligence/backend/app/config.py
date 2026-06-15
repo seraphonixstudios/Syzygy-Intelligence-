@@ -256,14 +256,16 @@ class SyzygyConfig(BaseSettings):
                 raise
 
         super().__init__(**data)
-
-    def model_post_init(self, __context: Any) -> None:
-        """Post-initialization validation."""
-        # Production-only validations
+        
+        # Validate production configuration immediately (before post_init)
         if self.env == "production":
             self._validate_production_secrets()
             self._validate_production_cors()
             self._validate_production_email()
+
+    def model_post_init(self, __context: Any) -> None:
+        """Post-initialization hook — validation already done in __init__ for production."""
+        pass
 
     def _validate_production_secrets(self) -> None:
         """Validate all secrets are set in production."""

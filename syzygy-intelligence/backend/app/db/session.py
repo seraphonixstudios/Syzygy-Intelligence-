@@ -168,9 +168,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             return result.scalars().all()
 
     Behavior:
-        - On successful yield: commits the transaction if one is active
-        - On exception: rolls back automatically
+        - On successful endpoint execution: commits the transaction if one is active
+        - On exception in endpoint code: rolls back automatically
         - Always closes the session in finally block
+        
+    Note: The try/except/else/finally pattern correctly handles both cases:
+        1. If endpoint code raises an exception after yield, the except block catches it and rolls back
+        2. If endpoint code succeeds, the else block commits the transaction
     """
     factory = _get_session_factory()
     async with factory() as session:
