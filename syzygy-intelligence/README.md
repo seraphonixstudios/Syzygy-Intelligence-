@@ -2,9 +2,9 @@
 
 <p align="center">
   <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="MIT License"/></a>
-  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions"><img src="https://img.shields.io/github/actions/workflow/status/seraphonixstudios/Syzygy-Intelligence-/.github/workflows/ci.yml?branch=main&style=flat-square&label=CI&color=success" alt="CI"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/node-22+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 22+"/></a>
+  <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions"><img src="https://img.shields.io/github/actions/workflow/status/seraphonixstudios/Syzygy-Intelligence-/.github/workflows/e2e.yml?branch=main&style=flat-square&label=CI&color=success" alt="CI"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/python-3.13+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.13+"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 20+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"/></a>
   <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"/></a>
   <a href="https://github.com/seraphonixstudios/Syzygy-Intelligence-"><img src="https://img.shields.io/github/stars/seraphonixstudios/Syzygy-Intelligence-?style=flat-square&label=stars&color=yellow" alt="GitHub Stars"/></a>
@@ -94,7 +94,7 @@ Through iterative rounds of **Proposal → Critique (Shadow Integration) → Ref
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Python 3.11+, FastAPI, LangGraph, Uvicorn |
+| **Backend** | Python 3.13+, FastAPI, LangGraph, Uvicorn |
 | **Agents** | LangGraph graphs + role-based crews + debate patterns |
 | **Models** | Ollama (Qwen3.5, Qwen-Coder, DeepSeek, Dolphin-Llama3, Llama 3.3) |
 | **Memory** | PostgreSQL + pgvector, Chroma, Neo4j, LangGraph checkpoints |
@@ -132,8 +132,8 @@ The UI manifests the alchemical aesthetic:
 
 - Docker & Docker Compose
 - Ollama (for local models)
-- Node.js 18+ (for frontend development)
-- Python 3.11+ (for backend development)
+- Node.js 20+ (for frontend development)
+- Python 3.13+ (for backend development)
 
 ### Quick Start (Docker)
 
@@ -227,28 +227,34 @@ The Docker production entrypoint runs `alembic upgrade head` automatically befor
 ### Run Tests
 
 ```bash
-# Backend tests (pytest, 482 tests — 90 self-improvement)
+# Backend tests (pytest, 563+ tests — 90 self-improvement)
 cd backend
 pip install -r requirements.txt
 pytest                         # All tests
 pytest -v --tb=short          # Verbose with short tracebacks
+pytest tests/test_vector_store.py  # ChromaDB-avoiding mock tests
 
-# Frontend E2E tests (Playwright, 28 spec files)
+# Frontend E2E tests (Playwright, 29 spec files)
 cd frontend
 npx playwright test            # Headless CI mode (2 workers, 3 shards)
 npx playwright test --ui      # Interactive UI mode
 npx playwright test e2e/auth.spec.ts  # Single file
+
+# Frontend unit tests (vitest, 225 tests in 23 files)
+npm run test:unit
 ```
 
 **CI pipeline** (`.github/workflows/e2e.yml`): On every push to `main`, three parallel jobs run:
 
-1. **frontend-lint** — `next lint --strict` + `tsc --noEmit`
-2. **backend-lint-and-test** — pytest 482 tests with PostgreSQL service + mock Ollama server
+1. **frontend-lint** — `next lint` + `tsc --noEmit` (type errors suppressed)
+2. **backend-lint-and-test** — pytest (563+ tests) with PostgreSQL service + mock Ollama server
 3. **e2e** — Playwright full-stack tests (3 shards × 2 workers, ~5min wall-clock) against live backend + frontend + PostgreSQL
 
 A lightweight mock Ollama server lives at `backend/tests/mock_ollama_server.py` — it responds to `/api/generate`, `/api/embed`, and `/api/tags` with plausible JSON so workflow execution tests pass in CI without requiring a GPU or model downloads. The backend config also accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed), making CI integration straightforward.
 
 Tests use `addInitScript` to set auth state before page JavaScript runs, avoiding hydration race conditions.
+
+> **ChromaDB note:** Tests for `vector_store.py` mock ChromaDB at the `sys.modules` level to avoid native extension crashes on CPython 3.14 process exit. Run `test_vector_store.py` individually, not as part of the full suite.
 
 ### Configure Models
 
@@ -503,15 +509,18 @@ syzygy-intelligence/
 │   ├── migrations/              # Alembic migrations
 │   │   ├── versions/
 │   │   │   ├── 0001_add_user_table.py
-│   │   │   └── 0002_add_remaining_tables.py
+│   │   │   ├── 0002_add_remaining_tables.py
+│   │   │   └── 0003_add_searchable_key_hash_and_fix_timestamps.py
 │   │   ├── env.py
 │   │   └── script.py.mako
-│   ├── tests/                   # pytest test suite (482 tests)
+│   ├── tests/                   # pytest test suite (563+ tests)
 │   │   ├── conftest.py
 │   │   ├── mock_ollama_server.py
 │   │   ├── test_chat.py
 │   │   ├── test_openai_compat.py
 │   │   ├── test_llm_integration.py
+│   │   ├── test_vector_store.py   # ChromaDB-avoiding mock tests
+│   │   ├── test_migrations.py     # Alembic migration syntax/chain tests
 │   │   └── ...
 │   ├── alembic.ini
 │   ├── requirements.txt
@@ -543,7 +552,7 @@ syzygy-intelligence/
 │   │   └── dashboard/           # Dashboard panels
 │   ├── hooks/                   # React hooks (useSSE, useWebSocket, useApi, etc.)
 │   ├── lib/                     # Utilities & API client
-│   ├── e2e/                     # Playwright E2E tests (28 spec files)
+│   ├── e2e/                     # Playwright E2E tests (29 spec files)
 │   │   ├── helpers.ts
 │   │   ├── auth.spec.ts
 │   │   ├── chat.spec.ts
