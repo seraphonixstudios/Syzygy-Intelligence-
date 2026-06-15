@@ -141,6 +141,7 @@ jobs:
 
       - name: Start backend
         run: |
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
           # Poll /health until ready (max 30s)
           for i in $(seq 1 30); do
             if curl -s http://localhost:8000/health > /dev/null 2>&1; then
