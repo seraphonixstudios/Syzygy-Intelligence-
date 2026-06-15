@@ -14,6 +14,8 @@ from app.api.routes.uploads import router as uploads_router
 from app.api.routes.workflows import router as workflows_router
 from app.api.routes.self_improvement import router as self_improvement_router
 
+from app.api.routes.telemetry import router as telemetry_router
+
 __all__ = [
     "agents_router",
     "audit_router",
@@ -25,6 +27,7 @@ __all__ = [
     "rag_router",
     "self_improvement_router",
     "sessions_router",
+    "telemetry_router",
     "tools_router",
     "uploads_router",
     "workflows_router",

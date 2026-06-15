@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
+import { trackApiCall } from "@/lib/observability";
 import { useAuthStore } from "@/store/authStore";
 
 import { API_URL } from "@/lib/config";
@@ -15,7 +16,9 @@ export function useApi() {
   const fetchApi = useCallback(async (path: string, options?: RequestInit, _retried = false) => {
     setLoading(true);
     setError(null);
-    logger.debug(`API ${options?.method || "GET"} ${path}`, undefined, "API");
+    const method = options?.method || "GET";
+    const startTime = performance.now();
+    logger.debug(`API ${method} ${path}`, undefined, "API");
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -30,6 +33,8 @@ export function useApi() {
         ...options,
         headers,
       });
+
+      trackApiCall(method, path, res.status, performance.now() - startTime);
 
       if (res.status === 401 && !_retried) {
         if (!refreshPromiseRef.current) {

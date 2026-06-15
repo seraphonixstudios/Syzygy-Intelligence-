@@ -25,6 +25,7 @@ from app.api.routes import (
     payments,
     self_improvement,
     sessions,
+    telemetry,
     tools,
     uploads,
     workflows,
@@ -142,6 +143,7 @@ app.include_router(rag_route.router, prefix="/api/rag", tags=["RAG"])
 app.include_router(self_improvement.router, prefix="/api", tags=["Self-Improvement"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(telemetry.router, tags=["Telemetry"])
 app.include_router(health.router, prefix="", tags=["Health"])
 
 app.add_api_websocket_route("/ws", ws_handler)
