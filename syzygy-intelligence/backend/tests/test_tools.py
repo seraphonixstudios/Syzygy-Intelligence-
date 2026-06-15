@@ -1,5 +1,6 @@
 """Unit tests for Syzygy Tools."""
 
+import subprocess
 from unittest.mock import patch
 
 import pytest
@@ -32,13 +33,38 @@ class TestFileSystemTool:
         assert len(result["items"]) >= 2
 
     @pytest.mark.asyncio
-    async def test_delete(self, tmp_path):
+    async def test_delete_file(self, tmp_path):
         tool = FileSystemTool()
         test_file = str(tmp_path / "delete_me.txt")
         await tool.execute(action="write", path=test_file, content="delete me")
 
         result = await tool.execute(action="delete", path=test_file)
         assert result["status"] == "deleted"
+        assert not tmp_path.joinpath("delete_me.txt").exists()
+
+    @pytest.mark.asyncio
+    async def test_delete_directory(self, tmp_path):
+        tool = FileSystemTool()
+        subdir = tmp_path / "mydir"
+        subdir.mkdir()
+        (subdir / "nested.txt").write_text("nested")
+
+        result = await tool.execute(action="delete", path=str(subdir))
+        assert result["status"] == "deleted"
+        assert not subdir.exists()
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_path(self):
+        tool = FileSystemTool()
+        result = await tool.execute(action="delete", path="/nonexistent/path")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_unknown_action(self):
+        tool = FileSystemTool()
+        result = await tool.execute(action="unknown")
+        assert "error" in result
+        assert "Unknown action" in result["error"]
 
     @pytest.mark.asyncio
     async def test_nonexistent_path(self):
@@ -73,6 +99,38 @@ class TestCodeExecutionTool:
         result = await tool.execute(code="test", language="brainfuck")
         assert "error" in result or not result["success"]
 
+    @pytest.mark.asyncio
+    async def test_shell_execution(self):
+        tool = CodeExecutionTool()
+        result = await tool.execute(code="echo hello_shell", language="shell")
+        assert result["success"]
+        assert "hello_shell" in result["stdout"]
+
+    @pytest.mark.asyncio
+    async def test_shell_error(self):
+        tool = CodeExecutionTool()
+        result = await tool.execute(code="exit 1", language="shell")
+        assert not result["success"]
+        assert result["return_code"] == 1
+
+    @pytest.mark.asyncio
+    async def test_shell_timeout(self):
+        tool = CodeExecutionTool()
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="sleep", timeout=0.001)
+            result = await tool.execute(code="sleep 100", language="shell", timeout=0.001)
+        assert "error" in result
+        assert "timed out" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_execution_generic_exception(self):
+        tool = CodeExecutionTool()
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = RuntimeError("unexpected failure")
+            result = await tool.execute(code="test", language="python")
+        assert not result["success"]
+        assert "error" in result
+
 
 class TestSearchTool:
     @pytest.mark.asyncio
@@ -88,12 +146,48 @@ class TestSearchTool:
         result = await tool.execute(query="", num_results=3)
         assert "results" in result or "error" in result
 
+    @pytest.mark.asyncio
+    async def test_search_import_error(self):
+        tool = SearchTool()
+        with patch.dict("sys.modules", {"httpx": None}):
+            with patch("builtins.__import__", side_effect=ImportError("no httpx")):
+                result = await tool.execute(query="test")
+        assert "error" in result
+        assert "httpx" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_search_httpx_exception(self):
+        tool = SearchTool()
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.side_effect = RuntimeError("HTTP connection failed")
+            result = await tool.execute(query="test")
+        assert "error" in result
+
 
 class TestGitTool:
     @pytest.fixture
     def tool(self):
         from app.tools.git_tool import GitTool
         return GitTool()
+
+    @pytest.fixture
+    def git_repo(self, tmp_path):
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, timeout=10)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path, capture_output=True, timeout=10,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path, capture_output=True, timeout=10,
+        )
+        (tmp_path / "file.txt").write_text("hello")
+        subprocess.run(["git", "add", "file.txt"], cwd=tmp_path, capture_output=True, timeout=10)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=tmp_path, capture_output=True, timeout=10,
+        )
+        return tmp_path
 
     @pytest.mark.asyncio
     async def test_unknown_action(self, tool):
@@ -119,6 +213,42 @@ class TestGitTool:
     async def test_branch_not_a_repo(self, tool, tmp_path):
         result = await tool.execute(action="branch", repo_path=str(tmp_path))
         assert "branches" in result or "error" in result
+
+    @pytest.mark.asyncio
+    async def test_status_in_repo(self, tool, git_repo):
+        result = await tool.execute(action="status", repo_path=str(git_repo))
+        assert "status" in result
+
+    @pytest.mark.asyncio
+    async def test_log_in_repo(self, tool, git_repo):
+        result = await tool.execute(action="log", repo_path=str(git_repo))
+        assert "log" in result
+        assert isinstance(result["log"], list)
+        assert len(result["log"]) >= 1
+
+    @pytest.mark.asyncio
+    async def test_branch_in_repo(self, tool, git_repo):
+        result = await tool.execute(action="branch", repo_path=str(git_repo))
+        assert "branches" in result
+        assert isinstance(result["branches"], list)
+        assert len(result["branches"]) >= 1
+        assert any(b.strip() for b in result["branches"])
+
+    @pytest.mark.asyncio
+    async def test_commit_in_repo(self, tool, git_repo):
+        (git_repo / "new.txt").write_text("new content")
+        result = await tool.execute(
+            action="commit", repo_path=str(git_repo), message="second commit",
+        )
+        assert result["committed"] is True
+        assert result["message"] == "second commit"
+
+    @pytest.mark.asyncio
+    async def test_diff_with_uncommitted(self, tool, git_repo):
+        (git_repo / "file.txt").write_text("modified content")
+        result = await tool.execute(action="diff", repo_path=str(git_repo))
+        assert "diff" in result
+        assert "modified" in result["diff"] or "+modified" in result["diff"]
 
 
 class TestBrowserTool:
