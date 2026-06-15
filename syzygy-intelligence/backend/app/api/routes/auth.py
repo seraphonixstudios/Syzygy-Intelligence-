@@ -33,6 +33,7 @@ from app.observability import (
     log_usage_event,
     metrics_registry,
 )
+from app.logging_setup import logger
 from app.services.email import EmailMessage
 
 router = APIRouter()
@@ -127,15 +128,24 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     token = create_password_reset_token(str(user.id))
     reset_link = f"{settings.frontend_url}/auth/reset-password?token={token}"
 
-    await send_email(EmailMessage(
-        to=user.email,  # type: ignore
-        subject="Reset your Syzygy password",
-        text_body=f"Reset your password here: {reset_link}\n\nThis link expires in 15 minutes.",
-        html_body=(
-            f"<p>Click <a href='{reset_link}'>here</a> to reset your password.</p>"
-            f"<p>This link expires in 15 minutes.</p>"
-        ),
-    ))
+    try:
+        await send_email(EmailMessage(
+            to=user.email,  # type: ignore
+            subject="Reset your Syzygy password",
+            text_body=f"Reset your password here: {reset_link}\n\nThis link expires in 15 minutes.",
+            html_body=(
+                f"<p>Click <a href='{reset_link}'>here</a> to reset your password.</p>"
+                f"<p>This link expires in 15 minutes.</p>"
+            ),
+        ))
+    except Exception as exc:
+        logger.error("Failed to send password reset email", error=str(exc), user_id=str(user.id))
+        # In production, fail the request. In dev (console provider), continue.
+        if settings.email_provider != "console":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email service is unavailable. Please try again later."
+            )
 
     log_auth_event("password_reset_requested", user_email=req.email, user_id=str(user.id), result="success")
     metrics_registry.auth_password_resets.labels(result="sent").inc()
@@ -194,15 +204,23 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     frontend_url = settings.cors_origins.split(",")[0].strip() or "http://localhost:3000"
     verify_link = f"{frontend_url}/auth/verify-email?token={token}"
 
-    await send_email(EmailMessage(
-        to=user.email,  # type: ignore
-        subject="Verify your Syzygy email",
-        text_body=f"Verify your email here: {verify_link}\n\nThis link expires in 24 hours.",
-        html_body=(
-            f"<p>Click <a href='{verify_link}'>here</a> to verify your email.</p>"
-            f"<p>This link expires in 24 hours.</p>"
-        ),
-    ))
+    try:
+        await send_email(EmailMessage(
+            to=user.email,  # type: ignore
+            subject="Verify your Syzygy email",
+            text_body=f"Verify your email here: {verify_link}\n\nThis link expires in 24 hours.",
+            html_body=(
+                f"<p>Click <a href='{verify_link}'>here</a> to verify your email.</p>"
+                f"<p>This link expires in 24 hours.</p>"
+            ),
+        ))
+    except Exception as exc:
+        logger.error("Failed to send verification email", error=str(exc), user_id=str(user.id))
+        if settings.email_provider != "console":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email service is unavailable. Please try again later."
+            )
 
     log_auth_event("email_verification_requested", user_email=req.email, user_id=str(user.id), result="success")
 
@@ -273,7 +291,8 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
     now = datetime.now(UTC)
     usage_reset = _to_utc(user.usage_reset_at)
 
-    if usage_reset and (usage_reset.year, usage_reset.month) < (now.year, now.month):
+    # Reset if no previous reset or if month/year has changed
+    if usage_reset is None or (usage_reset.year, usage_reset.month) < (now.year, now.month):
         user.message_count = 0  # type: ignore
         user.usage_reset_at = now  # type: ignore
         db.add(user)

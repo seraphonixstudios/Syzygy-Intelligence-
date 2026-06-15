@@ -146,24 +146,19 @@ class TestAppConfiguration:
 
     def test_routers_are_included(self):
         from app.main import app
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        openapi = app.openapi()
+        paths = openapi.get("paths", {})
+        route_paths = list(paths.keys())
         routes_str = ", ".join(route_paths)
-        assert "/api/chat" in routes_str
-        assert "/api/admin" in routes_str
-        assert "/api/auth" in routes_str
-        assert "/api/agents" in routes_str
-        assert "/api/sessions" in routes_str
-        assert "/api/consensus" in routes_str
-        assert "/api/memory" in routes_str
-        assert "/api/tools" in routes_str
-        assert "/api/workflows" in routes_str
-        assert "/api/audit" in routes_str
-        assert "/api/meta" in routes_str
-        assert "/api/uploads" in routes_str
-        assert "/api/rag" in routes_str
-        assert "/api/payments" in routes_str
-        assert "/health" in routes_str
-        assert "/ws" in routes_str
+        expected_prefixes = [
+            "/api/chat", "/api/admin", "/api/auth", "/api/agents",
+            "/api/sessions", "/api/consensus", "/api/memory", "/api/tools",
+            "/api/workflows", "/api/audit", "/api/meta", "/api/uploads",
+            "/api/rag", "/api/payments", "/health",
+        ]
+        for prefix in expected_prefixes:
+            assert any(p.startswith(prefix) for p in route_paths), f"Missing route prefix: {prefix}"
+        assert "/ws" in [r.path for r in app.routes if hasattr(r, "path")]
 
     def test_websocket_route_registered(self):
         from app.main import app
