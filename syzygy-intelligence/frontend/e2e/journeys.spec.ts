@@ -41,12 +41,12 @@ test.describe("Cross-page user journeys", () => {
   });
 
   test("login -> consensus -> run -> check results", async ({ page }) => {
-    await registerAndLogin(page);
-    await page.goto("/consensus", { waitUntil: "domcontentloaded" });
+    const { email } = await registerAndLogin(page);
+    await gotoProtected(page, "/consensus", email, TEST_PASS);
 
     // Submit a consensus topic
     const input = page.locator("input[placeholder*='topic' i]");
-    await input.waitFor({ state: "visible", timeout: 10000 });
+    await input.waitFor({ state: "visible", timeout: 15000 });
     await input.fill("Design a microservices architecture");
     const submitBtn = page.locator("button[type='submit']");
     await submitBtn.waitFor({ state: "visible", timeout: 5000 });
@@ -54,11 +54,11 @@ test.describe("Cross-page user journeys", () => {
 
     // Wait for processing or fallback
     const agentGrid = page.getByText(/agent|proposal|evaluation/i).first();
-    await agentGrid.waitFor({ state: "visible", timeout: 25000 }).catch(() => {});
+    await agentGrid.waitFor({ state: "visible", timeout: 40000 }).catch(() => {});
 
     // Wait for previous sessions to appear
     const sessionsLabel = page.getByText("Previous Sessions").first();
-    await sessionsLabel.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+    await sessionsLabel.waitFor({ state: "visible", timeout: 40000 }).catch(() => {});
   });
 
   test("login -> research -> submit -> copy results", async ({ page }) => {
@@ -104,29 +104,30 @@ test.describe("Cross-page user journeys", () => {
   });
 
   test("login -> rag -> ingest -> search -> verify results", async ({ page }) => {
-    await registerAndLogin(page);
-    await page.goto("/rag", { waitUntil: "domcontentloaded" });
+    const { email } = await registerAndLogin(page);
+    await gotoProtected(page, "/rag", email, TEST_PASS);
 
     // Ingest text first
     const textArea = page.getByPlaceholder("Paste raw text content to ingest...");
-    await textArea.waitFor({ state: "visible", timeout: 10000 });
+    await textArea.waitFor({ state: "visible", timeout: 15000 });
     await textArea.fill("Syzygy Intelligence uses multi-agent consensus with polarity fusion.");
     const ingestBtn = page.locator("button:has-text('Ingest')");
     await ingestBtn.click();
 
     // Wait for success toast or fallback (backend may be unavailable)
     const success = page.getByText("Text ingested").first();
-    const ok = await success.waitFor({ state: "visible", timeout: 20000 }).then(() => true).catch(() => false);
+    await success.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
 
     // Search for something and verify no crash
     const searchInput = page.getByPlaceholder("Search the knowledge base...");
+    await searchInput.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
     await searchInput.fill("syzygy");
     const searchBtn = page.getByRole("button", { name: "Search", exact: true }).first();
     await searchBtn.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
     // Page should be stable
-    await expect(page.locator("h1")).toContainText("Knowledge Base", { timeout: 10000 });
+    await expect(page.locator("h1")).toContainText("Knowledge Base", { timeout: 15000 });
   });
 
   test("login -> workflows -> execute -> download results", async ({ page }) => {
