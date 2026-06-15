@@ -200,6 +200,10 @@ class SyzygyConfig(BaseSettings):
     email_from_address: str = Field(default="noreply@syzygy.local", description="From email")
     email_from_name: str = Field(default="Syzygy Intelligence", description="From name")
 
+    # ──── Tracing / Jaeger ────
+    jaeger_host: str = Field(default="localhost", description="Jaeger agent host")
+    jaeger_port: int = Field(default=6831, description="Jaeger agent port")
+
     # ──── Rate Limiting ────
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_per_second: float = Field(default=10.0, description="Rate limit (req/sec)")

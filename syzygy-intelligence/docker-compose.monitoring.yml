@@ -91,6 +91,36 @@ services:
       timeout: 5s
       retries: 3
 
+  # ─── Postgres Exporter ─────────────────────────────────────
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: syzygy-postgres-exporter
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${SYZYGY_DB_USER:-syzygy}:${SYZYGY_DB_PASSWORD:-syzygy_secret}@postgres:5432/${SYZYGY_DB_NAME:-syzygy}?sslmode=disable"
+    networks:
+      - syzygy-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Redis Exporter ────────────────────────────────────────
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: syzygy-redis-exporter
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    networks:
+      - syzygy-net
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   prometheus_data:
   grafana_data:

@@ -7,11 +7,14 @@ import json
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import time
+
 import httpx
 
 from app.config import settings
 from app.errors import LLMConnectionError
 from app.logging_setup import logger
+from app.observability import log_llm_call, metrics_registry
 
 
 class OllamaClient:
@@ -42,6 +45,7 @@ class OllamaClient:
         """Generate text using Ollama's generate endpoint."""
         client = await self._get_client()
         model = model or self.default_model
+        start = time.time()
 
         payload = {
             "model": model,
@@ -67,10 +71,19 @@ class OllamaClient:
             response.raise_for_status()
 
             if stream:
-                return await self._handle_stream(response)
+                result = await self._handle_stream(response)
+                elapsed = time.time() - start
+                log_llm_call(model, len(prompt), len(result), elapsed * 1000)
+                metrics_registry.llm_calls.labels(model=model, status="success").inc()
+                metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
+                return result
 
             data = self._parse_json(response)
             result = data.get("response", "")
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), len(result), elapsed * 1000)
+            metrics_registry.llm_calls.labels(model=model, status="success").inc()
+            metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
             logger.info(
                 "Ollama generate success",
                 model=model,
@@ -79,8 +92,11 @@ class OllamaClient:
             return result  # type: ignore[no-any-return]
 
         except httpx.HTTPStatusError as e:
+            elapsed = time.time() - start
             status = e.response.status_code
             body = e.response.text[:300]
+            log_llm_call(model, len(prompt), 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error(
                 "Ollama HTTP error",
                 model=model,
@@ -92,6 +108,9 @@ class OllamaClient:
                 original_error=f"HTTP {status}: {body}",
             )
         except httpx.RequestError as e:
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error(
                 "Ollama connection error",
                 model=model,
@@ -113,6 +132,9 @@ class OllamaClient:
         """Stream tokens from Ollama's generate endpoint."""
         client = await self._get_client()
         model = model or self.default_model
+        start = time.time()
+        char_count = 0
+
         payload = {
             "model": model,
             "prompt": prompt,
@@ -130,16 +152,27 @@ class OllamaClient:
                             data = json.loads(line)
                             token = data.get("response", "")
                             if token:
+                                char_count += len(token)
                                 yield token
                             if data.get("done"):
                                 break
                         except json.JSONDecodeError:
                             continue
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), char_count, elapsed * 1000)
+            metrics_registry.llm_calls.labels(model=model, status="success").inc()
+            metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
             logger.info("Ollama generate stream complete", model=model)
         except httpx.HTTPStatusError as e:
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), char_count, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error("Ollama stream HTTP error", model=model, status=e.response.status_code)
             raise LLMConnectionError(model=model, original_error=f"HTTP {e.response.status_code}")
         except httpx.RequestError as e:
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), char_count, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error("Ollama stream connection error", model=model, error=str(e))
             raise LLMConnectionError(model=model, original_error=str(e))
 
@@ -153,6 +186,7 @@ class OllamaClient:
         """Chat completion via Ollama."""
         client = await self._get_client()
         model = model or self.default_model
+        start = time.time()
 
         payload = {
             "model": model,
@@ -177,6 +211,10 @@ class OllamaClient:
             response.raise_for_status()
             data = self._parse_json(response)
             result = data.get("message", {}).get("content", "")
+            elapsed = time.time() - start
+            log_llm_call(model, 0, len(result), elapsed * 1000)
+            metrics_registry.llm_calls.labels(model=model, status="success").inc()
+            metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
             logger.info(
                 "Ollama chat success",
                 model=model,
@@ -184,8 +222,11 @@ class OllamaClient:
             )
             return result  # type: ignore[no-any-return]
         except httpx.HTTPStatusError as e:
+            elapsed = time.time() - start
             status = e.response.status_code
             body = e.response.text[:300]
+            log_llm_call(model, 0, 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error(
                 "Ollama HTTP error",
                 model=model,
@@ -197,6 +238,9 @@ class OllamaClient:
                 original_error=f"HTTP {status}: {body}",
             )
         except httpx.RequestError as e:
+            elapsed = time.time() - start
+            log_llm_call(model, 0, 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error(
                 "Ollama connection error",
                 model=model,

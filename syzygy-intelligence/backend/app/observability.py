@@ -173,8 +173,8 @@ def setup_tracing() -> None:
         return
 
     jaeger_exporter = JaegerExporter(
-        agent_host_name=getattr(settings, "jaeger_host", "localhost"),
-        agent_port=int(getattr(settings, "jaeger_port", 6831)),
+        agent_host_name=settings.jaeger_host,
+        agent_port=settings.jaeger_port,
     )
 
     trace_provider = TracerProvider(

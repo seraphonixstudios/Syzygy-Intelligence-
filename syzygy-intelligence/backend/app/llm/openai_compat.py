@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
@@ -9,6 +10,7 @@ import httpx
 from app.config import settings
 from app.errors import LLMConnectionError
 from app.logging_setup import logger
+from app.observability import log_llm_call, metrics_registry
 
 
 class OpenAICompatClient:
@@ -64,12 +66,14 @@ class OpenAICompatClient:
         max_tokens: int = 2048,
     ) -> str:
         client = await self._get_client()
+        model = model or self.default_model
+        start = time.time()
         try:
             resp = await client.post(
                 f"{self.base_url}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
                 json={
-                    "model": model or self.default_model,
+                    "model": model,
                     "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens,
@@ -77,13 +81,24 @@ class OpenAICompatClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            result = data["choices"][0]["message"]["content"]
+            elapsed = time.time() - start
+            log_llm_call(model, 0, len(result), elapsed * 1000)
+            metrics_registry.llm_calls.labels(model=model, status="success").inc()
+            metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
+            return result
         except httpx.HTTPStatusError as e:
+            elapsed = time.time() - start
+            log_llm_call(model, 0, 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             raise LLMConnectionError(
                 model or self.default_model,
                 f"HTTP {e.response.status_code}: {e.response.text[:200]}",
             )
         except Exception as e:
+            elapsed = time.time() - start
+            log_llm_call(model, 0, 0, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             raise LLMConnectionError(model or self.default_model, str(e))
 
     async def generate_stream(
@@ -99,13 +114,16 @@ class OpenAICompatClient:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
         client = await self._get_client()
+        model = model or self.default_model
+        start = time.time()
+        char_count = 0
         try:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
                 json={
-                    "model": model or self.default_model,
+                    "model": model,
                     "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens,
@@ -122,10 +140,18 @@ class OpenAICompatClient:
                                 data = json.loads(chunk)
                                 delta = data["choices"][0].get("delta", {})
                                 if content := delta.get("content"):
+                                    char_count += len(content)
                                     yield content
                             except (json.JSONDecodeError, KeyError, IndexError):
                                 continue
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), char_count, elapsed * 1000)
+            metrics_registry.llm_calls.labels(model=model, status="success").inc()
+            metrics_registry.llm_latency_seconds.labels(model=model).observe(elapsed)
         except Exception as e:
+            elapsed = time.time() - start
+            log_llm_call(model, len(prompt), char_count, elapsed * 1000, status="error")
+            metrics_registry.llm_calls.labels(model=model, status="error").inc()
             logger.error("OpenAI-compat stream error", error=str(e))
             raise LLMConnectionError(model or self.default_model, str(e))
 

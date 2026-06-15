@@ -12,6 +12,7 @@ The consensus process:
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ from app.consensus.phases import ShadowCritiquePhase, ShadowIntegrationPhase
 from app.errors import ValidationError
 from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
+from app.observability import log_consensus_event, metrics_registry, trace_operation
 
 ConsensusEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 
@@ -130,6 +132,8 @@ class ConsensusEngine:
             session.rounds.append(round_data)
             session.current_round = round_num
 
+            round_start = time.time()
+
             # Phase 1: Proposals
             await self._proposal_phase(session, round_data)
             if on_event:
@@ -189,6 +193,20 @@ class ConsensusEngine:
 
             # Phase 5: Convergence check
             converged = await self._convergence_check(session, round_data)
+
+            round_duration = time.time() - round_start
+            round_data.convergence_score = round_data.convergence_score or 0.0
+            metrics_registry.consensus_round_duration_seconds.observe(round_duration)
+            status = "converged" if converged else "continued"
+            metrics_registry.consensus_rounds_completed.labels(result=status).inc()
+            log_consensus_event(
+                "consensus_round",
+                session.id,
+                round_num,
+                status,
+                round_duration * 1000,
+                {"convergence_score": round_data.convergence_score},
+            )
 
             if converged and round_num >= min_rounds:
                 round_data.completed = True
