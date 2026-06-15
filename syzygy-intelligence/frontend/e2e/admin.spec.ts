@@ -4,9 +4,9 @@ import { registerAndLogin, API, TEST_PASS } from "./helpers";
 test.describe("Admin access control", () => {
   test("redirects to sign in when logged out", async ({ page }) => {
     await page.goto("/admin");
-    const body = await page.evaluate(() => document.body.innerText);
-    expect(body).toContain("Sign In");
-    expect(body).not.toContain("Total Users");
+    await page.waitForTimeout(2000);
+    const url = page.url();
+    expect(url).toContain("/auth/login");
   });
 
   test("shows access denied for non-admin users", async ({ page }) => {

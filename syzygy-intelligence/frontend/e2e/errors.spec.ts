@@ -29,7 +29,7 @@ test.describe("Error states and edge cases", () => {
 
   test("code: generates fallback content when backend unavailable", async ({ page }) => {
     await page.goto("/code");
-    const input = page.locator("textarea, input[placeholder*='code' i], input[placeholder*='prompt' i]").first();
+    const input = page.locator("input[placeholder*='code' i]").first();
     await input.fill("Write a quick sort in Python");
     await page.locator("button[type='submit']").click();
 
@@ -44,6 +44,7 @@ test.describe("Error states and edge cases", () => {
 
   test("consensus: empty topic shows validation", async ({ page }) => {
     await page.goto("/consensus");
+    await expect(page.locator("h1")).toContainText("Consensus", { timeout: 10000 });
     const submitBtn = page.locator("button[type='submit']");
     if (await submitBtn.isEnabled().catch(() => false)) {
       await submitBtn.click();
