@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
 const publicPaths = [
-  "/",
   "/cloud",
   "/contact",
   "/auth/login",
