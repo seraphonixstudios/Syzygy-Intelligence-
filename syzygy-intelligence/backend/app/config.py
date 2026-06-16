@@ -282,7 +282,7 @@ class SyzygyConfig(BaseSettings):
 
         if errors:
             error_msg = "Production configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
-            _get_logger().error("Production secrets not configured", details="\n".join(errors))
+            _get_logger().error("Production secrets not configured\n%s", "\n".join(errors))
             raise ValueError(error_msg)
 
         _get_logger().info("Production secrets validated")
