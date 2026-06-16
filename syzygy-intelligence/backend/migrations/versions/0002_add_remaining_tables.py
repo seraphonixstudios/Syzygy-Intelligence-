@@ -8,6 +8,7 @@ Create Date: 2026-06-12
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
@@ -117,7 +118,7 @@ def upgrade() -> None:
                   sa.ForeignKey("sessions.id"), nullable=True),
         sa.Column("memory_type", sa.String(50), nullable=False),
         sa.Column("content", sa.Text, nullable=False),
-        sa.Column("embedding", sa.dialects.postgresql.VECTOR(1536), nullable=True),
+        sa.Column("embedding", Vector(1536), nullable=True),
         sa.Column("polarity",
                   sa.Enum("masculine", "feminine", "unified", name="polarity"),
                   nullable=True),
