@@ -24,15 +24,6 @@
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }
 
-    # Rate limiting (10 req/s burst 20)
-    rate_limit {
-        zone dynamic {
-            key {remote_host}
-            events 20
-            window 1s
-        }
-    }
-
     # Backend API proxy
     handle_path /api/* {
         reverse_proxy backend:8000 {
