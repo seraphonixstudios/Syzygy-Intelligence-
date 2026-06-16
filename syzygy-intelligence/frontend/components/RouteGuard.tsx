@@ -18,6 +18,7 @@ const publicPaths = [
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isVerifying = useAuthStore((s) => s.isVerifying);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -34,12 +35,21 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (ready && !publicPaths.includes(pathname) && !isAuthenticated) {
+    if (ready && !isVerifying && !publicPaths.includes(pathname) && !isAuthenticated) {
       window.location.href = "/auth/login";
     }
-  }, [pathname, isAuthenticated, ready]);
+  }, [pathname, isAuthenticated, isVerifying, ready]);
 
-  if (!ready) return null;
+  if (!ready || isVerifying) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+          <p className="text-sm text-gray-400">Verifying...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (publicPaths.includes(pathname) || isAuthenticated) {
     return <>{children}</>;

@@ -27,6 +27,7 @@ interface AuthState {
   refreshToken: string | null;
   user: UserInfo | null;
   isAuthenticated: boolean;
+  isVerifying: boolean;
   rememberMe: boolean;
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
@@ -66,6 +67,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       isAuthenticated: false,
+      isVerifying: true,
       rememberMe: true,
 
       login: async (email: string, password: string, remember = true) => {
