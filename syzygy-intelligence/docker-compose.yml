@@ -81,13 +81,6 @@ services:
       - "11434:11434"
     environment:
       OLLAMA_KEEP_ALIVE: "10m"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     <<: *shared
 
   # ─── Backend API Server ─────────────────────────────────────────

@@ -1,0 +1,14 @@
+# GPU support for Ollama service
+# Enables NVIDIA GPU acceleration for local LLM inference.
+# Requires nvidia-container-toolkit to be installed.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ollama-gpu.yml up -d
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
