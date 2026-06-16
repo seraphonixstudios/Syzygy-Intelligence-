@@ -70,7 +70,11 @@ class SyzygyLogger:
     ):
         self.name = name
         self.log_dir = Path(log_dir or f"{settings.data_dir}/logs")
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            self.log_dir = Path("/tmp/syzygy/logs")
+            self.log_dir.mkdir(parents=True, exist_ok=True)
         self.level = (level or settings.log_level).upper()
 
         self._logger = logging.getLogger(name)
