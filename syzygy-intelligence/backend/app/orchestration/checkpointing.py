@@ -16,7 +16,11 @@ class CheckpointManager:
 
     def __init__(self) -> None:
         self.storage_path = Path(f"{settings.data_dir}/checkpoints")
-        self.storage_path.mkdir(parents=True, exist_ok=True)
+        try:
+            self.storage_path.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            self.storage_path = Path("/tmp/syzygy/checkpoints")
+            self.storage_path.mkdir(parents=True, exist_ok=True)
 
     async def save_checkpoint(
         self,
