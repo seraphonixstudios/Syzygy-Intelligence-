@@ -13,7 +13,10 @@ services:
           devices: []
 
   backend:
-    volumes: []
+    volumes:
+      - sandbox_data:/app/data/sandbox
+      - chroma_data:/app/data/chroma
+      - uploads_data:/app/data/uploads
     command: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-reload
     environment:
       SYZYGY_ENV: production
