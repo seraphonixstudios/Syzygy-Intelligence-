@@ -25,6 +25,9 @@ pgvector
 # Embeddings
 numpy
 
+# Payments
+stripe
+
 # Tools
 playwright
 httpx
