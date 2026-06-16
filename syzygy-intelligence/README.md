@@ -241,7 +241,7 @@ npx playwright test            # Headless CI mode (2 workers, 3 shards)
 npx playwright test --ui      # Interactive UI mode
 npx playwright test e2e/auth.spec.ts  # Single file
 
-# Frontend unit tests (vitest, 225 tests in 23 files)
+# Frontend unit tests (vitest, 244 tests in 25 files)
 npm run test:unit
 ```
 
