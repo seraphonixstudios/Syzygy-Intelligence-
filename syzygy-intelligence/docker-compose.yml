@@ -128,7 +128,6 @@ services:
       ollama:
         condition: service_healthy
     volumes:
-      - ./backend:/app
       - sandbox_data:/app/data/sandbox
       - chroma_data:/app/data/chroma
       - uploads_data:/app/data/uploads

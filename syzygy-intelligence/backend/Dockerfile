@@ -55,7 +55,7 @@ COPY --from=builder --chown=syzygy:syzygy /opt/venv /opt/venv
 COPY --chown=syzygy:syzygy . .
 
 # Create data directories and clean build artifacts
-RUN mkdir -p data/chroma data/uploads data/sandbox data/logs && \
+RUN mkdir -p data/chroma data/uploads data/sandbox data/logs data/checkpoints data/memories/long_term data/memories/team && \
     chown -R syzygy:syzygy data && \
     find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
     find . -type f -name "*.pyc" -delete && \
