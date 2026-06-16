@@ -328,6 +328,40 @@ class TestOAuthCallback:
             assert added_user.email == "bob@first.com"
 
     @pytest.mark.asyncio
+    async def test_unknown_provider_fallback(self):
+        token_resp = MagicMock(status_code=200)
+        token_resp.json.return_value = MOCK_TOKEN
+        userinfo_resp = MagicMock(status_code=200)
+        userinfo_resp.json.return_value = {"email": "user@microsoft.com", "name": "MS User"}
+
+        factory, session = _mock_session_factory(existing_user=None)
+
+        with (
+            patch("app.api.routes.oauth.PROVIDER_CONFIGS", new={
+                "google": GOOGLE_CFG,
+                "github": GITHUB_CFG,
+                "microsoft": {
+                    "authorize_url": "https://login.microsoftonline.com/authorize",
+                    "token_url": "https://login.microsoftonline.com/token",
+                    "userinfo_url": "https://graph.microsoft.com/v1.0/me",
+                    "client_id": "ms-id",
+                    "client_secret": "ms-secret",
+                    "scope": "user.read",
+                },
+            }),
+            patch("app.api.routes.oauth.settings", frontend_url="http://localhost:3000", free_tier_days=30),
+            patch("app.api.routes.oauth._get_session_factory", return_value=factory),
+            _patch_auth_tokens(),
+            patch("httpx.AsyncClient") as mock_cls,
+        ):
+            _mock_httpx(mock_cls, token_resp, userinfo_resp)
+            result = await oauth_callback(provider="microsoft", code="abc", request=MagicMock())
+            assert result.status_code == 307
+            added_user = session.add.call_args[0][0]
+            assert added_user.email == "user@microsoft.com"
+            assert added_user.display_name == "MS User"
+
+    @pytest.mark.asyncio
     async def test_google_display_name_fallback_to_given_name(self):
         token_resp = MagicMock(status_code=200)
         token_resp.json.return_value = MOCK_TOKEN

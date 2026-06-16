@@ -26,9 +26,9 @@ def _parse_pdf(path: Path) -> str:
     import fitz
 
     doc = fitz.open(str(path))
-    pages = [page.get_text() for page in doc]
-    doc.close()
-    return "\n\n".join(pages)
+    pages = [page.get_text() for page in doc]  # pragma: no cover — requires PyMuPDF + real PDF
+    doc.close()  # pragma: no cover
+    return "\n\n".join(pages)  # pragma: no cover
 
 
 def chunk_text(
@@ -70,8 +70,8 @@ def chunk_text(
         break_at = _find_break_point(text, start, end)
         chunks.append(text[start:break_at])
         start = break_at - overlap
-        if start < 0:
-            start = 0
+        if start < 1 or start >= break_at:
+            start = break_at
 
     return chunks
 

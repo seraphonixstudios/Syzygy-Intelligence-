@@ -184,6 +184,23 @@ class TestChat:
         assert "401" in str(exc.value)
 
     @pytest.mark.asyncio
+    async def test_raises_on_http_status_error(self, client):
+        import httpx
+        mock_resp = MagicMock(spec=httpx.Response)
+        mock_resp.status_code = 429
+        mock_resp.text = "Rate limited"
+        request = MagicMock()
+        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "429 Rate Limited", request=request, response=mock_resp,
+        )
+        client._client = AsyncMock()
+        client._client.post = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(LLMConnectionError) as exc:
+            await client.chat(messages=[{"role": "user", "content": "Hi"}])
+        assert "429" in str(exc.value)
+
+    @pytest.mark.asyncio
     async def test_raises_on_network_error(self, client):
         client._client = AsyncMock()
         client._client.post = AsyncMock(side_effect=ConnectionError("DNS failure"))

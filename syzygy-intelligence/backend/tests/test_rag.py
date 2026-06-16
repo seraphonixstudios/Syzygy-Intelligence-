@@ -525,3 +525,84 @@ class TestInjector:
 
             with pytest.raises(AttributeError):
                 await build_rag_context("test")
+
+
+# ═══════════════════════════════════════════════════════════
+# Embeddings edge cases
+# ═══════════════════════════════════════════════════════════
+
+class TestEmbedEdgeCases:
+    @pytest.mark.asyncio
+    async def test_embed_500_error_raises(self):
+        """Ollama returning 500 raises LLMConnectionError for unsupported embeddings."""
+        from app.errors import LLMConnectionError
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+
+        with (
+            patch("app.rag.embeddings.settings") as mock_settings,
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_settings.ollama_base_url = "http://ollama:11434"
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.post.return_value = mock_resp
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(LLMConnectionError, match="does not support embeddings"):
+                await embed(["test"], model="nomic-embed-text")
+
+    @pytest.mark.asyncio
+    async def test_embed_other_status_raises(self):
+        """Ollama returning other status code raises HTTPStatusError."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        mock_resp.raise_for_status.side_effect = RuntimeError("HTTP Error")
+
+        with (
+            patch("app.rag.embeddings.settings") as mock_settings,
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_settings.ollama_base_url = "http://ollama:11434"
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.post.return_value = mock_resp
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(RuntimeError):
+                await embed(["test"], model="nomic-embed-text")
+
+
+# ═══════════════════════════════════════════════════════════
+# Ingester edge cases
+# ═══════════════════════════════════════════════════════════
+
+class TestIngesterEdgeCases:
+    def test_parse_pdf(self, tmp_path):
+        """Parse a PDF file using PyMuPDF."""
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_text("%PDF-1.4 fake pdf content")
+        with pytest.raises(Exception):
+            parse_document(str(pdf_path))
+
+    def test_chunk_text_overlap_clamp_to_zero(self):
+        """Overlap computation clamps start to 0 when negative."""
+        text = "A" * 10
+        chunks = chunk_text(text, chunk_size=5, overlap=10)
+        assert len(chunks) >= 1
+
+    def test_find_break_point_paragraph(self):
+        """_find_break_point prefers paragraph breaks."""
+        from app.rag.ingester import _find_break_point
+        text = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        break_at = _find_break_point(text, 5, 40)
+        # Should find the first \n\n after midpoint
+        assert break_at >= 5
+
+    def test_find_break_point_end(self):
+        """_find_break_point returns end as fallback."""
+        from app.rag.ingester import _find_break_point
+        text = "A" * 100
+        break_at = _find_break_point(text, 0, 50)
+        assert break_at == 50

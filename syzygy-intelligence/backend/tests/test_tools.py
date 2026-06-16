@@ -251,9 +251,109 @@ class TestGitTool:
         assert "modified" in result["diff"] or "+modified" in result["diff"]
 
 
+class TestToolRegistry:
+    def test_get_returns_none_for_missing(self):
+        from app.tools import ToolRegistry
+        registry = ToolRegistry()
+        assert registry.get("nonexistent") is None
+
+    def test_list_returns_dicts(self):
+        from app.tools import ToolRegistry
+        registry = ToolRegistry()
+        result = registry.list()
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert all("id" in item for item in result)
+        assert all("name" in item for item in result)
+
+    @pytest.mark.asyncio
+    async def test_execute_returns_error_for_missing_tool(self):
+        from app.tools import ToolRegistry
+        registry = ToolRegistry()
+        result = await registry.execute("nonexistent", {})
+        assert "error" in result
+        assert "nonexistent" in result["error"]
+
+
+class TestFileSystemToolExtra:
+    @pytest.mark.asyncio
+    async def test_read_directory_returns_items(self, tmp_path):
+        tool = FileSystemTool()
+        (tmp_path / "file1.txt").write_text("a")
+        (tmp_path / "subdir").mkdir()
+        result = await tool.execute(action="read", path=str(tmp_path))
+        assert "directory" in result
+        assert "items" in result
+        assert "file1.txt" in result["items"]
+        assert "subdir" in result["items"]
+
+    @pytest.mark.asyncio
+    async def test_list_nonexistent_path_returns_error(self):
+        tool = FileSystemTool()
+        result = await tool.execute(action="list", path="/nonexistent_path_xyz")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_exception_handler(self):
+        tool = FileSystemTool()
+        # null byte doesn't raise on Windows; None triggers TypeError in Path()
+        result = await tool.execute(action="read", path=None)
+        assert "error" in result
+
+
+class TestSearchToolExtra:
+    @pytest.mark.asyncio
+    async def test_search_snippets_shorter_than_links(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        tool = SearchTool()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = (
+            '<a class="result__a" href="http://url1">Title1</a>'
+            '<a class="result__a" href="http://url2">Title2</a>'
+            '<a class="result__snippet">Snippet1</a>'
+        )
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await tool.execute(query="test", num_results=5)
+        assert "results" in result
+        assert len(result["results"]) == 2
+        assert result["results"][0]["snippet"] == "Snippet1"
+        assert result["results"][1]["snippet"] == ""
+
+
+class TestGitToolExtra:
+    @pytest.mark.asyncio
+    async def test_clone_action(self):
+        from unittest.mock import MagicMock
+        from app.tools.git_tool import GitTool
+        tool = GitTool()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="cloned", stderr="")
+            result = await tool.execute(
+                action="clone", url="http://fake.url/repo", repo_path="/tmp/t"
+            )
+        assert result["cloned"] is True
+        assert result["url"] == "http://fake.url/repo"
+        assert result["path"] == "/tmp/t"
+
+
+class TestToolRegistryExecuteWithValidTool:
+    @pytest.mark.asyncio
+    async def test_execute_with_valid_tool(self, tmp_path):
+        from app.tools import ToolRegistry
+        registry = ToolRegistry()
+        test_file = str(tmp_path / "test.txt")
+        result = await registry.execute("filesystem", {"action": "write", "path": test_file, "content": "hello"})
+        assert result["status"] == "written"
+
+
 class TestBrowserTool:
     @pytest.fixture
     def tool(self):
+        pytest.importorskip("playwright")
         from app.tools.browser import BrowserTool
         return BrowserTool()
 

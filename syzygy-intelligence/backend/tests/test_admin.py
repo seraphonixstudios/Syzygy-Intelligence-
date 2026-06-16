@@ -169,6 +169,24 @@ class TestGetUser:
             await get_user(user_id="nonexistent", db=db, admin=admin_user)
         assert exc.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_premium_tier_10k_limit(self, admin_user):
+        user = _make_user(subscription_tier=SubscriptionTier.PREMIUM)
+        db = _mock_db_for_scalar_one_or_none(user)
+
+        from app.api.routes.admin import get_user
+        result = await get_user(user_id=user.id, db=db, admin=admin_user)
+        assert result.monthly_message_limit == 10000
+
+    @pytest.mark.asyncio
+    async def test_free_tier_with_active_trial_10k_limit(self, admin_user):
+        user = _make_user(subscription_tier=SubscriptionTier.FREE, trial_ends_at=datetime(2099, 1, 1, tzinfo=UTC))
+        db = _mock_db_for_scalar_one_or_none(user)
+
+        from app.api.routes.admin import get_user
+        result = await get_user(user_id=user.id, db=db, admin=admin_user)
+        assert result.monthly_message_limit == 10000
+
 
 class TestUpdateUser:
     @pytest.mark.asyncio

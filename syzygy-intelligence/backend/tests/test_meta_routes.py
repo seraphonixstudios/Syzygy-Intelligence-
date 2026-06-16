@@ -235,3 +235,131 @@ class TestRunSelfImprovement:
             result = await run_self_improvement({"output": "good output", "context": {}})
             assert result["proposals"] == []
             assert result["auto_applied"] == []
+
+
+# ═══════════════════════════════════════════════════════════
+# MetaCognitionEngine direct unit tests (app/meta/__init__.py)
+# ═══════════════════════════════════════════════════════════
+
+class TestMetaCognitionEngineEvaluate:
+    def test_evaluate_empty_output_completeness_zero(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = engine.evaluate_output("", {})
+        assert result.dimensions["completeness"] == 0.0
+        assert result.dimensions["actionability"] == 0.3
+
+    def test_evaluate_not_actionable(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = engine.evaluate_output("just a simple statement without action words", {})
+        assert result.dimensions["actionability"] == 0.3
+        assert any("actionable" in f for f in result.feedback)
+
+    def test_evaluate_with_structure(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        text = "1. First step\n- Bullet point\n  indented"
+        result = engine.evaluate_output(text, {})
+        assert result.dimensions["structure"] == 0.9
+
+    def test_evaluate_without_structure(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = engine.evaluate_output("just a plain sentence with no structure at all", {})
+        assert result.dimensions["structure"] == 0.5
+
+    def test_evaluate_actionable(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = engine.evaluate_output("Lets build and implement this feature", {})
+        assert result.dimensions["actionability"] == 0.8
+
+    def test_evaluate_suggestions_fallback(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        text = "implement build create use run " * 200 + "\n- with structure\n  indented"
+        result = engine.evaluate_output(text, {})
+        assert result.suggestions == ["Output meets quality thresholds"]
+
+    def test_evaluate_appends_to_history(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        engine.evaluate_output("test output", {})
+        assert len(engine._history) == 1
+
+    def test_propose_improvements_no_low_scores(self):
+        from app.meta import EvaluationResult, MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = EvaluationResult(score=0.9, dimensions={"completeness": 0.8, "coherence": 0.8}, feedback=[], suggestions=[])
+        proposals = engine.propose_improvements(result)
+        assert proposals == []
+
+    def test_propose_improvements_with_low_scores(self):
+        from app.meta import EvaluationResult, MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = EvaluationResult(score=0.3, dimensions={"completeness": 0.2}, feedback=["Too short"], suggestions=["Add detail"])
+        proposals = engine.propose_improvements(result)
+        assert len(proposals) == 1
+        assert proposals[0].target == "completeness"
+
+    def test_apply_proposal_not_found(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        result = engine.apply_proposal("nonexistent")
+        assert result is None
+
+    def test_get_history_empty(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        assert engine.get_history() == []
+
+    def test_get_proposals_filtered_by_status(self):
+        from app.meta import EvaluationResult, MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        engine.propose_improvements(EvaluationResult(score=0.3, dimensions={"completeness": 0.2}, feedback=["short"], suggestions=["add"]))
+        engine.propose_improvements(EvaluationResult(score=0.4, dimensions={"accuracy": 0.3}, feedback=["bad"], suggestions=["fix"]))
+        all_proposals = engine.get_proposals()
+        proposed = engine.get_proposals("proposed")
+        assert len(all_proposals) == len(proposed) == 2
+        applied = engine.get_proposals("applied")
+        assert applied == []
+
+    def test_get_summary_empty_history(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        summary = engine.get_summary()
+        assert summary["total_evaluations"] == 0
+        assert summary["average_score"] == 0
+        assert summary["total_proposals"] == 0
+
+    def test_get_summary_with_data(self):
+        from app.meta import MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        engine.evaluate_output("some content", {})
+        summary = engine.get_summary()
+        assert summary["total_evaluations"] == 1
+        assert summary["average_score"] > 0
+
+    def test_get_proposals_with_status_none(self):
+        from app.meta import EvaluationResult, MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        engine.propose_improvements(EvaluationResult(score=0.3, dimensions={"completeness": 0.1}, feedback=["x"], suggestions=["y"]))
+        assert len(engine.get_proposals(status=None)) == 1
+
+    def test_apply_proposal_success(self):
+        """apply_proposal with matching id and proposed status (lines 103-106)."""
+        from app.meta import EvaluationResult, MetaCognitionEngine
+        engine = MetaCognitionEngine()
+        engine.propose_improvements(
+            EvaluationResult(score=0.3, dimensions={"completeness": 0.1}, feedback=["short"], suggestions=["add"])
+        )
+        prop = engine._proposals[0]
+        result = engine.apply_proposal(prop.id)
+        assert result is not None
+        assert result.status == "applied"
+        assert result.applied_at is not None
+        # Calling again returns None (already applied)
+        result2 = engine.apply_proposal(prop.id)
+        assert result2 is None
+

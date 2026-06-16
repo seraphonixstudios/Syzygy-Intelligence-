@@ -9,7 +9,7 @@ Tests cover the three core classes without requiring LLM calls:
 from __future__ import annotations
 
 import math
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -51,6 +51,36 @@ class TestParseScore:
 
     def test_clamps_below_0(self):
         assert SelfAssessmentEngine._parse_score(None, "-0.5") == 0.0
+
+    def test_parse_score_0_to_1_float(self):
+        result = SelfAssessmentEngine._parse_score(None, "0")
+        assert result == 0.0
+
+    def test_parse_score_exactly_1(self):
+        result = SelfAssessmentEngine._parse_score(None, "1")
+        # "1" is treated as percentage: 1/100 = 0.01
+        assert result == 0.01
+
+    def test_parse_score_first_try_value_error(self):
+        with patch("app.self_improvement.assessment.re.findall") as mock_findall:
+            mock_findall.side_effect = [ValueError("bad"), ["0.5"]]
+            result = SelfAssessmentEngine._parse_score(None, "test")
+            # "0.5" in fallback: 0 <= 0.5 <= 100 -> 0.5/100 = 0.005
+            assert result == 0.005
+
+    def test_parse_score_first_try_index_error(self):
+        with patch("app.self_improvement.assessment.re.findall") as mock_findall:
+            mock_findall.side_effect = [IndexError("bad"), ["0.5"]]
+            result = SelfAssessmentEngine._parse_score(None, "test")
+            assert result == 0.005
+
+    def test_parse_score_second_try_value_error(self):
+        with patch("app.self_improvement.assessment.re.findall") as mock_findall:
+            mock_findall.side_effect = [[], ["0.5"]]
+            with patch("builtins.float", side_effect=ValueError("bad")):
+                result = SelfAssessmentEngine._parse_score(None, "test")
+                # float("0.5") raises ValueError -> caught by except -> returns 0.5
+                assert result == 0.5
 
 
 class TestExtractBullets:
@@ -231,6 +261,24 @@ class TestAssessMethod:
         engine = SelfAssessmentEngine(llm)
         result = await engine.assess("Write something", "bad output", domain="general")
         assert len(result.strengths) == 0
+
+    @pytest.mark.asyncio
+    async def test_diagnose_root_causes_with_agents(self):
+        from app.agents.base import SyzygyAgent
+
+        llm = AsyncMock()
+        llm.generate.return_value = "- Cause 1\n- Cause 2"
+        engine = SelfAssessmentEngine(llm)
+
+        agents = [SyzygyAgent.create("sage"), SyzygyAgent.create("hero")]
+        root_causes = await engine._diagnose_root_causes(
+            task="Write code",
+            output="def foo(): pass",
+            weaknesses=["accuracy"],
+            agents=agents,
+        )
+        assert "accuracy" in root_causes
+        assert len(root_causes["accuracy"]) >= 1
 
 
 # ═══════════════════════════════════════════════════════════
@@ -704,3 +752,211 @@ class TestAssessmentResult:
         assert r.root_causes == {}
         assert r.recommendations == []
         assert r.metrics == {}
+
+
+# ═══════════════════════════════════════════════════════════
+# Self-improvement API route tests (app/api/routes/self_improvement.py)
+# ═══════════════════════════════════════════════════════════
+
+class TestSelfImprovementRouteStart:
+    @pytest.mark.asyncio
+    async def test_start_with_no_agents_from_team_list(self):
+        """When agent_team specified but no agents found, falls back to default team."""
+        with (
+            patch("app.api.routes.self_improvement.agent_registry") as mock_registry,
+            patch("app.api.routes.self_improvement.RecursiveSelfImprovementWorkflow") as mock_workflow_cls,
+        ):
+            mock_registry.get.return_value = None
+            mock_registry.create_default_team.return_value = [MagicMock(), MagicMock()]
+            mock_workflow = AsyncMock()
+            mock_session = MagicMock()
+            mock_session.id = "session-1"
+            mock_session.status = "running"
+            mock_workflow.execute.return_value = mock_session
+            mock_workflow_cls.return_value = mock_workflow
+
+            from app.api.routes.self_improvement import start_self_improvement, SelfImprovementRequest
+            resp = await start_self_improvement(SelfImprovementRequest(task="test task", agent_team=["nonexistent"]))
+            assert resp["session_id"] == "session-1"
+            assert resp["status"] == "running"
+            mock_registry.create_default_team.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_with_valid_agents(self):
+        """When agent_team has valid agents, defaults team is not used."""
+        with (
+            patch("app.api.routes.self_improvement.agent_registry") as mock_registry,
+            patch("app.api.routes.self_improvement.RecursiveSelfImprovementWorkflow") as mock_workflow_cls,
+        ):
+            mock_agent = MagicMock()
+            mock_registry.get.return_value = mock_agent
+            mock_workflow = AsyncMock()
+            mock_session = MagicMock()
+            mock_session.id = "session-2"
+            mock_session.status = "completed"
+            mock_workflow.execute.return_value = mock_session
+            mock_workflow_cls.return_value = mock_workflow
+
+            from app.api.routes.self_improvement import start_self_improvement, SelfImprovementRequest
+            resp = await start_self_improvement(SelfImprovementRequest(task="test", agent_team=["sage"]))
+            assert resp["session_id"] == "session-2"
+
+    @pytest.mark.asyncio
+    async def test_start_exception_returns_500(self):
+        """Unexpected exception in start_self_improvement returns 500."""
+        with (
+            patch("app.api.routes.self_improvement.agent_registry"),
+            patch("app.api.routes.self_improvement.RecursiveSelfImprovementWorkflow") as mock_workflow_cls,
+        ):
+            mock_workflow = AsyncMock()
+            mock_workflow.execute.side_effect = ValueError("workflow failed")
+            mock_workflow_cls.return_value = mock_workflow
+
+            from app.api.routes.self_improvement import start_self_improvement, SelfImprovementRequest
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as exc:
+                await start_self_improvement(SelfImprovementRequest(task="test"))
+            assert exc.value.status_code == 500
+
+
+class TestSelfImprovementRouteGetSession:
+    @pytest.mark.asyncio
+    async def test_get_session_with_cycles(self):
+        """Returns session response with proper cycle data."""
+        mock_cycle = MagicMock()
+        mock_cycle.task = "some task"
+        mock_cycle.cycle_number = 1
+        mock_cycle.initial_assessment = MagicMock()
+        mock_cycle.initial_assessment.overall_score = 0.4
+        mock_cycle.final_assessment = MagicMock()
+        mock_cycle.final_assessment.overall_score = 0.8
+        mock_cycle.performance_delta = 0.4
+        mock_cycle.improvements_applied = ["imp1", "imp2"]
+        mock_cycle.convergence_reached = True
+        mock_cycle.completed_at = None
+
+        mock_session = MagicMock()
+        mock_session.id = "sess-1"
+        mock_session.task = "test"
+        mock_session.domain = "general"
+        mock_session.status = "completed"
+        mock_session.current_cycle = 1
+        mock_session.max_cycles = 5
+        mock_session.total_performance_gain = 0.4
+        mock_session.final_output = "output"
+        mock_session.meta_insights = ["insight"]
+        mock_session.cycles = [mock_cycle]
+        mock_session.created_at = MagicMock()
+        mock_session.created_at.isoformat.return_value = "2026-01-01T00:00:00"
+        mock_session.completed_at = MagicMock()
+        mock_session.completed_at.isoformat.return_value = "2026-01-01T01:00:00"
+
+        with patch("app.api.routes.self_improvement._active_sessions", {"sess-1": mock_session}):
+            from app.api.routes.self_improvement import get_session
+            from app.api.routes.self_improvement import SelfImprovementSessionResponse
+            resp = await get_session("sess-1")
+            assert isinstance(resp, SelfImprovementSessionResponse)
+            assert resp.session_id == "sess-1"
+            assert len(resp.cycles) == 1
+            assert resp.cycles[0].cycle_number == 1
+            assert resp.cycles[0].initial_score == 0.4
+            assert resp.cycles[0].final_score == 0.8
+            assert resp.cycles[0].improvements_applied == 2
+            assert resp.cycles[0].completed_at is None
+
+    @pytest.mark.asyncio
+    async def test_get_session_not_found(self):
+        """Returns 404 when session not found."""
+        with patch("app.api.routes.self_improvement._active_sessions", {}):
+            from app.api.routes.self_improvement import get_session
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as exc:
+                await get_session("nonexistent")
+            assert exc.value.status_code == 404
+
+
+class TestSelfImprovementRouteGetCycles:
+    @pytest.mark.asyncio
+    async def test_get_cycles_all(self):
+        """Returns all cycles from a session."""
+        mock_cycle = MagicMock()
+        mock_cycle.task = "some task"
+        mock_cycle.cycle_number = 1
+        mock_cycle.initial_assessment = MagicMock()
+        mock_cycle.initial_assessment.overall_score = 0.5
+        mock_cycle.final_assessment = MagicMock()
+        mock_cycle.final_assessment.overall_score = 0.7
+        mock_cycle.performance_delta = 0.2
+        mock_cycle.improvements_applied = [{"type": "code", "target_agent": "sage", "action": "refactor"}]
+        mock_cycle.convergence_reached = True
+
+        mock_session = MagicMock()
+        mock_session.id = "sess-2"
+        mock_session.cycles = [mock_cycle]
+
+        import app.api.routes.self_improvement as mod
+        original = mod._active_sessions
+        mod._active_sessions = {"sess-2": mock_session}
+        try:
+            # Must pass cycle_number=None explicitly; Query(None) is a FieldInfo
+            # object when calling the function directly (not via TestClient)
+            resp = await mod.get_cycles("sess-2", None)
+        finally:
+            mod._active_sessions = original
+        assert resp["session_id"] == "sess-2"
+        assert resp["total_cycles"] == 1
+        assert len(resp["cycles"]) == 1
+        assert resp["cycles"][0]["cycle_number"] == 1
+        assert resp["cycles"][0]["improvements"][0]["type"] == "code"
+        assert resp["cycles"][0]["improvements"][0]["action"] == "refactor"
+
+    @pytest.mark.asyncio
+    async def test_get_cycles_filtered(self):
+        """Returns only the matching cycle when cycle_number specified."""
+        mock_cycle_1 = MagicMock()
+        mock_cycle_1.task = "task 1"
+        mock_cycle_1.cycle_number = 1
+        mock_cycle_1.initial_assessment = None
+        mock_cycle_1.final_assessment = None
+        mock_cycle_1.performance_delta = 0.0
+        mock_cycle_1.improvements_applied = []
+        mock_cycle_1.convergence_reached = False
+
+        mock_cycle_2 = MagicMock()
+        mock_cycle_2.task = "task 2"
+        mock_cycle_2.cycle_number = 2
+        mock_cycle_2.initial_assessment = None
+        mock_cycle_2.final_assessment = None
+        mock_cycle_2.performance_delta = 0.1
+        mock_cycle_2.improvements_applied = []
+        mock_cycle_2.convergence_reached = True
+
+        mock_session = MagicMock()
+        mock_session.id = "sess-3"
+        mock_session.cycles = [mock_cycle_1, mock_cycle_2]
+
+        import app.api.routes.self_improvement as mod
+        original = mod._active_sessions
+        mod._active_sessions = {"sess-3": mock_session}
+        try:
+            resp = await mod.get_cycles("sess-3", 2)
+        finally:
+            mod._active_sessions = original
+        assert resp["total_cycles"] == 2
+        assert len(resp["cycles"]) == 1
+        assert resp["cycles"][0]["cycle_number"] == 2
+        assert resp["cycles"][0]["improvements"] == []
+
+    @pytest.mark.asyncio
+    async def test_get_cycles_not_found(self):
+        """Returns 404 when session not found."""
+        import app.api.routes.self_improvement as mod
+        orig = mod._active_sessions
+        mod._active_sessions = {}
+        try:
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as exc:
+                await mod.get_cycles("nonexistent", None)
+            assert exc.value.status_code == 404
+        finally:
+            mod._active_sessions = orig

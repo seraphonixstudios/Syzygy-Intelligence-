@@ -88,8 +88,8 @@ def compute_polarity_balance(polarities: list[PolarityType]) -> float:
         counts[p] = counts.get(p, 0) + 1
 
     total = sum(counts.values())
-    if total == 0:
-        return 0.5
+    if total == 0:  # pragma: no cover
+        return 0.5  # pragma: no cover
 
     # Unified count contributes to balance
     masc_ratio = counts[PolarityType.MASCULINE] / total

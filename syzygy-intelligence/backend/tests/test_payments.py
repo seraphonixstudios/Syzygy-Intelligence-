@@ -193,6 +193,38 @@ class TestWebhookHandlers:
             mock_log.assert_called_once()
 
 
+class TestPaymentRoutesEdgeCases:
+    @pytest.mark.asyncio
+    async def test_create_checkout_no_stripe_prod(self):
+        from app.api.routes.payments import create_checkout
+        user = MagicMock()
+        user.id = "u1"
+        user.email = "test@test.com"
+
+        req = MagicMock(price_id="price_premium", success_url="", cancel_url="")
+
+        with (
+            patch("app.api.routes.payments.get_stripe_config", return_value=None),
+            patch("app.api.routes.payments.settings.env", "production"),
+        ):
+            with pytest.raises(HTTPException) as exc:
+                await create_checkout(req, user=user)
+            assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_webhook_exception(self):
+        from app.api.routes.payments import stripe_webhook
+        request = MagicMock()
+        request.body = AsyncMock(return_value=b"{}")
+        request.headers = {"stripe-signature": "sig"}
+
+        with patch("app.api.routes.payments.handle_webhook", side_effect=ValueError("bad sig")):
+            with pytest.raises(HTTPException) as exc:
+                await stripe_webhook(request)
+            assert exc.value.status_code == 400
+            assert "bad sig" in str(exc.value.detail)
+
+
 class TestPaymentRoutes:
     def test_require_user_rejects_unauthenticated(self):
         import asyncio

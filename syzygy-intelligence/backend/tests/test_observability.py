@@ -163,3 +163,58 @@ class TestMetricsEndpoint:
         data, content_type = await metrics_endpoint()
         assert content_type
         assert data
+
+
+class TestSetupTracingProduction:
+    def test_sets_up_tracing_in_production(self):
+        """setup_tracing initializes Jaeger exporter in production with all deps."""
+        pytest.importorskip("opentelemetry.exporter.jaeger.thrift")
+        with (
+            patch("app.observability.settings") as mock_settings,
+            patch("app.observability.logger") as mock_logger,
+            patch("opentelemetry.exporter.jaeger.thrift.JaegerExporter") as mock_je,
+            patch("opentelemetry.instrumentation.fastapi.FastAPIInstrumentor") as mock_fi,
+            patch("opentelemetry.instrumentation.sqlalchemy.SQLAlchemyInstrumentor") as mock_si,
+            patch("opentelemetry.instrumentation.redis.RedisInstrumentor") as mock_ri,
+            patch("app.observability.TracerProvider") as mock_tp,
+            patch("app.observability.BatchSpanProcessor") as mock_bsp,
+            patch("app.observability.trace") as mock_trace,
+        ):
+            mock_settings.env = "production"
+            mock_settings.jaeger_host = "jaeger"
+            mock_settings.jaeger_port = 6831
+            from app.observability import setup_tracing
+            setup_tracing()
+            mock_je.assert_called_once_with(agent_host_name="jaeger", agent_port=6831)
+            mock_tp.assert_called_once()
+            mock_tp.return_value.add_span_processor.assert_called_once()
+            mock_trace.set_tracer_provider.assert_called_once()
+            mock_fi.instrument_app.assert_called_once()
+            mock_si.return_value.instrument.assert_called_once()
+            mock_ri.return_value.instrument.assert_called_once()
+            mock_logger.info.assert_called_with("OpenTelemetry tracing initialized with Jaeger")
+
+
+class TestRequestTracingMiddlewareException:
+    @pytest.mark.asyncio
+    async def test_logs_error_on_exception(self):
+        """Middleware logs error when the wrapped app raises."""
+        with (
+            patch("app.observability.logger") as mock_logger,
+            patch("app.observability.request_id_context") as mock_rid,
+            patch("app.observability.correlation_id_context") as mock_cid,
+        ):
+            from app.observability import RequestTracingMiddleware
+
+            async def failing_app(scope, receive, send):
+                raise RuntimeError("app crash")
+
+            middleware = RequestTracingMiddleware(failing_app)
+            scope = {"type": "http", "method": "GET", "path": "/fail", "headers": []}
+            receive = AsyncMock()
+            send = AsyncMock()
+
+            with pytest.raises(RuntimeError, match="app crash"):
+                await middleware(scope, receive, send)
+            mock_logger.error.assert_called_once()
+            assert "failed" in mock_logger.error.call_args[0][0]

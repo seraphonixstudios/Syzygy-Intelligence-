@@ -371,3 +371,94 @@ class TestClose:
 async def async_gen(items):
     for item in items:
         yield item
+
+
+# ═══════════════════════════════════════════════════════════
+# Edge case tests for OllamaClient
+# ═══════════════════════════════════════════════════════════
+
+class TestGenerateStreamEdgeCases:
+    @pytest.mark.asyncio
+    async def test_skips_json_decode_error_lines(self):
+        """Lines that fail JSON parsing are skipped in generate_stream."""
+        lines = [
+            'not json',
+            '{"response":"Hello","done":false}',
+            'also not json',
+            '{"response":"","done":true}',
+        ]
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.aiter_lines.return_value = async_gen(lines)
+
+        mock_httpx = MagicMock()
+        mock_httpx.__aenter__.return_value = mock_response
+        mock_httpx.__aexit__ = AsyncMock()
+
+        mock_client = MagicMock(spec=httpx.AsyncClient)
+        mock_client.stream.return_value = mock_httpx
+
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        c._client = mock_client
+
+        tokens = []
+        async for token in c.generate_stream("test"):
+            tokens.append(token)
+        assert tokens == ["Hello"]
+
+
+class TestChatEdgeCases:
+    @pytest.mark.asyncio
+    async def test_raises_on_request_error(self):
+        """Chat raises LLMConnectionError on httpx.RequestError."""
+        mock_httpx_client = MagicMock(spec=httpx.AsyncClient)
+        mock_httpx_client.post = AsyncMock(
+            side_effect=httpx.RequestError("connection failed", request=MagicMock())
+        )
+
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        c._client = mock_httpx_client
+        with pytest.raises(LLMConnectionError):
+            await c.chat([{"role": "user", "content": "Hi"}])
+
+
+class TestParseJsonEdgeCases:
+    def test_nested_brace_recovery(self):
+        """_parse_json recovers JSON by depth-counting braces when first_brace fails."""
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        resp = MagicMock()
+        # The text has two top-level objects; first_brace/last_brace picks both -> invalid JSON.
+        # Depth counting then extracts the first complete object.
+        resp.content = b'prefix {"a": 1} junk {"b": 2} suffix'
+        result = c._parse_json(resp)
+        assert result == {"a": 1}
+
+    def test_depth_counting_raises_on_unbalanced(self):
+        """_parse_json raises when depth counting finds no balanced pair (line 318)."""
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        resp = MagicMock()
+        # Raw json.loads fails, first_brace/last_brace candidate fails,
+        # and depth counting never finds depth == 0 -> raises
+        resp.content = b'prefix {"a": {"b": "c"} suffix'
+        import json
+        with pytest.raises(json.JSONDecodeError):
+            c._parse_json(resp)
+
+
+class TestHandleStreamEdgeCases:
+    @pytest.mark.asyncio
+    async def test_skips_json_decode_error(self):
+        """_handle_stream skips lines with JSON decode errors."""
+        lines = [
+            '{"response":"A","done":false}',
+            'invalid json line',
+            '{"response":"B","done":true}',
+        ]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.aiter_lines.return_value = async_gen(lines)
+
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        result = await c._handle_stream(mock_response)
+        assert result == "AB"

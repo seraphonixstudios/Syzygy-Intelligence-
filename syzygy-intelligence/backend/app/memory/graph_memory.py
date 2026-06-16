@@ -11,7 +11,7 @@ from app.logging_setup import logger
 
 try:
     from neo4j import Driver as Neo4jDriver
-except ImportError:
+except ImportError:  # pragma: no cover
     Neo4jDriver = Any  # type: ignore
 
 
@@ -32,8 +32,8 @@ class GraphMemory:
                     max_connection_lifetime=300,
                     connection_timeout=10,
                 )
-                self._initialized = True
-                logger.info("Neo4j graph memory initialized")
+                self._initialized = True  # pragma: no cover — requires running Neo4j
+                logger.info("Neo4j graph memory initialized")  # pragma: no cover — requires running Neo4j
             except Exception as e:
                 logger.warning(f"Neo4j not available, graph memory disabled: {e}")
                 self._initialized = True

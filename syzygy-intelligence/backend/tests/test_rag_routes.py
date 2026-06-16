@@ -232,3 +232,15 @@ class TestDeleteDocument:
         with pytest.raises(HTTPException) as exc:
             await delete_doc(DeleteRequest(source=""))
         assert exc.value.status_code == 400
+
+
+class TestIngestBatchEmptyFiles:
+    @pytest.mark.asyncio
+    async def test_no_files_returns_400(self):
+        from app.api.routes.rag import ingest_batch
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc:
+            await ingest_batch(files=[])
+        assert exc.value.status_code == 400
+        assert exc.value.detail == "No files provided"

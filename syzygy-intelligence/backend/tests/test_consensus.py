@@ -1,7 +1,7 @@
 """Comprehensive unit tests for Syzygy Consensus Engine."""
 
 import asyncio
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -12,6 +12,8 @@ from app.consensus.phases import (
     EvaluationPhase,
     ProposalPhase,
     RefinementPhase,
+    ShadowCritiquePhase,
+    ShadowIntegrationPhase,
 )
 from app.consensus.scoring import ConsensusScorer
 from app.consensus.synthesis import SynthesisGenerator
@@ -273,6 +275,12 @@ class TestConsensusScorer:
         text = "2.0, 0.5, 0.5, 0.5, 0.5"
         result = scorer._parse_fallback(text)
         assert result["accuracy"] == 1.0
+
+    def test_parse_fallback_exception_handler(self):
+        scorer = ConsensusScorer(llm=AsyncMock())
+        result = scorer._parse_fallback("invalid..data")
+        expected = dict(zip(scorer.SCORE_DIMENSIONS, [0.5, 0.5, 0.5, 0.5, 0.5]))
+        assert result == expected
 
     # -- evaluate_all --
 
@@ -1119,3 +1127,308 @@ class TestEvaluationPhase:
         agent = registry.create_agent("sage")
         prompt = EvaluationPhase.build_evaluation_prompt("Task", "", agent)
         assert prompt is not None
+
+
+# ===================================================================
+# ConsensusEngine edge cases — missing archetype, shadow phases, error fallbacks
+# ===================================================================
+
+class TestConsensusEngineEdgeCases:
+    async def test_run_consensus_missing_archetype(self):
+        """Agent with archetype=None raises ValidationError (line 128)."""
+        from app.errors import ValidationError
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        agent._archetype = None
+        with pytest.raises(ValidationError, match="missing archetype"):
+            await engine.run_consensus("task", agents=[agent], max_rounds=1, min_rounds=1)
+
+    async def test_agent_propose_missing_archetype(self):
+        """_agent_propose raises ValidationError when agent has no archetype (line 488)."""
+        from app.errors import ValidationError
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        agent._archetype = None
+        with pytest.raises(ValidationError, match="missing archetype"):
+            await engine._agent_propose(agent, "task", "context")
+
+    async def test_agent_refine_missing_archetype(self):
+        """_agent_refine raises ValidationError when agent has no archetype (line 535)."""
+        from app.errors import ValidationError
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        agent._archetype = None
+        with pytest.raises(ValidationError, match="missing archetype"):
+            await engine._agent_refine(agent, "task", "proposal", {})
+
+    async def test_critique_phase_fallback_same_polarity(self):
+        """When all agents share polarity, critique targets fall back to any agent (line 283)."""
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "critique"
+        registry = AgentRegistry()
+        sage1 = registry.create_agent("sage")  # masculine
+        sage2 = registry.create_agent("sage")  # masculine
+        session = ConsensusSession(task="Test", agents=[sage1, sage2])
+        round_data = ConsensusRound(
+            round_number=1,
+            proposals={sage1.id: "prop1", sage2.id: "prop2"},
+        )
+        session.rounds.append(round_data)
+        await engine._critique_phase(session, round_data)
+        assert sage1.id in round_data.critiques
+        assert sage2.id in round_data.critiques
+
+    async def test_evaluation_phase_all_error_proposals(self):
+        """When all proposals start with [Error, fall back to originals (lines 396-397)."""
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        engine.scorer = MagicMock()
+        engine.scorer.evaluate_all = AsyncMock(return_value={agent.id: {"accuracy": 0.5, "overall": 0.5}})
+        session = ConsensusSession(task="Test", agents=[agent])
+        round_data = ConsensusRound(
+            round_number=1,
+            proposals={agent.id: "[Error] something failed"},
+        )
+        await engine._evaluation_phase(session, round_data)
+        args = engine.scorer.evaluate_all.call_args[0]
+        assert args[1] == round_data.proposals
+
+    async def test_shadow_critique_phase(self):
+        """_shadow_critique_phase processes independent shadow agents (lines 316-340)."""
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "shadow critique"
+        registry = AgentRegistry()
+        from app.agents.shadow import ShadowAgent
+        shadow = ShadowAgent(
+            name="ShadowSage",
+            parent_archetype_key="sage",
+        )
+        shadow.align = MagicMock()
+        agent = registry.create_agent("sage")
+        session = ConsensusSession(
+            task="Test", agents=[agent], shadow_agents=[shadow]
+        )
+        round_data = ConsensusRound(
+            round_number=2,
+            proposals={agent.id: "proposal text"},
+        )
+        session.rounds.append(round_data)
+        await engine._shadow_critique_phase(session, round_data)
+        assert shadow.id in round_data.critiques
+
+    async def test_shadow_integration_phase(self):
+        """_shadow_integration_phase integrates shadow insights (lines 349-357)."""
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        registry = AgentRegistry()
+        from app.agents.shadow import ShadowAgent
+        shadow = ShadowAgent(
+            name="ShadowSage",
+            parent_archetype_key="sage",
+        )
+        agent = registry.create_agent("sage")
+        session = ConsensusSession(
+            task="Test", agents=[agent], shadow_agents=[shadow]
+        )
+        await engine._shadow_integration_phase(session)
+        assert len(session.shadow_integration_reports) == 1
+
+    def test_fusion_report_with_shadows(self):
+        """_generate_fusion_report includes shadow contributions (lines 463-467)."""
+        engine = ConsensusEngine()
+        registry = AgentRegistry()
+        from app.agents.shadow import ShadowAgent
+        shadow = ShadowAgent(
+            name="ShadowSage",
+            parent_archetype_key="sage",
+        )
+        shadow.alignment_score = 0.75
+        agent = registry.create_agent("sage")
+        session = ConsensusSession(
+            task="Test", agents=[agent], shadow_agents=[shadow],
+        )
+        session.current_round = 2
+        report = engine._generate_fusion_report(session)
+        assert "shadow_forces" in report
+        assert "ShadowSage" in report["shadow_forces"]
+        assert "0.75" in report["individuation_notes"]
+
+    async def test_run_consensus_with_events_all_phases(self):
+        """Full run with on_event covering critique, refinement, shadow events."""
+        registry = AgentRegistry()
+        agents = [registry.create_agent("sage"), registry.create_agent("great_mother")]
+        from app.agents.shadow import ShadowAgent
+        shadow = ShadowAgent(
+            name="ShadowSage", parent_archetype_key="sage"
+        )
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "mock response"
+        engine.scorer = ConsensusScorer(llm=AsyncMock())
+        engine.scorer._evaluate_single = AsyncMock(return_value={
+            "accuracy": 0.8, "holistic_insight": 0.7, "creativity": 0.6,
+            "feasibility": 0.7, "polarity_balance": 0.8,
+        })
+        events = []
+
+        async def on_event(event_type, data):
+            events.append(event_type)
+
+        result = await engine.run_consensus(
+            "Test task",
+            agents=agents,
+            shadow_agents=[shadow],
+            max_rounds=3,
+            min_rounds=1,
+            on_event=on_event,
+        )
+        assert result.status == "completed"
+        event_types = set(events)
+        assert "proposal" in event_types
+        assert "shadow_integration" in event_types
+
+
+# ===================================================================
+# ShadowCritiquePhase and ShadowIntegrationPhase
+# ===================================================================
+
+class TestShadowCritiquePhase:
+    def test_build_prompt(self):
+        """ShadowCritiquePhase.build_prompt delegates to shadow (line 119)."""
+        from app.agents.shadow import ShadowAgent
+        shadow = ShadowAgent(
+            name="ShadowSage",
+            parent_archetype_key="sage",
+        )
+        result = ShadowCritiquePhase.build_prompt(
+            "Test task", shadow, {"agent1": "proposal"}
+        )
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+
+class TestShadowIntegrationPhase:
+    def test_build_integration_summary_no_reports(self):
+        """Empty reports returns fallback message."""
+        result = ShadowIntegrationPhase.build_integration_summary([])
+        assert "No shadow integration occurred" in result
+
+    def test_build_integration_summary_with_reports(self):
+        """build_integration_summary formats reports (lines 129-138)."""
+        report = MagicMock()
+        report.shadow_agent_id = "shadow_1"
+        report.parent_agent_id = "parent_1"
+        report.insights = ["Insight one", "Insight two"]
+        report.alignment_delta = 0.05
+        report.new_alignment_score = 0.85
+        result = ShadowIntegrationPhase.build_integration_summary([report])
+        assert "shadow_1" in result
+        assert "parent_1" in result
+        assert "Insight one" in result
+        assert "Alignment delta" in result
+
+
+# ===================================================================
+# ConsensusEngine on_event branches — critique, shadow_critique, refinement events
+# ===================================================================
+
+class TestConsensusEngineOnEventBranches:
+    """Test the if on_event: branches for critique, shadow_critique, refinement."""
+
+    async def _make_engine(self, session, round_data):
+        """Create engine where _shadow_critique_phase and _critique_phase work."""
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "mock"
+        engine.scorer = ConsensusScorer(llm=AsyncMock())
+        engine.scorer._evaluate_single = AsyncMock(return_value={
+            "accuracy": 0.3, "holistic_insight": 0.3, "creativity": 0.3,
+            "feasibility": 0.3, "polarity_balance": 0.3,
+        })
+        return engine
+
+    @pytest.mark.asyncio
+    async def test_on_event_critique_branch(self):
+        """on_event is called with 'critique' when critique phase runs."""
+        registry = AgentRegistry()
+        agents = [registry.create_agent("sage"), registry.create_agent("great_mother")]
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "mock"
+        engine.scorer = ConsensusScorer(llm=AsyncMock())
+        engine.scorer._evaluate_single = AsyncMock(return_value={
+            "accuracy": 0.3, "holistic_insight": 0.3, "creativity": 0.3,
+            "feasibility": 0.3, "polarity_balance": 0.3,
+        })
+        events = []
+        async def on_event(etype, data):
+            events.append(etype)
+        result = await engine.run_consensus(
+            "Test task", agents=agents,
+            max_rounds=2, min_rounds=2, on_event=on_event,
+        )
+        assert "critique" in events
+
+    @pytest.mark.asyncio
+    async def test_on_event_shadow_critique_branch(self):
+        """on_event is called with 'shadow_critique' when shadow critique runs."""
+        from app.agents.shadow import ShadowAgent
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        shadow = ShadowAgent(name="ShadowSage", parent_archetype_key="sage")
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "mock"
+        engine.scorer = ConsensusScorer(llm=AsyncMock())
+        engine.scorer._evaluate_single = AsyncMock(return_value={
+            "accuracy": 0.3, "holistic_insight": 0.3, "creativity": 0.3,
+            "feasibility": 0.3, "polarity_balance": 0.3,
+        })
+        events = []
+        async def on_event(etype, data):
+            events.append(etype)
+        result = await engine.run_consensus(
+            "Test task", agents=[agent], shadow_agents=[shadow],
+            max_rounds=2, min_rounds=2, on_event=on_event,
+        )
+        assert "shadow_critique" in events
+
+    @pytest.mark.asyncio
+    async def test_on_event_refinement_branch(self):
+        """on_event is called with 'refinement' when refinement phase runs."""
+        registry = AgentRegistry()
+        agents = [registry.create_agent("sage"), registry.create_agent("great_mother")]
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.return_value = "mock"
+        engine.scorer = ConsensusScorer(llm=AsyncMock())
+        engine.scorer._evaluate_single = AsyncMock(return_value={
+            "accuracy": 0.3, "holistic_insight": 0.3, "creativity": 0.3,
+            "feasibility": 0.3, "polarity_balance": 0.3,
+        })
+        events = []
+        async def on_event(etype, data):
+            events.append(etype)
+        result = await engine.run_consensus(
+            "Test task", agents=agents,
+            max_rounds=2, min_rounds=2, on_event=on_event,
+        )
+        assert "refinement" in events
+
+    @pytest.mark.asyncio
+    async def test_shadow_critique_error_handling(self):
+        """Shadow critique LLM error produces fallback message (line 336)."""
+        from app.agents.shadow import ShadowAgent
+        registry = AgentRegistry()
+        agent = registry.create_agent("sage")
+        shadow = ShadowAgent(name="ShadowSage", parent_archetype_key="sage")
+        engine = ConsensusEngine(llm_client=AsyncMock())
+        engine.llm.generate.side_effect = Exception("LLM unavailable")
+        session = ConsensusSession(
+            task="Test", agents=[agent], shadow_agents=[shadow],
+        )
+        round_data = ConsensusRound(
+            round_number=2,
+            proposals={agent.id: "proposal text"},
+        )
+        session.rounds.append(round_data)
+        await engine._shadow_critique_phase(session, round_data)
+        assert "[Error in shadow critique" in round_data.critiques.get(shadow.id, "")

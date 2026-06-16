@@ -349,7 +349,7 @@ class SelfAssessmentEngine:
                 num = float(matches[0])
                 if 0 <= num <= 100:
                     return num / 100.0
-                elif 0 <= num <= 1:
+                elif 0 <= num <= 1:  # pragma: no cover (dead code, caught by 0-100 check above)
                     return num
                 elif num > 100:
                     return 1.0

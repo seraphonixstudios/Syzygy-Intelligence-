@@ -401,3 +401,206 @@ class TestResetUsageIfNeeded:
         user = _make_user(message_count=5)
         await _reset_usage_if_needed(user, _patch_deps["db"])
         assert user.message_count == 5
+
+
+class TestForgotPasswordEdgeCases:
+    @pytest.mark.asyncio
+    async def test_email_failure_non_console_raises(self, _patch_deps):
+        from app.api.routes.auth import forgot_password, ForgotPasswordRequest
+        _patch_deps["settings"].email_provider = "smtp"
+        user = _make_user()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = user
+        _patch_deps["db"].execute.return_value = result
+        _patch_deps["send_email"].side_effect = RuntimeError("SMTP down")
+
+        with pytest.raises(HTTPException) as exc:
+            await forgot_password(ForgotPasswordRequest(email="test@example.com"), _patch_deps["db"])
+        assert exc.value.status_code == 503
+
+
+class TestSendVerificationEdgeCases:
+    @pytest.mark.asyncio
+    async def test_email_failure_non_console_raises(self, _patch_deps):
+        from app.api.routes.auth import send_verification, SendVerificationRequest
+        _patch_deps["settings"].email_provider = "smtp"
+        user = _make_user(verified_at=None)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = user
+        _patch_deps["db"].execute.return_value = result
+        _patch_deps["send_email"].side_effect = RuntimeError("SMTP down")
+
+        with pytest.raises(HTTPException) as exc:
+            await send_verification(SendVerificationRequest(email="test@example.com"), _patch_deps["db"])
+        assert exc.value.status_code == 503
+
+
+class TestResetPasswordEdgeCases:
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_sub(self, _patch_deps):
+        from app.api.routes.auth import reset_password, ResetPasswordRequest
+        import jwt
+        token = jwt.encode({"type": "password_reset", "sub": None}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await reset_password(ResetPasswordRequest(token=token, new_password="new"), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_rejects_user_not_found(self, _patch_deps):
+        from app.api.routes.auth import reset_password, ResetPasswordRequest
+        from app.api.auth import create_password_reset_token
+        from unittest.mock import PropertyMock
+        user_id = str(uuid.uuid4())
+        token = create_password_reset_token(user_id)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None
+        _patch_deps["db"].execute.return_value = result
+
+        with pytest.raises(HTTPException) as exc:
+            await reset_password(ResetPasswordRequest(token=token, new_password="new"), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+
+class TestVerifyEmailEdgeCases:
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_sub(self, _patch_deps):
+        from app.api.routes.auth import verify_email, VerifyEmailRequest
+        import jwt
+        token = jwt.encode({"type": "email_verification", "sub": None}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await verify_email(VerifyEmailRequest(token=token), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_rejects_user_not_found(self, _patch_deps):
+        from app.api.routes.auth import verify_email, VerifyEmailRequest
+        from app.api.auth import create_verification_token
+        user_id = str(uuid.uuid4())
+        token = create_verification_token(user_id)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None
+        _patch_deps["db"].execute.return_value = result
+
+        with pytest.raises(HTTPException) as exc:
+            await verify_email(VerifyEmailRequest(token=token), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+
+class TestRefreshEdgeCases:
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_sub_or_email(self, _patch_deps):
+        from app.api.routes.auth import refresh, RefreshRequest
+        import jwt
+        token = jwt.encode({"type": "refresh", "sub": None, "email": None}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await refresh(RefreshRequest(refresh_token=token))
+        assert exc.value.status_code == 401
+
+
+class TestUserToResponseEdgeCases:
+    def test_enterprise_user_gets_premium_limit(self):
+        from app.db.models import SubscriptionTier
+        from app.api.routes.auth import _user_to_response
+        user = _make_user(subscription_tier=SubscriptionTier.ENTERPRISE)
+        resp = _user_to_response(user)
+        assert resp.monthly_message_limit == 1000
+
+    def test_premium_user_gets_premium_limit(self):
+        from app.db.models import SubscriptionTier
+        from app.api.routes.auth import _user_to_response
+        user = _make_user(subscription_tier=SubscriptionTier.PREMIUM)
+        resp = _user_to_response(user)
+        assert resp.monthly_message_limit == 1000
+
+
+class TestVerifyEmailSubNone:
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_sub(self, _patch_deps):
+        from app.api.routes.auth import verify_email, VerifyEmailRequest
+        import jwt
+        token = jwt.encode({"type": "email_verification", "sub": None}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await verify_email(VerifyEmailRequest(token=token), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+
+class TestRefreshSubOrEmailNone:
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_sub(self, _patch_deps):
+        from app.api.routes.auth import refresh, RefreshRequest
+        import jwt
+        token = jwt.encode({"type": "refresh", "sub": None, "email": "test@example.com"}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await refresh(RefreshRequest(refresh_token=token))
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_email(self, _patch_deps):
+        from app.api.routes.auth import refresh, RefreshRequest
+        import jwt
+        token = jwt.encode({"type": "refresh", "sub": "user-1", "email": None}, "secret", algorithm="HS256")
+        with pytest.raises(HTTPException) as exc:
+            await refresh(RefreshRequest(refresh_token=token))
+        assert exc.value.status_code == 401
+
+
+class TestResetPasswordSubNoneWithValidToken:
+    @pytest.mark.asyncio
+    async def test_reset_password_token_with_sub_none(self, _patch_deps):
+        from app.api.routes.auth import reset_password, ResetPasswordRequest
+        from app.config import settings
+        import jwt
+        token = jwt.encode(
+            {"type": "password_reset", "sub": None},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        with pytest.raises(HTTPException) as exc:
+            await reset_password(ResetPasswordRequest(token=token, new_password="new"), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+
+class TestVerifyEmailSubNoneWithValidToken:
+    @pytest.mark.asyncio
+    async def test_verify_email_token_with_sub_none(self, _patch_deps):
+        from app.api.routes.auth import verify_email, VerifyEmailRequest
+        from app.config import settings
+        import jwt
+        token = jwt.encode(
+            {"type": "email_verification", "sub": None},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        with pytest.raises(HTTPException) as exc:
+            await verify_email(VerifyEmailRequest(token=token), _patch_deps["db"])
+        assert exc.value.status_code == 400
+
+
+class TestRefreshTokenSubEmailNoneWithValidToken:
+    @pytest.mark.asyncio
+    async def test_refresh_token_with_sub_none_valid_key(self, _patch_deps):
+        from app.api.routes.auth import refresh, RefreshRequest
+        from app.config import settings
+        import jwt
+        token = jwt.encode(
+            {"type": "refresh", "sub": None, "email": "test@example.com"},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        with pytest.raises(HTTPException) as exc:
+            await refresh(RefreshRequest(refresh_token=token))
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_with_email_none_valid_key(self, _patch_deps):
+        from app.api.routes.auth import refresh, RefreshRequest
+        from app.config import settings
+        import jwt
+        token = jwt.encode(
+            {"type": "refresh", "sub": "user-1", "email": None},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        with pytest.raises(HTTPException) as exc:
+            await refresh(RefreshRequest(refresh_token=token))
+        assert exc.value.status_code == 401

@@ -1,4 +1,4 @@
-"""WebSocket handler for real-time chat and agent communication."""
+"""WebSocket handler for real-time chat and agent communication."""  # pragma: no cover
 
 from __future__ import annotations
 

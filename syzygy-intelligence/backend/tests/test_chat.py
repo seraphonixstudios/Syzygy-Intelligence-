@@ -360,3 +360,48 @@ class TestChatStream:
         })
         assert resp.status_code == 200
         assert "Unexpected" in resp.text
+
+
+# ===================================================================
+# Multi-model timeout and exception branches
+# ===================================================================
+
+class TestChatMultiModelEdgeCases:
+    def test_multi_model_timeout(self, _patch_modules):
+        from app.api.routes.chat import model_manager
+        import asyncio
+        model_manager.generate_multi_model = AsyncMock(side_effect=asyncio.TimeoutError())
+
+        resp = TestClient(test_app).post("/api/chat/multi-model", json={
+            "message": "Test",
+            "models": ["qwen3:8b-gpu"],
+        })
+        assert resp.status_code == 504
+
+    def test_multi_model_generic_exception(self, _patch_modules):
+        from app.api.routes.chat import model_manager
+        model_manager.generate_multi_model = AsyncMock(side_effect=RuntimeError("Unexpected failure"))
+
+        resp = TestClient(test_app).post("/api/chat/multi-model", json={
+            "message": "Test",
+            "models": ["qwen3:8b-gpu"],
+        })
+        assert resp.status_code == 500
+        assert "Unexpected failure" in resp.json()["detail"]
+
+
+# ===================================================================
+# GET /api/chat/models — exception branch
+# ===================================================================
+
+class TestChatModelsEdgeCases:
+    def test_list_models_failure_returns_empty_available(self, _patch_modules):
+        from app.api.routes.chat import model_manager
+        model_manager.get_model_for_role.side_effect = lambda r: f"model-{r}"
+        model_manager.list_available_models = AsyncMock(side_effect=RuntimeError("Ollama down"))
+        model_manager.get_all_model_names.return_value = ["qwen3:8b-gpu"]
+
+        resp = TestClient(test_app).get("/api/chat/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["available"] == []

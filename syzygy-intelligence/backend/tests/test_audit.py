@@ -179,3 +179,43 @@ class TestSyzygyLogger:
         except RuntimeError as e:
             logger.log_exception(e, "context", extra_field="value")
             # Should not raise
+
+
+class TestAuditServiceCountWithSessionId:
+    @pytest.mark.asyncio
+    async def test_filters_by_session_id(self):
+        import uuid
+        from unittest.mock import patch
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+        from app.audit import AuditService
+        from app.db.models import AuditLog, Base
+
+        engine = create_async_engine("sqlite+aiosqlite://")
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_a = uuid.uuid4()
+        session_b = uuid.uuid4()
+
+        async with factory() as db:
+            db.add_all([
+                AuditLog(id=uuid.uuid4(), event_type="t1", action="a1", session_id=session_a, details={}),
+                AuditLog(id=uuid.uuid4(), event_type="t1", action="a2", session_id=session_a, details={}),
+                AuditLog(id=uuid.uuid4(), event_type="t1", action="a3", session_id=session_b, details={}),
+            ])
+            await db.commit()
+
+        with patch("app.audit._get_session_factory", return_value=factory):
+            svc = AuditService()
+            count_a = await svc.count(session_id=str(session_a))
+            assert count_a == 2
+
+            count_b = await svc.count(session_id=str(session_b))
+            assert count_b == 1
+
+            count_none = await svc.count(session_id="00000000-0000-0000-0000-000000000000")
+            assert count_none == 0

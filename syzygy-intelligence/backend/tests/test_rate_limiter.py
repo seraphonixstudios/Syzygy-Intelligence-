@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections import defaultdict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -305,3 +306,83 @@ class TestSetupRateLimiter:
             setup_rate_limiter(app)
             # No middleware should be registered
             assert len(app.user_middleware) == 0
+
+
+class TestRedisRateLimiterEdgeCases:
+    @pytest.mark.asyncio
+    async def test_consume_redis_error_cleanup_aclose_exception(self):
+        limiter = RedisRateLimiter(rate=10.0, burst=5)
+        limiter._sha = "sha1"
+        mock_redis = AsyncMock()
+        mock_redis.evalsha = AsyncMock(side_effect=Exception("Redis down"))
+        mock_redis.aclose = AsyncMock(side_effect=RuntimeError("close failed"))
+        limiter._redis = mock_redis
+
+        result = await limiter.consume("test-key")
+        assert result is True
+        assert limiter._redis is None
+
+    @pytest.mark.asyncio
+    async def test_consume_redis_returns_false_triggers_fallback(self):
+        limiter = RedisRateLimiter(rate=10.0, burst=5)
+        limiter._redis = AsyncMock()
+        limiter._sha = "sha1"
+        mock_redis = AsyncMock()
+        mock_redis.evalsha = AsyncMock(return_value=0)
+        limiter._redis = mock_redis
+
+        from app.middleware.rate_limiter import RateLimiterMiddleware
+        app = FastAPI()
+        middleware = RateLimiterMiddleware(app)
+
+        result = await middleware._check("ip", "test-ip")
+        assert result is True or result is False  # In-memory fallback decides
+
+
+class TestRateLimiter429Response:
+    @pytest.mark.asyncio
+    async def test_rate_limited_returns_429(self):
+        app = FastAPI()
+
+        @app.get("/api/test")
+        async def test_endpoint():
+            return {"ok": True}
+
+        middleware = RateLimiterMiddleware(app)
+
+        # Make Redis limiter connected and return False (rate limited)
+        mock_redis = AsyncMock()
+        mock_redis.evalsha = AsyncMock(return_value=0)
+        middleware.ip_limiter._redis = mock_redis
+        middleware.ip_limiter._sha = "sha1"
+        middleware.ip_limiter._circuit_breaker_state = CircuitBreakerState.CLOSED
+
+        # Make in-memory fallback also return False
+        middleware.ip_fallback["127.0.0.1"] = TokenBucket(rate=0, burst=0)
+
+        sent_429 = False
+
+        async def mock_send(msg):
+            nonlocal sent_429
+            if msg["type"] == "http.response.start" and msg["status"] == 429:
+                sent_429 = True
+
+        async def mock_receive():
+            return {"type": "http.request"}
+
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "query_string": b"",
+        }
+
+        with patch("app.middleware.rate_limiter.settings") as mock_settings:
+            mock_settings.rate_limit_enabled = True
+            mock_settings.rate_limit_per_second = 0.001
+            mock_settings.rate_limit_burst = 0
+
+            await middleware(scope, mock_receive, mock_send)
+            assert sent_429

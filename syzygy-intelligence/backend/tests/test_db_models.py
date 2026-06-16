@@ -99,6 +99,23 @@ class TestARRAYType:
         result = array_type.process_result_value("[]", sqlite_dialect())
         assert result == []
 
+    def test_load_dialect_impl_postgresql(self):
+        from app.db.models import ARRAY
+        from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+        from sqlalchemy import String
+        from unittest.mock import MagicMock
+
+        impl = ARRAY().load_dialect_impl(MagicMock(name="postgresql"))
+        assert isinstance(impl, PG_ARRAY)
+        assert impl.item_type._type_affinity is String
+
+    def test_bind_param_postgresql_passthrough(self):
+        from app.db.models import ARRAY
+        from unittest.mock import MagicMock
+
+        result = ARRAY().process_bind_param([1, 2, 3], MagicMock(name="postgresql"))
+        assert result == [1, 2, 3]
+
 
 class TestVECTORType:
     def test_fallback_is_type_decorator(self):

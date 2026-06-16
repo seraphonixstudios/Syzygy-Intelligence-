@@ -262,3 +262,103 @@ class TestConsensusGetSessionEndpoint:
             assert resp.json()["synthesis"] == ""
         finally:
             del engine.active_sessions[session.id]
+
+
+# ===================================================================
+# Edge cases for consensus routes
+# ===================================================================
+
+class TestConsensusEdgeCases:
+
+    @patch("app.api.routes.consensus.check_usage_limit")
+    @patch("app.api.routes.consensus.run_consensus_with_memory")
+    @patch("app.api.routes.consensus.ws_manager")
+    def test_on_event_calls_ws_manager(self, mock_ws, mock_run, _check):
+        """The on_event callback actually sends messages via ws_manager."""
+        mock_ws.send_to = AsyncMock()
+
+        async def _mock_run(engine=None, task=None, agents=None, session_id=None,
+                            max_rounds=None, min_rounds=None, convergence_threshold=None,
+                            on_event=None):
+            if on_event:
+                await on_event("round", {"round": 1})
+            return _fake_session()
+
+        mock_run.side_effect = _mock_run
+
+        resp = TestClient(test_app).post("/api/consensus/run", json={
+            "task": "Test",
+            "ws_client_id": "ws-123",
+        })
+        assert resp.status_code == 200
+        mock_ws.send_to.assert_awaited_once_with("ws-123", {"type": "consensus_round", "round": 1})
+
+    @patch("app.api.routes.consensus.run_consensus_with_memory")
+    def test_run_unexpected_error_returns_500(self, mock_run):
+        """Unexpected exception in run_consensus returns 500."""
+        mock_run.side_effect = RuntimeError("engine crash")
+        resp = TestClient(test_app).post("/api/consensus/run", json={"task": "Test"})
+        assert resp.status_code == 500
+
+    @patch("app.api.routes.consensus.check_usage_limit")
+    @patch("app.api.routes.consensus.run_consensus_with_memory")
+    def test_agent_ids_some_valid(self, mock_run, _check):
+        """When some agent_ids match, the matched agents are used."""
+        mock_run.return_value = _fake_session()
+        from app.api.routes.consensus import agent_registry
+        resp = TestClient(test_app).post("/api/consensus/run", json={
+            "task": "Test",
+            "agent_ids": ["nonexistent"],
+        })
+        assert resp.status_code == 400
+
+    @patch("app.api.routes.consensus.check_usage_limit")
+    @patch("app.api.routes.consensus.run_consensus_with_memory")
+    def test_agent_ids_mixed_valid_and_invalid(self, mock_run, _check):
+        """When some agent_ids are valid and some aren't, valid ones are used."""
+        from app.api.routes.consensus import agent_registry
+        agent = agent_registry.create_agent("sage")
+        mock_run.return_value = _fake_session()
+        resp = TestClient(test_app).post("/api/consensus/run", json={
+            "task": "Test",
+            "agent_ids": [agent.id, "nonexistent"],
+        })
+        assert resp.status_code == 200
+        _, kwargs = mock_run.call_args
+        assert len(kwargs["agents"]) == 1
+        assert kwargs["agents"][0].id == agent.id
+
+    def test_list_sessions_empty(self):
+        """list_sessions returns empty list when no active sessions."""
+        from app.api.routes.consensus import engine
+        engine.active_sessions.clear()
+        resp = TestClient(test_app).get("/api/consensus/sessions")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["sessions"] == []
+        assert data["count"] == 0
+
+    def test_list_sessions_with_data(self):
+        """list_sessions returns session summaries."""
+        from app.api.routes.consensus import engine
+        session = ConsensusSession(task="Active task", status="running")
+        engine.active_sessions[session.id] = session
+        try:
+            resp = TestClient(test_app).get("/api/consensus/sessions")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["count"] == 1
+            assert data["sessions"][0]["session_id"] == session.id
+            assert data["sessions"][0]["task"] == "Active task"
+            assert data["sessions"][0]["status"] == "running"
+        finally:
+            del engine.active_sessions[session.id]
+
+    def test_get_session_unexpected_error_returns_500(self):
+        """Unexpected exception in get_session returns 500."""
+        from app.api.routes.consensus import engine
+        bad = MagicMock(spec_set=dict)
+        bad.get.side_effect = RuntimeError("fail")
+        with patch.object(engine, "active_sessions", bad):
+            resp = TestClient(test_app).get("/api/consensus/sessions/some-id")
+            assert resp.status_code == 500

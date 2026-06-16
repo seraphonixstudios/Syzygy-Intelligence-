@@ -303,3 +303,126 @@ class TestComposeShadowTeam:
         from app.api.routes.agents import compose_shadow_team
         result = await compose_shadow_team()
         assert len(result["shadow_agents"]) == 2
+
+
+# ═══════════════════════════════════════════════════════════
+# Generic exception handler tests for all agent routes
+# ═══════════════════════════════════════════════════════════
+
+class TestAgentRouteExceptionHandlers:
+    @pytest.mark.asyncio
+    async def test_list_agents_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.list_agents.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import list_agents
+            with pytest.raises(HTTPException) as exc:
+                await list_agents()
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_get_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import get_agent
+            with pytest.raises(HTTPException) as exc:
+                await get_agent("a1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_delete_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.remove.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import delete_agent
+            with pytest.raises(HTTPException) as exc:
+                await delete_agent("a1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_compose_team_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.create_default_team.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import compose_team
+            with pytest.raises(HTTPException) as exc:
+                await compose_team()
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_toggle_shadow_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import toggle_shadow
+            with pytest.raises(HTTPException) as exc:
+                await toggle_shadow("a1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_list_shadow_agents_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.list_shadow_agents.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import list_shadow_agents
+            with pytest.raises(HTTPException) as exc:
+                await list_shadow_agents()
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_create_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.create_shadow_agent.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import create_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await create_shadow_agent({})
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_get_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get_shadow.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import get_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await get_shadow_agent("s1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_delete_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.remove_shadow.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import delete_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await delete_shadow_agent("s1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_align_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get_shadow.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import align_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await align_shadow_agent("s1", {})
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_misalign_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get_shadow.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import misalign_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await misalign_shadow_agent("s1", {})
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_integrate_shadow_agent_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.get_shadow.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import integrate_shadow_agent
+            with pytest.raises(HTTPException) as exc:
+                await integrate_shadow_agent("s1", "a1")
+            assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_compose_shadow_team_exception(self):
+        with patch("app.api.routes.agents.agent_registry") as mr:
+            mr.create_shadow_balanced_team.side_effect = RuntimeError("unexpected")
+            from app.api.routes.agents import compose_shadow_team
+            with pytest.raises(HTTPException) as exc:
+                await compose_shadow_team()
+            assert exc.value.status_code == 500

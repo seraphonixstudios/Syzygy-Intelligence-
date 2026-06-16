@@ -1,5 +1,7 @@
 """Unit tests for Syzygy Notifications and Audit System."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from app.notifications import (
@@ -47,6 +49,42 @@ class TestNotification:
     def test_all_severities_have_values(self):
         for s in NotificationSeverity:
             assert s.value
+
+
+class TestMessageBusHistory:
+    @pytest.mark.asyncio
+    async def test_history_truncation(self):
+        bus = MessageBus()
+        for i in range(1100):
+            await bus.publish(Notification(type=NotificationType.SYSTEM, title=f"T{i}"))
+        history = bus.get_history(limit=2000)
+        assert len(history) == 1000
+        assert history[0].title == "T100"
+
+    @pytest.mark.asyncio
+    async def test_sync_callback(self):
+        bus = MessageBus()
+        received = []
+
+        def sync_handler(notification):
+            received.append(notification)
+
+        bus.subscribe("system", sync_handler)
+        await bus.publish(Notification(type=NotificationType.SYSTEM, title="Sync"))
+        assert len(received) == 1
+
+    @pytest.mark.asyncio
+    async def test_callback_exception_logged(self):
+        bus = MessageBus()
+        with patch("app.notifications.logger.error") as mock_err:
+
+            async def failing_handler(n):
+                raise RuntimeError("handler crashed")
+
+            bus.subscribe("system", failing_handler)
+            await bus.publish(Notification(type=NotificationType.SYSTEM, title="Fail"))
+            mock_err.assert_called_once()
+            assert "handler crashed" in str(mock_err.call_args)
 
 
 class TestMessageBus:
@@ -124,6 +162,40 @@ class TestMessageBus:
         await bus.publish(Notification(type=NotificationType.SYSTEM, title="T"))
         assert len(r1) == 1
         assert len(r2) == 1
+
+
+class TestNotificationManagerWsSend:
+    @pytest.mark.asyncio
+    async def test_notify_ws_broadcast_success(self):
+        nm = NotificationManager()
+        send = AsyncMock()
+        nm.register_ws("cid1", send)
+
+        with patch("app.notifications.audit_service.log", new_callable=AsyncMock):
+            n = await nm.notify(
+                type=NotificationType.SYSTEM,
+                title="Broadcast",
+                body="To all",
+            )
+        send.assert_awaited_once()
+        assert send.call_args[0][0]["title"] == "Broadcast"
+
+    @pytest.mark.asyncio
+    async def test_notify_ws_broadcast_failure_disconnects(self):
+        nm = NotificationManager()
+        send_fail = AsyncMock(side_effect=RuntimeError("WS gone"))
+        send_ok = AsyncMock()
+        nm.register_ws("cid_fail", send_fail)
+        nm.register_ws("cid_ok", send_ok)
+
+        with patch("app.notifications.audit_service.log", new_callable=AsyncMock):
+            with patch.object(nm, "unregister_ws") as mock_unreg:
+                await nm.notify(
+                    type=NotificationType.SYSTEM,
+                    title="Test",
+                )
+        mock_unreg.assert_called_once_with("cid_fail")
+        assert send_ok.await_count == 1
 
 
 class TestNotificationManager:

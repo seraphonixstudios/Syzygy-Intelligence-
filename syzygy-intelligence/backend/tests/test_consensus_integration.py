@@ -206,6 +206,32 @@ class TestRunConsensusWithMemory:
         assert engine.run_consensus.call_args.kwargs["on_event"] is callback
 
     @pytest.mark.asyncio
+    async def test_memory_enriched_propose(self, mock_memory, mock_checkpoint, mock_db):
+        mock_memory.search_team_memory = AsyncMock(return_value=[{"content": "past team work"}])
+        mock_memory.recall = AsyncMock(return_value=[{"content": "past result data"}])
+
+        engine = AsyncMock()
+        session = make_session()
+        engine.run_consensus = AsyncMock(return_value=session)
+
+        original_propose = AsyncMock(return_value="proposal")
+        engine._agent_propose = original_propose
+
+        await run_consensus_with_memory(engine, "t", [make_mock_agent()], session_id="ses-mem")
+
+        # Verify the wrapper was created and calls original with enriched context
+        assert engine._agent_propose is not original_propose
+
+        # Call the wrapper directly — it should enrich context
+        result = await engine._agent_propose(make_mock_agent(), "task", "base_ctx")
+        assert result == "proposal"
+        # original was called with enriched context containing past memories
+        original_propose.assert_awaited_once()
+        args = original_propose.call_args[0]
+        assert "past team work" in args[2]
+        assert "past result data" in args[2]
+
+    @pytest.mark.asyncio
     async def test_enriches_context_with_memories(self, mock_memory, mock_checkpoint, mock_db):
         mock_memory.search_team_memory = AsyncMock(return_value=[{"content": "past team work"}])
         mock_memory.recall = AsyncMock(return_value=[{"content": "past result data"}])

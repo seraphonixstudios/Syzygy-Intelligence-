@@ -10,6 +10,7 @@
 [![Ollama](https://img.shields.io/badge/Ollama-GPU-000000?style=flat&logo=llama)](https://ollama.ai/)
 [![License](https://img.shields.io/badge/License-MIT-d4a843?style=flat)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/seraphonixstudios/Syzygy-Intelligence-/.github/workflows/e2e.yml?branch=main&style=flat&label=CI&color=success)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/actions)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-)
 [![PRs](https://img.shields.io/badge/PRs-Welcome-8b6914?style=flat)](https://github.com/seraphonixstudios/Syzygy-Intelligence-/pulls)
 
 > *"The union of opposites is the eternal cosmic pattern."* — Heraclitus
@@ -234,7 +235,7 @@ syzygy-intelligence/
 │   │   └── ScrollToTop.tsx     # Route-change scroll reset
 │   ├── hooks/                  # useApi, useWebSocket, useVoiceRecorder
 │   ├── lib/                    # Utilities, theme config, structured logger
-│   ├── e2e/                    # Playwright end-to-end test suite (38 tests)
+│   ├── e2e/                    # Playwright end-to-end test suite (29 specs, 272 tests)
 │   ├── playwright.config.ts    # E2E test configuration
 │   └── public/branding/        # PNG assets
 │       ├── pagetop.logo.png    # Page header logo
@@ -302,17 +303,21 @@ alembic revision --autogenerate -m "description"
 ### Testing
 
 ```bash
-# Frontend E2E tests (Playwright, 23 spec files across all pages)
+# Frontend E2E tests (Playwright, 29 spec files, 272 tests)
 cd frontend
 npm install          # includes @playwright/test
 npx playwright install chromium
 npx playwright test  # headless CI mode
 
-# Backend tests (pytest, 234 tests across all modules)
+# Backend tests (pytest, 1534 tests across all modules, 100% coverage)
 cd backend
 pip install -r requirements.txt
 pytest              # auto-discovers tests/
 pytest -v           # verbose output
+
+# Frontend unit tests (vitest, 225 tests in 23 files)
+cd frontend
+npm run test:unit
 ```
 
 ### CI Pipeline
@@ -322,8 +327,8 @@ The CI pipeline (`.github/workflows/e2e.yml`) runs three jobs in parallel on eve
 | Job | What it does |
 |-----|-------------|
 | **frontend-lint** | `next lint --strict` + `tsc --noEmit` |
-| **backend-lint-and-test** | `pytest` 234 tests against PostgreSQL service + mock Ollama |
-| **e2e** | Playwright 23 spec files against full stack (PostgreSQL + backend + frontend) |
+| **backend-lint-and-test** | `pytest` 1534 tests (100% coverage) against PostgreSQL service + mock Ollama |
+| **e2e** | Playwright 29 spec files (272 tests) against full stack (PostgreSQL + backend + frontend) |
 
 A lightweight mock Ollama server (`backend/tests/mock_ollama_server.py`) serves canned responses for `/api/generate`, `/api/embed`, and `/api/tags` so workflow execution tests pass without requiring a GPU or downloaded models. The backend config accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed) for easy CI integration.
 

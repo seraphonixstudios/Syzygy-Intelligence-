@@ -104,6 +104,33 @@ class TestLifespan:
             assert len(warning_calls) == 1
 
     @pytest.mark.asyncio
+    async def test_missing_all_deps_logs_warning(self):
+        from app.main import lifespan
+        mods_to_remove = {
+            k: v for k, v in dict(__import__("sys").modules).items()
+            if k in ("sqlalchemy", "httpx", "bcrypt", "jwt")
+        }
+        with (
+            patch("app.main.init_db", new_callable=AsyncMock, return_value=True),
+            patch("app.main.close_db", new_callable=AsyncMock),
+            patch("app.main.setup_tracing"),
+            patch("app.main.setup_error_handlers"),
+            patch("app.main.setup_rate_limiter"),
+            patch("app.main.logger") as mock_logger,
+            patch.dict("sys.modules", {"sqlalchemy": None, "httpx": None, "bcrypt": None, "jwt": None}, clear=False),
+        ):
+            async with lifespan(MagicMock()):
+                pass
+        warning_calls = [c for c in mock_logger.warning.call_args_list
+                         if "Missing dependencies" in str(c)]
+        assert len(warning_calls) == 1
+        msg = str(warning_calls[0])
+        assert "sqlalchemy" in msg
+        assert "httpx" in msg
+        assert "bcrypt" in msg
+        assert "PyJWT" in msg
+
+    @pytest.mark.asyncio
     async def test_db_init_exception_prod_raises(self):
         with (
             patch("app.main.init_db", new_callable=AsyncMock, side_effect=Exception("conn refused")),

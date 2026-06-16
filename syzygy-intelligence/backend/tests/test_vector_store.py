@@ -291,6 +291,23 @@ async def test_store_handles_empty_agent_id(mock_chromadb):
 
 
 @pytest.mark.asyncio
+async def test_chroma_generic_exception_disables_vector_store():
+    """Verify generic Exception during Chroma init is handled gracefully."""
+    from app.memory.vector_store import logger, VectorMemory
+
+    vm = VectorMemory()
+    with (
+        patch("chromadb.PersistentClient", side_effect=Exception("Disk full")) as mock_client,
+        patch.object(logger, "warning") as mock_warn,
+    ):
+        await vm._ensure_init()
+
+    mock_warn.assert_called_once()
+    assert "Disk full" in str(mock_warn.call_args)
+    assert vm._initialized is True
+
+
+@pytest.mark.asyncio
 async def test_chroma_import_error_disables_vector_store():
     """Verify ImportError when chromadb is unavailable is handled gracefully."""
     from app.memory.vector_store import logger, VectorMemory

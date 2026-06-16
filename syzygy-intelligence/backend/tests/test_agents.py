@@ -228,6 +228,56 @@ class TestAgentRegistry:
         assert len(team) == 5
 
 
+class TestShadowAgentEdgeCases:
+    def test_parent_archetype_none(self):
+        shadow = ShadowAgent.create("nonexistent", name="Ghost")
+        # Force _archetype to None to hit the fallback branch
+        shadow._archetype = None
+        assert shadow.parent_archetype is None
+
+    def test_polarity_fallback_when_archetype_none(self):
+        shadow = ShadowAgent.create("sage")
+        shadow._archetype = None
+        assert shadow.polarity == PolarityType.UNIFIED
+
+    def test_custom_persona_in_system_prompt(self):
+        from app.agents.personas import Persona
+        custom = Persona(name="Ghost", archetype="trickster", voice_instructions="Boo!", traits=["spooky"])
+        shadow = ShadowAgent.create("sage", custom_persona=custom)
+        prompt = shadow.build_system_prompt()
+        assert "Ghost" in prompt
+        assert "trickster" in prompt
+
+    def test_custom_system_prompt_appended(self):
+        shadow = ShadowAgent.create("sage", custom_system_prompt="Custom directive here")
+        prompt = shadow.build_system_prompt()
+        assert "Custom directive here" in prompt
+
+    def test_integrate_high_alignment(self):
+        parent = SyzygyAgent.create("sage")
+        shadow = ShadowAgent.create("sage", alignment_score=0.8)
+        report = shadow.integrate(parent)
+        assert len(report.insights) >= 3
+        assert report.alignment_delta == 0.05
+
+    def test_integrate_low_alignment(self):
+        parent = SyzygyAgent.create("sage")
+        shadow = ShadowAgent.create("sage", alignment_score=0.3)
+        report = shadow.integrate(parent)
+        assert len(report.insights) >= 2
+        assert report.alignment_delta == 0.15
+
+    def test_get_critique_prompt_high_alignment(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.8)
+        prompt = shadow.get_critique_prompt("Test task", {"a1": "proposal"})
+        assert "incisive" in prompt
+
+    def test_get_critique_prompt_low_alignment(self):
+        shadow = ShadowAgent.create("sage", alignment_score=0.3)
+        prompt = shadow.get_critique_prompt("Test task", {"a1": "proposal"})
+        assert "raw" in prompt
+
+
 class TestShadowAgent:
     def test_create_shadow_agent(self):
         from app.agents.shadow import ShadowAgent
@@ -385,3 +435,46 @@ class TestShadowRegistry:
         registry = AgentRegistry()
         with pytest.raises(ValueError):
             registry.create_shadow_agent("nonexistent")
+
+
+class TestSyzygyAgentEdgeCases:
+    def test_agent_no_name_fallback(self):
+        agent = SyzygyAgent(archetype_key="hero")
+        assert agent.name == "Hero"
+
+    def test_agent_custom_system_prompt(self):
+        agent = SyzygyAgent(archetype_key="sage", custom_system_prompt="Custom directive")
+        prompt = agent.build_system_prompt()
+        assert "Custom directive" in prompt
+
+    def test_agent_polarity_unified_when_no_archetype(self):
+        agent = SyzygyAgent(archetype_key="hero")
+        agent._archetype = None
+        assert agent.polarity == PolarityType.UNIFIED
+
+    def test_agent_persona_property(self):
+        agent = SyzygyAgent(archetype_key="sage")
+        agent._persona = None
+        assert agent.persona is None
+
+
+class TestPolarityEdgeCases:
+    def test_color_hex_masculine(self):
+        from app.agents.polarity import POLARITY_CONFIGS, PolarityType
+        assert POLARITY_CONFIGS[PolarityType.MASCULINE].color_hex == "#c9a84c"
+
+    def test_color_hex_feminine(self):
+        from app.agents.polarity import POLARITY_CONFIGS, PolarityType
+        assert POLARITY_CONFIGS[PolarityType.FEMININE].color_hex == "#b0b0c0"
+
+    def test_color_hex_unified(self):
+        from app.agents.polarity import POLARITY_CONFIGS, PolarityType
+        assert POLARITY_CONFIGS[PolarityType.UNIFIED].color_hex == "#00f0ff"
+
+    def test_get_dominant_polarity_empty(self):
+        from app.agents.polarity import get_dominant_polarity
+        assert get_dominant_polarity([]) is None
+
+    def test_compute_balance_total_zero(self):
+        from app.agents.polarity import compute_polarity_balance
+        assert compute_polarity_balance([]) == 0.5

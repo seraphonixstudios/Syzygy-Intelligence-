@@ -142,6 +142,21 @@ class TestConnectionManager:
         assert "a" in ids
         assert "b" in ids
 
+    @pytest.mark.asyncio
+    async def test_notification_send_via_registered_callback(self):
+        from app.api.websockets import ConnectionManager
+        from app.notifications import notification_manager
+
+        mgr = ConnectionManager()
+        ws = AsyncMock()
+        ws.send_json = AsyncMock()
+        cid = await mgr.connect(ws, "test-cid")
+
+        send_func = notification_manager._ws_connections.get(cid)
+        assert send_func is not None
+        await send_func({"type": "test"})
+        ws.send_json.assert_called_once_with({"type": "test"})
+
 
 # ===================================================================
 # WebSocket handler — ws_handler
@@ -228,6 +243,24 @@ class TestWebSocketHandler:
             _, kwargs = run_consensus_with_memory.call_args
             assert kwargs["on_event"] is not None
             assert callable(kwargs["on_event"])
+
+    def test_run_consensus_on_event_callback(self, _patch_deps):
+        from app.api.websockets import run_consensus_with_memory
+        with TestClient(test_app).websocket_connect("/ws") as ws:
+            ws.send_json({"action": "run_consensus", "task": "Test"})
+            ws.receive_json()
+            ws.receive_json()
+
+            _, kwargs = run_consensus_with_memory.call_args
+            on_event = kwargs["on_event"]
+
+            import asyncio
+            asyncio.run(on_event("round_update", {"round": 1, "score": 0.85}))
+
+            msg = ws.receive_json()
+            assert msg["type"] == "consensus_round_update"
+            assert msg["round"] == 1
+            assert msg["score"] == 0.85
 
     def test_run_consensus_uses_default_team(self, _patch_deps):
         mock_agents = [MagicMock(), MagicMock()]

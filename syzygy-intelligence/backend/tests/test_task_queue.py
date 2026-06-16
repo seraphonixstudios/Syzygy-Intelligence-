@@ -279,3 +279,40 @@ class TestTaskQueue:
             m_def.side_effect = RuntimeError("fail")
             results = await q.execute_parallel(["task"], max_concurrent=1)
             assert len(results) >= 1
+
+    @pytest.mark.asyncio
+    async def test_execute_next_with_sync_handler(self):
+        q = TaskQueue()
+        handler = MagicMock(return_value="sync result")
+        q.register_handler("test_type", handler)
+        await q.enqueue("work", task_type="test_type")
+        result = await q.execute_next()
+        assert result == "sync result"
+        handler.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_run_worker_starts_and_stops(self):
+        q = TaskQueue()
+        await q.enqueue("task1")
+
+        import asyncio
+
+        async def mock_execute_next():
+            await asyncio.sleep(0.01)
+            return None
+
+        q.execute_next = mock_execute_next
+
+        try:
+            await asyncio.wait_for(q.run_worker(max_concurrent=1), timeout=0.5)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_execute_parallel_dequeue_returns_none(self):
+        q = TaskQueue()
+        with patch.object(q, "dequeue", new_callable=AsyncMock, return_value=None):
+            with patch.object(q, "enqueue", new_callable=AsyncMock, return_value="task-id"):
+                results = await q.execute_parallel(["task1"], max_concurrent=1)
+                # dequeue returns None, so _run returns None which gets filtered out
+                assert len(results) == 0
