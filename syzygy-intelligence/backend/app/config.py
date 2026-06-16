@@ -19,13 +19,36 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Lazy import to break circular dependency with logging_setup.py
 # logging_setup imports settings from this module at module level.
+class _FallbackLogger:
+    """Adapter so _get_logger() accepts **kwargs on all log levels."""
+
+    def __init__(self) -> None:
+        import logging
+
+        self._logger = logging.getLogger("syzygy.config")
+
+    def debug(self, msg: str, *args: object, **kwargs: object) -> None:
+        self._logger.debug(msg, *args)
+
+    def info(self, msg: str, *args: object, **kwargs: object) -> None:
+        self._logger.info(msg, *args)
+
+    def warning(self, msg: str, *args: object, **kwargs: object) -> None:
+        self._logger.warning(msg, *args)
+
+    def error(self, msg: str, *args: object, **kwargs: object) -> None:
+        self._logger.error(msg, *args)
+
+    def critical(self, msg: str, *args: object, **kwargs: object) -> None:
+        self._logger.critical(msg, *args)
+
+
 def _get_logger():
     try:
         from app.logging_setup import logger
         return logger
     except ImportError:
-        import logging
-        return logging.getLogger("syzygy.config")
+        return _FallbackLogger()
 
 
 class DatabaseConfig:
