@@ -13,6 +13,7 @@ openai
 # Database
 sqlalchemy[asyncio]
 asyncpg
+psycopg2-binary
 alembic
 redis
 neo4j
