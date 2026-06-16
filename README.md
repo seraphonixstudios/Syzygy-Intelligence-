@@ -342,6 +342,13 @@ The frontend includes a structured logger (`lib/logger.ts`) with levels:
 
 ---
 
+## Contact
+
+- **Email:** [seraphonixstudios@gmail.com](mailto:seraphonixstudios@gmail.com)
+- **Twitter / X:** [@seraphonixS](https://x.com/seraphonixS)
+
+---
+
 ## License
 
 MIT License — see [LICENSE](./LICENSE) for details.

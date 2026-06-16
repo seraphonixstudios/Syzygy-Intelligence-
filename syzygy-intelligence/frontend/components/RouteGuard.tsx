@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 const publicPaths = [
   "/",
   "/cloud",
+  "/contact",
   "/auth/login",
   "/auth/register",
   "/auth/forgot-password",

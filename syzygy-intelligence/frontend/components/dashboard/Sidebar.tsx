@@ -21,6 +21,7 @@ import {
   User,
   Gauge,
   Shield,
+  Mail,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -41,6 +42,7 @@ const navItems = [
   { icon: Library, label: "Memory", href: "/memory" },
   { icon: TrendingUp, label: "Improve", href: "/improve" },
   { icon: Palette, label: "Brand", href: "/brand" },
+  { icon: Mail, label: "Contact", href: "/contact" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 

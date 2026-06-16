@@ -587,6 +587,13 @@ All contributors must adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
+## Contact
+
+- **Email:** [seraphonixstudios@gmail.com](mailto:seraphonixstudios@gmail.com)
+- **Twitter / X:** [@seraphonixS](https://x.com/seraphonixS)
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
