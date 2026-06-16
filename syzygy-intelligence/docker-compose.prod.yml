@@ -6,7 +6,7 @@
 #   See Caddyfile for TLS config, rate limiting, and security headers.
 services:
   ollama:
-    image: ollama/ollama:0.3.14
+    image: ollama/ollama:latest
     deploy:
       resources:
         reservations:
