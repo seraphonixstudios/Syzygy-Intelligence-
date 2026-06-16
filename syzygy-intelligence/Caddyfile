@@ -8,6 +8,10 @@
 #   Set DOMAIN=localhost, SKIP_TLS=true in .env
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d
 
+www.{$DOMAIN:localhost} {
+    redir https://{$DOMAIN:localhost}{uri}
+}
+
 {$DOMAIN:localhost} {
     log {
         output file /data/logs/access.log
