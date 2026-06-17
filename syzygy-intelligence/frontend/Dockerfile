@@ -9,6 +9,7 @@ ENV NPM_CONFIG_LOGLEVEL=error \
 # Build-time environment variables for public Next.js config
 ARG NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8000
 ARG NEXT_PUBLIC_SYZYGY_WS_URL=ws://localhost:8000/ws
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
 # ─── Dependencies Stage ───────────────────────────────────────
 # Install dependencies separately for layer caching
@@ -30,9 +31,11 @@ FROM base AS builder
 
 ARG NEXT_PUBLIC_SYZYGY_API_URL=http://localhost:8000
 ARG NEXT_PUBLIC_SYZYGY_WS_URL=ws://localhost:8000/ws
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
 ENV NEXT_PUBLIC_SYZYGY_API_URL=${NEXT_PUBLIC_SYZYGY_API_URL} \
     NEXT_PUBLIC_SYZYGY_WS_URL=${NEXT_PUBLIC_SYZYGY_WS_URL} \
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY} \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
 

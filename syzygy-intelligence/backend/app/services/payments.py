@@ -67,6 +67,74 @@ async def create_checkout_session(
         raise
 
 
+async def create_setup_intent(user_id: str, user_email: str, price_id: str) -> dict[str, str | None]:
+    cfg = get_stripe_config()
+    if not cfg:
+        return {"client_secret": None, "error": "Stripe not configured"}
+
+    try:
+        import stripe
+        stripe.api_key = cfg.secret_key
+
+        customer = stripe.Customer.create(email=user_email, metadata={"user_id": user_id})
+
+        si = stripe.SetupIntent.create(
+            customer=customer.id,
+            usage="off_session",
+            metadata={"user_id": user_id, "price_id": price_id},
+        )
+        return {"client_secret": si.client_secret, "customer_id": customer.id}
+    except Exception as e:
+        logger.error("Stripe SetupIntent creation failed", error=str(e), source="payments")
+        return {"client_secret": None, "error": str(e)}
+
+
+async def activate_subscription(
+    user_id: str, customer_id: str, payment_method_id: str, price_id: str
+) -> dict[str, str | None]:
+    cfg = get_stripe_config()
+    if not cfg:
+        return {"error": "Stripe not configured", "subscription_id": None}
+
+    try:
+        import stripe
+        stripe.api_key = cfg.secret_key
+
+        stripe.PaymentMethod.attach(payment_method_id, customer=customer_id)
+        stripe.Customer.modify(
+            customer_id,
+            invoice_settings={"default_payment_method": payment_method_id},
+        )
+
+        sub = stripe.Subscription.create(
+            customer=customer_id,
+            items=[{"price": price_id}],
+            default_payment_method=payment_method_id,
+            off_session=True,
+            payment_behavior="default_incomplete",
+        )
+
+        from sqlalchemy import select
+        from app.db.models import User
+        from app.db.session import get_db_context
+
+        async with get_db_context() as db:
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if user:
+                user.stripe_customer_id = customer_id
+                user.stripe_subscription_id = sub.id
+                tier = "enterprise" if "enterprise" in price_id else "premium"
+                user.subscription_tier = tier
+                db.add(user)
+                await db.commit()
+
+        return {"subscription_id": sub.id, "error": None}
+    except Exception as e:
+        logger.error("Subscription activation failed", error=str(e), source="payments")
+        return {"subscription_id": None, "error": str(e)}
+
+
 async def create_customer_portal_url(customer_id: str, return_url: str) -> str:
     try:
         import stripe

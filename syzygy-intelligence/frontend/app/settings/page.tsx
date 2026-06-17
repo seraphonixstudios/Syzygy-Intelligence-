@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle, Key, Copy, Trash2, Plus, CheckCircle2, XCircle, ExternalLink, Monitor, Download } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Settings as SettingsIcon, Save, RefreshCw, Loader2, User, Shield, MessageSquare, Calendar, ShieldCheck, AlertTriangle, Key, Copy, Trash2, Plus, CheckCircle2, XCircle, ExternalLink, Monitor, Download, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
+import { StripeCheckoutForm } from "@/components/StripeCheckoutForm";
 
 const MODEL_OPTIONS = [
   { value: "qwen3:8b-gpu", label: "Qwen3 8B (GPU)" },
@@ -140,6 +142,7 @@ export default function SettingsPage() {
   };
 
   const [verifying, setVerifying] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const handleSaveProfile = async () => {
     setProfileSaving(true);
@@ -322,14 +325,51 @@ export default function SettingsPage() {
                 </div>
               )}
               {user.subscription_tier === "free" ? (
-                <Button
-                  variant="gold"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => window.location.href = "/cloud"}
-                >
-                  Upgrade Plan
-                </Button>
+                <>
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowCheckout(true)}
+                  >
+                    Upgrade Plan
+                  </Button>
+                  <Dialog.Root open={showCheckout} onOpenChange={setShowCheckout}>
+                    <Dialog.Portal>
+                      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+                      <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-syzygy-surface-border bg-syzygy-surface p-6 shadow-2xl">
+                        <Dialog.Close className="absolute right-4 top-4 text-syzygy-grey/50 hover:text-foreground transition-colors">
+                          <X className="h-4 w-4" />
+                        </Dialog.Close>
+                        <Dialog.Title className="font-alchemical text-lg tracking-wider text-syzygy-gold mb-1">
+                          Upgrade Subscription
+                        </Dialog.Title>
+                        <Dialog.Description className="text-xs text-syzygy-grey/50 mb-4">
+                          Choose a plan and enter your card details. Your subscription activates immediately.
+                        </Dialog.Description>
+                        <div className="space-y-3">
+                          <div className="rounded-xl border border-syzygy-surface-border p-4 bg-syzygy-shadow/20">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-foreground">Premium</span>
+                              <span className="text-sm text-syzygy-gold">$19/mo</span>
+                            </div>
+                            <ul className="text-xs text-syzygy-grey/60 space-y-0.5 list-disc list-inside">
+                              <li>2,000 messages/month</li>
+                              <li>Advanced model access</li>
+                              <li>Priority support</li>
+                            </ul>
+                          </div>
+                          <StripeCheckoutForm
+                            priceId="price_1TjEktIvoQ24ry0Lla28yYdr"
+                            tierLabel="Premium"
+                            onSuccess={() => setShowCheckout(false)}
+                            onCancel={() => setShowCheckout(false)}
+                          />
+                        </div>
+                      </Dialog.Content>
+                    </Dialog.Portal>
+                  </Dialog.Root>
+                </>
               ) : (
                 <Button
                   variant="occult"

@@ -28,5 +28,6 @@ services:
       args:
         NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     environment:
       NODE_ENV: production

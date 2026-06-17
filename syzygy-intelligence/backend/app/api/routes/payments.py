@@ -12,8 +12,10 @@ from app.config import settings
 from app.db.models import User
 from app.logging_setup import logger
 from app.services.payments import (
+    activate_subscription,
     create_checkout_session,
     create_customer_portal_url,
+    create_setup_intent,
     get_stripe_config,
     handle_webhook,
 )
@@ -30,6 +32,23 @@ class CreateCheckoutRequest(BaseModel):
 class CheckoutResponse(BaseModel):
     url: str
     session_id: str | None = None
+
+
+class SetupIntentResponse(BaseModel):
+    client_secret: str | None = None
+    customer_id: str | None = None
+    error: str | None = None
+
+
+class ActivateSubscriptionRequest(BaseModel):
+    customer_id: str
+    payment_method_id: str
+    price_id: str
+
+
+class ActivateSubscriptionResponse(BaseModel):
+    subscription_id: str | None = None
+    error: str | None = None
 
 
 class PortalResponse(BaseModel):
@@ -56,6 +75,42 @@ async def create_checkout(
         trial_days=0,
     )
     return CheckoutResponse(url=result["url"], session_id=result.get("session_id"))
+
+
+@router.post("/create-setup-intent", response_model=SetupIntentResponse)
+async def create_setup(
+    req: CreateCheckoutRequest,
+    user: User = Depends(require_user),
+) -> SetupIntentResponse:
+    if not get_stripe_config():
+        return SetupIntentResponse(error="Stripe not configured")
+    result = await create_setup_intent(
+        user_id=str(user.id),
+        user_email=user.email,
+        price_id=req.price_id,
+    )
+    return SetupIntentResponse(
+        client_secret=result.get("client_secret"),
+        customer_id=result.get("customer_id"),
+        error=result.get("error"),
+    )
+
+
+@router.post("/activate-subscription", response_model=ActivateSubscriptionResponse)
+async def activate_sub(
+    req: ActivateSubscriptionRequest,
+    user: User = Depends(require_user),
+) -> ActivateSubscriptionResponse:
+    result = await activate_subscription(
+        user_id=str(user.id),
+        customer_id=req.customer_id,
+        payment_method_id=req.payment_method_id,
+        price_id=req.price_id,
+    )
+    return ActivateSubscriptionResponse(
+        subscription_id=result.get("subscription_id"),
+        error=result.get("error"),
+    )
 
 
 @router.post("/customer-portal", response_model=PortalResponse)
