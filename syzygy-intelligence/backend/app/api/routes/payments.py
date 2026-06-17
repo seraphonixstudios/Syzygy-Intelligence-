@@ -34,6 +34,10 @@ class CheckoutResponse(BaseModel):
     session_id: str | None = None
 
 
+class SetupIntentRequest(BaseModel):
+    tier: str = "premium"
+
+
 class SetupIntentResponse(BaseModel):
     client_secret: str | None = None
     customer_id: str | None = None
@@ -43,7 +47,7 @@ class SetupIntentResponse(BaseModel):
 class ActivateSubscriptionRequest(BaseModel):
     customer_id: str
     payment_method_id: str
-    price_id: str
+    tier: str = "premium"
 
 
 class ActivateSubscriptionResponse(BaseModel):
@@ -79,15 +83,17 @@ async def create_checkout(
 
 @router.post("/create-setup-intent", response_model=SetupIntentResponse)
 async def create_setup(
-    req: CreateCheckoutRequest,
+    req: SetupIntentRequest,
     user: User = Depends(require_user),
 ) -> SetupIntentResponse:
-    if not get_stripe_config():
+    cfg = get_stripe_config()
+    if not cfg:
         return SetupIntentResponse(error="Stripe not configured")
+    price_id = cfg.enterprise_price_id if req.tier == "enterprise" else cfg.premium_price_id
     result = await create_setup_intent(
         user_id=str(user.id),
         user_email=user.email,
-        price_id=req.price_id,
+        price_id=price_id,
     )
     return SetupIntentResponse(
         client_secret=result.get("client_secret"),
@@ -101,11 +107,15 @@ async def activate_sub(
     req: ActivateSubscriptionRequest,
     user: User = Depends(require_user),
 ) -> ActivateSubscriptionResponse:
+    cfg = get_stripe_config()
+    if not cfg:
+        return ActivateSubscriptionResponse(error="Stripe not configured")
+    price_id = cfg.enterprise_price_id if req.tier == "enterprise" else cfg.premium_price_id
     result = await activate_subscription(
         user_id=str(user.id),
         customer_id=req.customer_id,
         payment_method_id=req.payment_method_id,
-        price_id=req.price_id,
+        price_id=price_id,
     )
     return ActivateSubscriptionResponse(
         subscription_id=result.get("subscription_id"),

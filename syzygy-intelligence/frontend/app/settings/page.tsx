@@ -360,7 +360,7 @@ export default function SettingsPage() {
                             </ul>
                           </div>
                           <StripeCheckoutForm
-                            priceId="price_1TjEktIvoQ24ry0Lla28yYdr"
+                            tier="premium"
                             tierLabel="Premium"
                             onSuccess={() => setShowCheckout(false)}
                             onCancel={() => setShowCheckout(false)}

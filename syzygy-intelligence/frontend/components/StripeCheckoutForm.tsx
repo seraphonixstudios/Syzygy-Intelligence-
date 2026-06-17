@@ -16,13 +16,13 @@ function getStripe() {
 }
 
 interface StripeCheckoutFormProps {
-  priceId: string;
+  tier: "premium" | "enterprise";
   tierLabel: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export function StripeCheckoutForm({ priceId, tierLabel, onSuccess, onCancel }: StripeCheckoutFormProps) {
+export function StripeCheckoutForm({ tier, tierLabel, onSuccess, onCancel }: StripeCheckoutFormProps) {
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function StripeCheckoutForm({ priceId, tierLabel, onSuccess, onCancel }: 
       const res = await fetch(`${API}/api/payments/create-setup-intent`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ price_id: priceId }),
+        body: JSON.stringify({ tier }),
       });
       if (!res.ok) throw new Error("Failed to initialize payment");
       const data = await res.json();
@@ -108,7 +108,7 @@ export function StripeCheckoutForm({ priceId, tierLabel, onSuccess, onCancel }: 
         body: JSON.stringify({
           customer_id: customerId,
           payment_method_id: setupIntent.payment_method,
-          price_id: priceId,
+          tier,
         }),
       });
       const data = await res.json();
