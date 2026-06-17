@@ -46,7 +46,7 @@ describe("RouteGuard", () => {
   });
 
   it("renders children after hydration for public paths", () => {
-    mockPathname = "/";
+    mockPathname = "/cloud";
     render(
       <RouteGuard>
         <div>content</div>
