@@ -8,6 +8,7 @@ from app.tools.browser import BrowserTool
 from app.tools.code_execution import CodeExecutionTool
 from app.tools.filesystem import FileSystemTool
 from app.tools.git_tool import GitTool
+from app.tools.image_gen_tool import ImageGenTool
 from app.tools.search import SearchTool
 
 
@@ -21,6 +22,7 @@ class ToolRegistry:
             "git": GitTool(),
             "code_execution": CodeExecutionTool(),
             "search": SearchTool(),
+            "image_gen": ImageGenTool(),
         }
 
     def get(self, name: str) -> Any:

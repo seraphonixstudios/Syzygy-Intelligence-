@@ -242,6 +242,27 @@ class SyzygyConfig(BaseSettings):
     stripe_premium_price_id: str = Field(default="price_premium_monthly", description="Premium price ID")
     stripe_enterprise_price_id: str = Field(default="price_enterprise_monthly", description="Enterprise price ID")
 
+    # ──── Image Generation ────
+    image_gen_provider: str = Field(default="mock", description="Image gen backend: comfyui, replicate, mock")
+    comfyui_base_url: str = Field(default="http://localhost:8188", description="ComfyUI API base URL")
+    comfyui_checkpoint: str = Field(default="flux1_dev.safetensors", description="Default ComfyUI checkpoint")
+    comfyui_upscaler: str = Field(default="4x_NMKD-Superscale-SP_178000_G.pth", description="Upscaler model name")
+    comfyui_rembg_model: str = Field(default="RMBG-1.4", description="Background removal model name")
+    comfyui_default_negative: str = Field(
+        default="blurry, low quality, distorted, deformed, ugly, bad anatomy, bad proportions, extra limbs",
+        description="Default negative prompt for ComfyUI",
+    )
+    replicate_api_token: str = Field(default="", description="Replicate API token")
+    replicate_txt2img_model: str = Field(
+        default="black-forest-labs/flux-1.1-pro-ultra", description="Replicate txt2img model ID"
+    )
+    replicate_upscaler_model: str = Field(
+        default="nightmareai/real-esrgan:42fed1c", description="Replicate upscaler model ID"
+    )
+    replicate_rembg_model: str = Field(
+        default="nateraw/rembg:1.0.0", description="Replicate background removal model ID"
+    )
+
     # ──── API ────
     api_key_length: int = Field(default=48, description="API key length")
 

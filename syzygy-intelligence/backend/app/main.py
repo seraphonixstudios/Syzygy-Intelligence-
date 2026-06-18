@@ -19,6 +19,7 @@ from app.api.routes import (
     chat,
     consensus,
     health,
+    image_gen,
     memory,
     meta,
     oauth,
@@ -143,6 +144,7 @@ app.include_router(rag_route.router, prefix="/api/rag", tags=["RAG"])
 app.include_router(self_improvement.router, prefix="/api", tags=["Self-Improvement"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(image_gen.router, prefix="/api/image-gen", tags=["Image Generation"])
 app.include_router(telemetry.router, tags=["Telemetry"])
 app.include_router(health.router, prefix="", tags=["Health"])
 
