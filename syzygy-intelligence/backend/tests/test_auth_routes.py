@@ -249,7 +249,11 @@ class TestRefresh:
         from app.api.routes.auth import refresh, RefreshRequest
         uid = str(uuid.uuid4())
         token = create_refresh_token(uid, "test@example.com")
-        resp = await refresh(RefreshRequest(refresh_token=token))
+        mock_user = MagicMock(is_active=True)
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = mock_user
+        _patch_deps["db"].execute.return_value = result_mock
+        resp = await refresh(RefreshRequest(refresh_token=token), db=_patch_deps["db"])
         assert resp.access_token
         assert resp.refresh_token
 
@@ -392,6 +396,10 @@ class TestResetUsageIfNeeded:
     async def test_resets_when_new_month(self, _patch_deps):
         from app.api.routes.auth import _reset_usage_if_needed
         user = _make_user(usage_reset_at=datetime.now(UTC) - timedelta(days=40))
+        refreshed = MagicMock(message_count=0, usage_reset_at=datetime.now(UTC))
+        result_mock = MagicMock()
+        result_mock.scalar_one.return_value = refreshed
+        _patch_deps["db"].execute.return_value = result_mock
         await _reset_usage_if_needed(user, _patch_deps["db"])
         assert user.message_count == 0
 
