@@ -31,6 +31,7 @@ from app.api.routes import (
     uploads,
     workflows,
 )
+from app.api.openai_compat import router as openai_compat_router
 from app.api.routes import rag as rag_route
 from app.api.websockets import ws_handler
 from app.config import settings
@@ -145,6 +146,7 @@ app.include_router(self_improvement.router, prefix="/api", tags=["Self-Improveme
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(image_gen.router, prefix="/api/image-gen", tags=["Image Generation"])
+app.include_router(openai_compat_router)
 app.include_router(telemetry.router, tags=["Telemetry"])
 app.include_router(health.router, prefix="", tags=["Health"])
 

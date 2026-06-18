@@ -135,6 +135,14 @@ export function Sidebar() {
         </div>
       )}
 
+      {/* Footer links */}
+      <div className="w-full px-2 pb-1 mt-auto">
+        <div className="flex justify-center gap-3 text-[10px] text-syzygy-grey/30">
+          <Link href="/privacy" className="hover:text-syzygy-gold/60 transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-syzygy-gold/60 transition-colors">Terms</Link>
+        </div>
+      </div>
+
       {/* Auth section */}
       <div className="w-full border-t border-syzygy-surface-border px-2 pt-3 mt-2">
         {isAuthenticated && user ? (
