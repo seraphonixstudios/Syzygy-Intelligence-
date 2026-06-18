@@ -37,16 +37,27 @@ export function RootLayoutClient({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
 
-  // Subscribe logger errors to telemetry
+  // Subscribe logger errors to telemetry with proper cleanup
   useEffect(() => {
     const unsub = logger.subscribe((entry) => {
       if (entry.level === "error") {
-        import("@/lib/observability").then((obs) => {
-          obs.trackError(new Error(entry.message), entry.source);
-        });
+        // Load observability dynamically and track error
+        import("@/lib/observability")
+          .then((obs) => {
+            obs.trackError(new Error(entry.message), entry.source);
+          })
+          .catch((err) => {
+            // Silently fail if observability import fails
+            console.error("Failed to load observability:", err);
+          });
       }
     });
-    return unsub;
+    // Ensure unsub is a function before calling it
+    return () => {
+      if (typeof unsub === "function") {
+        unsub();
+      }
+    };
   }, []);
 
   return (

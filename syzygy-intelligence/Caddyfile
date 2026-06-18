@@ -29,38 +29,34 @@ www.{$DOMAIN:localhost} {
     }
 
     # Backend API proxy
-    handle_path /api/* {
-        reverse_proxy backend:8000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Real-IP {remote_host}
-        }
+    @api {
+        path /api/*
+        path /api/**
+    }
+    handle @api {
+        reverse_proxy backend:8000
     }
 
     # WebSocket proxy
-    handle_path /ws/* {
-        reverse_proxy backend:8000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Real-IP {remote_host}
-        }
+    @ws {
+        path /ws/*
+        path /ws/**
+    }
+    handle @ws {
+        reverse_proxy backend:8000
     }
 
     # OpenAI-compatible endpoint
-    handle_path /v1/* {
-        reverse_proxy backend:8000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Real-IP {remote_host}
-        }
+    @v1 {
+        path /v1/*
+        path /v1/**
+    }
+    handle @v1 {
+        reverse_proxy backend:8000
     }
 
     # Frontend (Next.js)
     handle {
-        reverse_proxy frontend:3000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Real-IP {remote_host}
-        }
+        reverse_proxy frontend:3000
     }
 }

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Syzygy Intelligence",
   description: "Aligning opposites into unified intelligence",
   icons: {
-    icon: "/branding/seraphonixlogo.png",
+    icon: "/favicon.svg",
   },
 };
 

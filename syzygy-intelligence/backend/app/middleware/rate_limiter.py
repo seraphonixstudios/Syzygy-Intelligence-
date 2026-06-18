@@ -144,8 +144,8 @@ class RedisRateLimiter:
 
         try:
             # Sanitize key to prevent injection attacks
-            # Only allow alphanumeric, hyphens, underscores
-            safe_key = "".join(c for c in key if c.isalnum() or c in ("-", "_", ":"))
+            # Only allow alphanumeric, hyphens, underscores (NO colons to prevent Redis key structure injection)
+            safe_key = "".join(c for c in key if c.isalnum() or c in ("-", "_"))
             if not safe_key:
                 logger.warning(
                     "Rate limiter: invalid key format after sanitization",

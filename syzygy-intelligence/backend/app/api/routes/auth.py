@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,6 +73,30 @@ class UserResponse(BaseModel):
     monthly_message_limit: int
     settings: dict[str, Any]
     created_at: str
+
+
+class UserSettingsUpdate(BaseModel):
+    """Schema for user settings with validation."""
+    settings: dict[str, Any]
+    
+    @field_validator('settings')
+    @classmethod
+    def validate_settings(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Validate settings dict — max 100 keys, each value max 1KB when serialized."""
+        if not isinstance(v, dict):
+            raise ValueError('Settings must be a dictionary')
+        if len(v) > 100:
+            raise ValueError('Settings cannot exceed 100 keys')
+        for key, value in v.items():
+            if not isinstance(key, str):
+                raise ValueError('Setting keys must be strings')
+            try:
+                serialized = str(value)
+                if len(serialized) > 1024:
+                    raise ValueError(f'Setting value for {key} exceeds 1KB')
+            except Exception as e:
+                raise ValueError(f'Setting value for {key} is not serializable: {str(e)}')
+        return v
 
 
 class UpdateSettingsRequest(BaseModel):
@@ -153,6 +177,12 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     resp: dict[str, Any] = {"message": "If that email exists, a reset link has been sent."}
     if settings.email_provider == "console":
         resp["reset_token"] = token
+    elif settings.env == "production" and settings.email_provider == "console":
+        logger.warning(
+            "Password reset token exposed in production with console email provider",
+            user_id=str(user.id),
+            email_provider=settings.email_provider,
+        )
     return resp
 
 
@@ -201,8 +231,7 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
         return {"message": "If that email exists, a verification link has been sent."}
 
     token = create_verification_token(str(user.id))
-    frontend_url = settings.cors_origins.split(",")[0].strip() or "http://localhost:3000"
-    verify_link = f"{frontend_url}/auth/verify-email?token={token}"
+    verify_link = f"{settings.frontend_url}/auth/verify-email?token={token}"
 
     try:
         await send_email(EmailMessage(
@@ -227,6 +256,12 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     resp: dict[str, Any] = {"message": "If that email exists, a verification link has been sent."}
     if settings.email_provider == "console":
         resp["verification_token"] = token
+    elif settings.env == "production" and settings.email_provider == "console":
+        logger.warning(
+            "Verification token exposed in production with console email provider",
+            user_id=str(user.id),
+            email_provider=settings.email_provider,
+        )
     return resp
 
 
@@ -292,11 +327,20 @@ async def _reset_usage_if_needed(user: User, db: AsyncSession) -> None:
     usage_reset = _to_utc(user.usage_reset_at)
 
     # Reset if no previous reset or if month/year has changed
+    # Use atomic SQL UPDATE to prevent race conditions with concurrent requests
     if usage_reset is None or (usage_reset.year, usage_reset.month) < (now.year, now.month):
-        user.message_count = 0  # type: ignore
-        user.usage_reset_at = now  # type: ignore
-        db.add(user)
+        stmt = (
+            update(User)
+            .where(User.id == user.id)
+            .values(message_count=0, usage_reset_at=now)
+        )
+        await db.execute(stmt)
         await db.commit()
+        # Refresh the user object to reflect database changes
+        result = await db.execute(select(User).where(User.id == user.id))
+        refreshed = result.scalar_one()
+        user.message_count = refreshed.message_count  # type: ignore
+        user.usage_reset_at = refreshed.usage_reset_at  # type: ignore
         log_usage_event("usage_reset", str(user.id), user.subscription_tier.value, 0)
 
 
@@ -348,7 +392,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenR
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(req: RefreshRequest) -> TokenResponse:
+async def refresh(req: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     payload = decode_token(req.refresh_token)
     if payload is None or payload.get("type") != "refresh":
         log_auth_event("token_refresh", result="invalid_token")
@@ -360,6 +404,14 @@ async def refresh(req: RefreshRequest) -> TokenResponse:
     if not sub or not email:
         log_auth_event("token_refresh", result="invalid_token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    # Validate user still exists and is active (security fix: don't issue tokens for disabled/deleted users)
+    result = await db.execute(select(User).where(User.id == uuid.UUID(sub)))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:  # type: ignore
+        log_auth_event("token_refresh", user_id=sub, result="user_inactive_or_deleted")
+        metrics_registry.auth_token_refreshes.labels(token_type="refresh").inc()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive or no longer exists")
 
     log_auth_event("token_refresh", user_id=sub, user_email=email, result="success")
     metrics_registry.auth_token_refreshes.labels(token_type="access").inc()
@@ -380,7 +432,7 @@ async def get_me(
 
 @router.put("/me/settings")
 async def update_settings(
-    req: UpdateSettingsRequest,
+    req: UserSettingsUpdate,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:

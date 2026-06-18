@@ -153,7 +153,16 @@ async def get_db_context() -> AsyncIterator[AsyncSession]:
         else:
             # Only commit if a transaction is active (not already committed)
             if session.in_transaction():
-                await session.commit()
+                try:
+                    await session.commit()
+                except Exception as commit_err:
+                    await session.rollback()
+                    logger.error(
+                        "Database commit failed — rolling back",
+                        error_type=type(commit_err).__name__,
+                        error=str(commit_err),
+                    )
+                    raise
         finally:
             await session.close()
 
@@ -191,7 +200,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         else:
             # Only commit if a transaction is active (not already committed)
             if session.in_transaction():
-                await session.commit()
+                try:
+                    await session.commit()
+                except Exception as commit_err:
+                    await session.rollback()
+                    logger.error(
+                        "Database commit failed — rolling back",
+                        error_type=type(commit_err).__name__,
+                        error=str(commit_err),
+                    )
+                    raise
         finally:
             await session.close()
 

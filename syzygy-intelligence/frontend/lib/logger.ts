@@ -71,6 +71,7 @@ export const logger = {
 
   subscribe: (fn: (entry: LogEntry) => void) => {
     listeners.push(fn);
+    // Return a cleanup function that guarantees it's callable
     return () => {
       const idx = listeners.indexOf(fn);
       if (idx >= 0) listeners.splice(idx, 1);
