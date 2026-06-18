@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Monitoring stack extension for Syzygy Intelligence
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up
 
@@ -22,7 +20,7 @@ services:
     networks:
       - syzygy-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9090/-/healthy"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -47,7 +45,7 @@ services:
     networks:
       - syzygy-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -68,7 +66,7 @@ services:
     networks:
       - syzygy-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9093/-/healthy"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -86,7 +84,7 @@ services:
     networks:
       - syzygy-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:16686/api/traces"]
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:16686/"]
       interval: 10s
       timeout: 5s
       retries: 3
