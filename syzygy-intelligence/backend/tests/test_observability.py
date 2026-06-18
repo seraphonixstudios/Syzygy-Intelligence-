@@ -168,7 +168,7 @@ class TestMetricsEndpoint:
 class TestSetupTracingProduction:
     def test_sets_up_tracing_in_production(self):
         """setup_tracing initializes Jaeger exporter in production with all deps."""
-        pytest.importorskip("opentelemetry.exporter.jaeger.thrift")
+        pytest.importorskip("opentelemetry.exporter.jaeger.thrift", exc_type=ImportError)
         with (
             patch("app.observability.settings") as mock_settings,
             patch("app.observability.logger") as mock_logger,

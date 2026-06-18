@@ -157,7 +157,7 @@ class TestSyzygyConfigEdgeCases:
         with patch("app.config._get_logger", return_value=mock_logger):
             config = SyzygyConfig(env="development", _env_file=None, cors_origins="")
             assert config.allowed_origins == ["http://localhost:3000", "http://localhost:8000"]
-            mock_logger.info.assert_called_once()
+            mock_logger.info.assert_any_call("CORS origins empty, using development defaults", origins=["http://localhost:3000", "http://localhost:8000"])
 
     def test_database_url_sync_sqlite(self):
         config = SyzygyConfig(env="development", _env_file=None)

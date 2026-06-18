@@ -26,6 +26,7 @@ class _FallbackLogger:
         import logging
 
         self._logger = logging.getLogger("syzygy.config")
+        self.name = "syzygy.config"
 
     def debug(self, msg: str, *args: object, **kwargs: object) -> None:
         self._logger.debug(msg, *args)
@@ -305,7 +306,7 @@ class SyzygyConfig(BaseSettings):
 
         if errors:
             error_msg = "Production configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
-            _get_logger().error("Production secrets not configured\n%s", "\n".join(errors))
+            _get_logger().error(f"Production secrets not configured: {'; '.join(errors)}")
             raise ValueError(error_msg)
 
         _get_logger().info("Production secrets validated")
