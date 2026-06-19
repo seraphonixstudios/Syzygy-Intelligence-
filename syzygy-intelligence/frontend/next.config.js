@@ -6,6 +6,7 @@ const nextConfig = {
             { source: "/favicon.ico", destination: "/favicon.svg" },
         ];
     },
+
 };
 
 module.exports = nextConfig;
