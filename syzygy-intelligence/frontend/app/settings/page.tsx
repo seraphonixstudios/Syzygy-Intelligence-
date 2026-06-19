@@ -10,10 +10,8 @@ import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
 import { StripeCheckoutForm } from "@/components/StripeCheckoutForm";
 
-const MODEL_OPTIONS = [
-  { value: "qwen3:8b-gpu", label: "Qwen3 8B (GPU)" },
-  { value: "dolphin-llama3:8b-gpu", label: "Dolphin Llama3 8B (GPU)" },
-  { value: "llava:13b-gpu", label: "LLaVA 13B Vision (GPU)" },
+const FALLBACK_MODELS = [
+  "tinyllama:latest", "qwen3:4b", "qwen3:8b", "llava:13b", "nomic-embed-text:latest",
 ];
 
 const POLARITY_PRESETS = [
@@ -33,6 +31,7 @@ export default function SettingsPage() {
   const [maxRounds, setMaxRounds] = useState(4);
   const [consensusThreshold, setConsensusThreshold] = useState(0.85);
   const [preferDesktopApp, setPreferDesktopApp] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [desktopDownloading, setDesktopDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -77,7 +76,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchApiKeys();
+    fetchModels();
   }, []);
+
+  const fetchModels = async () => {
+    try {
+      const res = await fetch(`${API}/api/chat/models`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAvailableModels((data.available || []).length > 0 ? data.available : FALLBACK_MODELS);
+    } catch {
+      setAvailableModels(FALLBACK_MODELS);
+    }
+  };
 
   const fetchApiKeys = async () => {
     setApiKeysLoading(true);
@@ -589,7 +600,8 @@ export default function SettingsPage() {
             onChange={(e) => setDefaultModel(e.target.value)}
             className="w-full rounded-lg border border-syzygy-surface-border bg-syzygy-shadow/50 px-3 py-1.5 text-sm text-foreground outline-none focus:border-syzygy-gold/50"
           >
-            {MODEL_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            {availableModels.length === 0 && <option value="">Loading...</option>}
+            {availableModels.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </SettingRow>
 
