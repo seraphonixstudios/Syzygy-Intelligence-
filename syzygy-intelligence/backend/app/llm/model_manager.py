@@ -163,16 +163,17 @@ class ModelManager:
     async def chat(
         self,
         messages: list[dict[str, str]],
+        model: str = "",
         role: str = "default",
         temperature: float = 0.7,
         max_tokens: int = 2048,
         provider: str | None = None,
     ) -> str:
-        model = self.get_model_for_role(role)
+        resolved = model or self.get_model_for_role(role)
         llm = self.get_provider(provider)
         return await llm.chat(
             messages=messages,
-            model=model,
+            model=resolved,
             temperature=temperature,
             max_tokens=max_tokens,
         )
