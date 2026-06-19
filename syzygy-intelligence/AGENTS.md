@@ -143,3 +143,12 @@ CI runs 3 jobs: `frontend-lint`, `backend-lint-and-test` (1567), `e2e` (3 parall
 - **Production polish**: Added `/privacy` and `/terms` pages, `favicon.ico` rewrite to `/favicon.svg`, `robots.txt`, sidebar footer links, updated `RouteGuard` public paths.
 - **VPS**: 14 containers running, all healthy, 1567 backend tests, 244 frontend tests, Stripe live, SendGrid email confirmed.
 - **Git**: `main` at `d130c5f` — pushed to `origin/main`.
+
+## Session Summary (June 19, 2026)
+
+- **Default model swap**: Changed VPS default from `qwen3:8b` → `qwen3:4b` → `tinyllama` (637MB) to fit within 7.8GB RAM. `qwen3:8b` (5.2GB) and `qwen3:4b` (2.5GB) both cause OOM kill when combined with other containers (Neo4j 824MB, etc.). `/v1/chat/completions` confirmed **200 OK** returning `"Hey!"`.
+- **CSP via Next.js middleware**: Caddy v2.11.4 silently drops `Content-Security-Policy` header from its `header` directive (confirmed with isolated test Caddy). Workaround: created `frontend/middleware.ts` + `NextResponse.next()` which sets CSP on every response. Verified CSP present via `curl.exe -D -`.
+- **Content-Security-Policy value**: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com wss:; frame-src 'self' https://js.stripe.com;`
+- **Known Caddy limitation**: `Content-Security-Policy` set via `header` directive is silently dropped by Caddy v2.11.4 (all other headers in the same block work fine). Must use Next.js middleware or `reverse_proxy` response manipulation.
+- **VPS rebuild fix**: `docker-compose.yml` had `cache_from: type=registry,ref=syzygy/frontend:latest` which prevented source changes (new `middleware.ts`) from triggering rebuild. Removed `cache_from` entries to force fresh builds.
+- **Git**: `main` at `a799f05` — pushed to `origin/main`.

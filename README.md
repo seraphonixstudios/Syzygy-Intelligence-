@@ -232,7 +232,8 @@ syzygy-intelligence/
 │   │   ├── ReasoningPanel.tsx  # Agent thought-trace display
 │   │   ├── VoiceButton.tsx     # Push-to-talk toggle
 │   │   ├── AetherBackground.tsx# Canvas particle system
-│   │   └── ScrollToTop.tsx     # Route-change scroll reset
+│   │   ├── ScrollToTop.tsx     # Route-change scroll reset
+│   ├── middleware.ts           # CSP + security headers
 │   ├── hooks/                  # useApi, useWebSocket, useVoiceRecorder
 │   ├── lib/                    # Utilities, theme config, structured logger
 │   ├── e2e/                    # Playwright end-to-end test suite (29 specs, 272 tests)
@@ -309,13 +310,13 @@ npm install          # includes @playwright/test
 npx playwright install chromium
 npx playwright test  # headless CI mode
 
-# Backend tests (pytest, 1534 tests across all modules, 100% coverage)
+# Backend tests (pytest, 1567 tests across all modules, 100% coverage)
 cd backend
 pip install -r requirements.txt
 pytest              # auto-discovers tests/
 pytest -v           # verbose output
 
-# Frontend unit tests (vitest, 225 tests in 23 files)
+# Frontend unit tests (vitest, 244 tests in 25 files)
 cd frontend
 npm run test:unit
 ```
@@ -327,7 +328,7 @@ The CI pipeline (`.github/workflows/e2e.yml`) runs three jobs in parallel on eve
 | Job | What it does |
 |-----|-------------|
 | **frontend-lint** | `next lint --strict` + `tsc --noEmit` |
-| **backend-lint-and-test** | `pytest` 1534 tests (100% coverage) against PostgreSQL service + mock Ollama |
+| **backend-lint-and-test** | `pytest` 1567 tests (100% coverage) against PostgreSQL service + mock Ollama |
 | **e2e** | Playwright 29 spec files (272 tests) against full stack (PostgreSQL + backend + frontend) |
 
 A lightweight mock Ollama server (`backend/tests/mock_ollama_server.py`) serves canned responses for `/api/generate`, `/api/embed`, and `/api/tags` so workflow execution tests pass without requiring a GPU or downloaded models. The backend config accepts `DATABASE_URL` directly (no `SYZYGY_` prefix needed) for easy CI integration.
