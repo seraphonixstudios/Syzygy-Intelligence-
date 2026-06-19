@@ -9,15 +9,16 @@ test.describe("Chat streaming features", () => {
     testEmail = creds.email;
   });
 
-  test("shows model selector with qwen3:8b-gpu default", async ({ page }) => {
+  test("shows model selector with default model", async ({ page }) => {
     await gotoProtected(page, "/chat", testEmail, TEST_PASS);
-    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
-    await expect(modelBtn).toBeVisible();
+    const modelBtn = page.locator("button:has(svg.lucide-layers)").first();
+    await expect(modelBtn).toBeVisible({ timeout: 10000 });
   });
 
   test("model picker opens on click", async ({ page }) => {
     await gotoProtected(page, "/chat", testEmail, TEST_PASS);
-    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
+    const modelBtn = page.locator("button:has(svg.lucide-layers)").first();
+    await modelBtn.waitFor({ state: "visible", timeout: 10000 });
     await modelBtn.click();
     const autoOpt = page.locator("button:has-text('Auto (Syzygy Consensus)')");
     await expect(autoOpt).toBeVisible();
@@ -25,7 +26,8 @@ test.describe("Chat streaming features", () => {
 
   test("model picker has All Models option", async ({ page }) => {
     await gotoProtected(page, "/chat", testEmail, TEST_PASS);
-    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
+    const modelBtn = page.locator("button:has(svg.lucide-layers)").first();
+    await modelBtn.waitFor({ state: "visible", timeout: 10000 });
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
     await expect(allModels).toBeVisible();
@@ -33,7 +35,8 @@ test.describe("Chat streaming features", () => {
 
   test("can select All Models option", async ({ page }) => {
     await gotoProtected(page, "/chat", testEmail, TEST_PASS);
-    const modelBtn = page.locator("button:has-text('qwen3:8b-gpu')").first();
+    const modelBtn = page.locator("button:has(svg.lucide-layers)").first();
+    await modelBtn.waitFor({ state: "visible", timeout: 10000 });
     await modelBtn.click();
     const allModels = page.locator("button:has-text('All Models')");
     await allModels.click();

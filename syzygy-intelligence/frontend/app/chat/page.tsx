@@ -157,7 +157,7 @@ export default function ChatPage() {
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
-  const [selectedModel, setSelectedModel] = useState("qwen3:8b-gpu");
+  const [selectedModel, setSelectedModel] = useState("tinyllama:latest");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [useRag, setUseRag] = useState(false);
@@ -178,13 +178,19 @@ export default function ChatPage() {
           throw new Error(`HTTP ${response.status}`);
         }
         const data = (await response.json()) as ModelInfo;
-        setAvailableModels(data.available);
-        logger.info("Loaded available models", data.available, "Chat");
+        const models = data.available || [];
+        setAvailableModels(models);
+        if (models.length > 0 && !models.includes(selectedModel) && selectedModel !== "syzygy" && selectedModel !== "__all__") {
+          setSelectedModel(models[0]);
+        }
+        logger.info("Loaded available models", models, "Chat");
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         logger.warn("Could not fetch model list — using defaults", errorMsg, "Chat");
         toast.error("Could not load models");
-        setAvailableModels(["qwen3:8b-gpu", "dolphin-llama3:8b-gpu", "llava:13b-gpu"]);
+        const fallback = ["tinyllama:latest", "qwen3:4b", "qwen3:8b", "llava:13b"];
+        setAvailableModels(fallback);
+        if (!fallback.includes(selectedModel)) setSelectedModel(fallback[0]);
       }
     };
 
