@@ -88,8 +88,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      cache_from:
-        - type=registry,ref=syzygy/backend:latest
     container_name: syzygy-backend
     ports:
       - "8000:8000"
@@ -140,8 +138,6 @@ services:
       args:
         NEXT_PUBLIC_SYZYGY_API_URL: ${NEXT_PUBLIC_SYZYGY_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_SYZYGY_WS_URL: ${NEXT_PUBLIC_SYZYGY_WS_URL:-ws://localhost:8000/ws}
-      cache_from:
-        - type=registry,ref=syzygy/frontend:latest
     container_name: syzygy-frontend
     ports:
       - "3000:3000"
@@ -165,8 +161,6 @@ services:
     build:
       context: ./sandbox
       dockerfile: Dockerfile
-      cache_from:
-        - type=registry,ref=syzygy/sandbox:latest
     container_name: syzygy-sandbox
     environment:
       SANDBOX_TIMEOUT: ${SYZYGY_SANDBOX_TIMEOUT:-120}
