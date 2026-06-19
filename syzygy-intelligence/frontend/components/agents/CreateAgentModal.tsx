@@ -85,8 +85,8 @@ export function CreateAgentModal({ open, onOpenChange, onCreated }: CreateAgentM
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-syzygy-surface-border bg-syzygy-deep p-6 shadow-2xl data-[state=open]:animate-scale-in">
+        <Dialog.Overlay className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm data-[state=open]:animate-fade-in" />
+        <Dialog.Content className="z-50 max-h-[85dvh] w-[90vw] max-w-4xl overflow-y-auto rounded-xl border border-syzygy-surface-border bg-syzygy-deep p-6 shadow-2xl data-[state=open]:animate-scale-in">
           <div className="flex items-center justify-between mb-6">
             <Dialog.Title className="text-lg font-semibold text-foreground">
               Create Agent
