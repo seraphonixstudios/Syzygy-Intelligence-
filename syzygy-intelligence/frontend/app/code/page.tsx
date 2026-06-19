@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 
 const languageOptions = ["python", "javascript", "typescript", "go", "rust", "bash"];
 
@@ -85,9 +86,9 @@ export default function CodePage() {
     setActiveFileIndex(0);
     setReviews([]);
     try {
-      const res = await fetch(`${API}/api/workflows/code/execute`, {
+      const res = await fetch(`${API}/api/workflows/coding/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...useAuthStore.getState().getAuthHeaders() },
         body: JSON.stringify({ task: prompt.trim(), context: { language }, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();

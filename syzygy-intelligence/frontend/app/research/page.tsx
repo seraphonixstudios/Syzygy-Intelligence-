@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { cn, formatDate } from "@/lib/utils";
 import { API_URL as API } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 
 type Depth = "quick" | "deep" | "comprehensive";
 
@@ -64,7 +65,7 @@ export default function ResearchPage() {
     try {
       const res = await fetch(`${API}/api/workflows/research/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...useAuthStore.getState().getAuthHeaders() },
         body: JSON.stringify({ task: query.trim(), context: { depth }, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();

@@ -9,9 +9,10 @@ import { Workflow, Play, Loader2, CheckCircle2, XCircle, Copy, Download, ArrowRi
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 
 const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
-  code: "Scaffold, edit, test, and debug with polarity-aware pair programming",
+  coding: "Scaffold, edit, test, and debug with polarity-aware pair programming",
   research: "Parallel search with multi-source validation and synthesis",
   content: "Research → Outline → Draft → Edit → Polish pipeline",
   debate: "Multi-round structured debate between agents",
@@ -76,7 +77,7 @@ export default function WorkflowsPage() {
     try {
       const res = await fetch(`${API}/api/workflows/${selected}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...useAuthStore.getState().getAuthHeaders() },
         body: JSON.stringify({ task: input.trim(), context: {}, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { API_URL as API } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 
 const TONES = ["Formal", "Casual", "Persuasive", "Poetic"] as const;
 const FORMATS = ["Article", "Blog Post", "Report", "Email", "Social Post"] as const;
@@ -81,7 +82,7 @@ export default function ContentPage() {
     try {
       const res = await fetch(`${API}/api/workflows/content/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...useAuthStore.getState().getAuthHeaders() },
         body: JSON.stringify({
           task: topic.trim(),
           context: { tone: tone.toLowerCase(), format: format.toLowerCase().replace(/\s+/g, "_") },
