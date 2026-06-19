@@ -131,9 +131,11 @@ class ModelManager:
         except LLMConnectionError:
             if provider is None and settings.litellm_enabled:
                 logger.warning("Primary provider failed, falling back to LiteLLM", model=model)
+                fallback_model = settings.fallback_model
                 return await self.litellm.generate(
                     prompt=prompt,
                     system=system,
+                    model=fallback_model,
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
@@ -183,11 +185,12 @@ class ModelManager:
         prompt: str,
         system: str = "",
         role: str = "default",
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
         provider: str | None = None,
     ):
-        model = self.get_model_for_role(role)
+        model = model or self.get_model_for_role(role)
         llm = self.get_provider(provider)
         async for chunk in llm.generate_stream(
             prompt=prompt,
