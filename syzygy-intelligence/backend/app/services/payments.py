@@ -172,11 +172,13 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
         "invoice.payment_failed": _handle_invoice_failed,
     }
 
-    event_type = event.get("type", "")
+    event_type = event["type"]
     handler = handlers.get(event_type)
     if handler:
         logger.info(f"Stripe webhook: {event_type}", source="payments")
-        await handler(event["data"]["object"])
+        obj = event["data"]["object"]
+        data = obj.to_dict() if hasattr(obj, "to_dict") else obj
+        await handler(data)
     else:
         logger.debug(f"Unhandled webhook event type: {event_type}", source="payments")
 
