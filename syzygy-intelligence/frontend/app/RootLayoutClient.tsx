@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useUnhandledRejection } from "@/hooks/useUnhandledRejection";
-import { MotionConfig, AnimatePresence } from "framer-motion";
+import { MotionConfig } from "framer-motion";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Toaster } from "sonner";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -72,7 +72,7 @@ export function RootLayoutClient({ children }: { children: ReactNode }) {
           <ErrorBoundary source="Layout">
             <ScrollToTop>
               <RouteGuard>
-                <AnimatePresence mode="wait">{children}</AnimatePresence>
+                {children}
               </RouteGuard>
             </ScrollToTop>
           </ErrorBoundary>
