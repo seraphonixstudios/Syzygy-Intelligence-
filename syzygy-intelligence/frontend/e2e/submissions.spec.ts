@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin, gotoProtected, TEST_PASS } from "./helpers";
+import { registerAndLogin, gotoProtected, selectWorkflow, executeWorkflow, TEST_PASS } from "./helpers";
 
 test.describe("Form submissions", () => {
   let testEmail = "";
@@ -90,21 +90,8 @@ test.describe("Form submissions", () => {
 
   test("workflows: execute workflow and see output", async ({ page }) => {
     await gotoProtected(page, "/workflows", testEmail, TEST_PASS);
-    // Click a workflow card to select it
-    const card = page.locator("button.syzygy-card-glass:has-text('code')");
-    await card.waitFor({ state: "visible", timeout: 5000 });
-    await card.click();
-
-    const input = page.locator("input[placeholder*='code' i], input[placeholder*='task' i]").first();
-    await input.waitFor({ state: "visible", timeout: 5000 });
-    await input.fill("Write a Python function to calculate fibonacci");
-
-    const execBtn = page.locator("button:has-text('Execute')");
-    await execBtn.waitFor({ state: "visible", timeout: 5000 });
-    await execBtn.click();
-
-    const output = page.locator("pre.overflow-auto").first();
-    await output.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+    await selectWorkflow(page, "coding");
+    await executeWorkflow(page, "Write a Python function to calculate fibonacci");
   });
 
   test("consensus: submit topic and see session history", async ({ page }) => {

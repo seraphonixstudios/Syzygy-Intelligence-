@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin, gotoProtected, TEST_PASS } from "./helpers";
+import { registerAndLogin, gotoProtected, selectWorkflow, executeWorkflow, TEST_PASS } from "./helpers";
 
 test.describe("Cross-page user journeys", () => {
   test("register -> login -> view dashboard -> navigate to settings", async ({ page }) => {
@@ -134,21 +134,8 @@ test.describe("Cross-page user journeys", () => {
     const { email } = await registerAndLogin(page);
     await gotoProtected(page, "/workflows", email, TEST_PASS);
 
-    // Select a workflow
-    const card = page.locator("button.syzygy-card-glass:has-text('research')").first();
-    await card.waitFor({ state: "visible", timeout: 5000 });
-    await card.click();
-
-    // Fill and execute
-    const taskInput = page.locator("input").first();
-    await taskInput.waitFor({ state: "visible", timeout: 5000 });
-    await taskInput.fill("Research quantum computing");
-    const execBtn = page.locator("button:has-text('Execute')");
-    await execBtn.click();
-
-    // Wait for output panel
-    const output = page.locator("pre.overflow-auto").first();
-    await output.waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+    await selectWorkflow(page, "research");
+    const output = await executeWorkflow(page, "Research quantum computing");
 
     // Try download button
     const downloadBtn = page.locator("button:has-text('Download')").first();

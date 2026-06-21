@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, selectWorkflow } from "./helpers";
 
 test.describe("File and Link Upload", () => {
   test.beforeEach(async ({ page }) => {
@@ -20,9 +20,7 @@ test.describe("File and Link Upload", () => {
     test(`upload image zone visible on ${route}`, async ({ page }) => {
       await page.goto(route);
       if (route === "/workflows") {
-        const card = page.locator("button:has-text('translate')").first();
-        await card.click();
-        await page.waitForTimeout(500);
+        await selectWorkflow(page, "translate");
       }
       const zone = page.getByText(/drop image/i);
       await expect(zone).toBeVisible({ timeout: 5000 });

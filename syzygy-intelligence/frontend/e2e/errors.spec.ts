@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, selectWorkflow } from "./helpers";
 
 test.describe("Error states and edge cases", () => {
   test.beforeEach(async ({ page }) => {
@@ -98,19 +98,11 @@ test.describe("Error states and edge cases", () => {
 
   test("workflows: can cancel workflow selection", async ({ page }) => {
     await page.goto("/workflows");
-    const card = page.locator("button:has-text('research')").first();
-    await card.waitFor({ state: "visible", timeout: 5000 });
-    await card.click();
-
-    // Verify the form shows up
-    const input = page.locator("input").first();
-    await input.waitFor({ state: "visible", timeout: 5000 });
+    await selectWorkflow(page, "research");
 
     // Click "Change workflow" to deselect
-    const changeBtn = page.locator("button:has-text('Change workflow')");
-    await changeBtn.click();
+    await page.locator("button:has-text('Change workflow')").click();
     await page.waitForTimeout(300);
-    // Grid of cards is visible again
     await expect(page.locator("button:has-text('coding')")).toBeVisible();
   });
 

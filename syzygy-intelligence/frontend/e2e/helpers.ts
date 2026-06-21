@@ -97,3 +97,24 @@ export async function gotoProtected(page: Page, url: string, email = "", pass = 
   // Last attempt — navigate anyway
   await page.goto(url).catch(() => {});
 }
+
+/** Click a workflow card on the /workflows page and wait for the input form. */
+export async function selectWorkflow(page: Page, name: string) {
+  const card = page.locator(`button:has-text('${name}')`).first();
+  await card.waitFor({ state: "visible", timeout: 8000 });
+  await card.click();
+  const input = page.locator("input[placeholder*='Describe your task']").first();
+  await input.waitFor({ state: "visible", timeout: 5000 });
+  return input;
+}
+
+/** Fill a workflow input, execute, and wait for output. */
+export async function executeWorkflow(page: Page, task: string) {
+  const input = page.locator("input[placeholder*='Describe your task']").first();
+  await input.fill(task);
+  const execBtn = page.locator("button:has-text('Execute')");
+  await execBtn.click();
+  const output = page.locator("pre.overflow-auto").first();
+  await output.waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+  return output;
+}
