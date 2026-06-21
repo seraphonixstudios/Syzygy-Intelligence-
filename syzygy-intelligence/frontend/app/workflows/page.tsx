@@ -123,7 +123,7 @@ export default function WorkflowsPage() {
             <button
               key={w}
               type="button"
-              onClick={() => setSelected(w)}
+              onClick={() => { toast.info(`Selected: ${w}`); setSelected(w); }}
               className={`stagger-${(i % 8) + 1} animate-fade-in-up syzygy-card-glass rounded-xl p-4 text-left transition-all hover:border-syzygy-gold/30 hover:scale-[1.02] hover:border-syzygy-gold/50 duration-300 cursor-pointer ${
                 selected === w ? "border-syzygy-gold/50 shadow-lg shadow-syzygy-gold/10" : ""
               }`}
