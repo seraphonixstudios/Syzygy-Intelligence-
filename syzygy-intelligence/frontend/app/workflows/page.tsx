@@ -122,8 +122,9 @@ export default function WorkflowsPage() {
           workflows.map((w, i) => (
             <button
               key={w}
+              type="button"
               onClick={() => setSelected(w)}
-              className={`stagger-${(i % 8) + 1} animate-fade-in-up syzygy-card-glass rounded-xl p-4 text-left transition-all hover:border-syzygy-gold/30 hover:scale-[1.02] hover:border-syzygy-gold/50 duration-300 ${
+              className={`stagger-${(i % 8) + 1} animate-fade-in-up syzygy-card-glass rounded-xl p-4 text-left transition-all hover:border-syzygy-gold/30 hover:scale-[1.02] hover:border-syzygy-gold/50 duration-300 cursor-pointer ${
                 selected === w ? "border-syzygy-gold/50 shadow-lg shadow-syzygy-gold/10" : ""
               }`}
             >
@@ -145,7 +146,7 @@ export default function WorkflowsPage() {
                 key={s}
                 type="button"
                 onClick={() => setInput(s)}
-                className="group flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/20 px-4 py-3 text-left text-xs text-syzygy-grey/60 transition-all duration-200 hover:border-syzygy-gold/30 hover:bg-syzygy-gold/5 hover:text-syzygy-grey-light"
+                className="group flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/20 px-4 py-3 text-left text-xs text-syzygy-grey/60 transition-all duration-200 hover:border-syzygy-gold/30 hover:bg-syzygy-gold/5 hover:text-syzygy-grey-light cursor-pointer"
               >
                 <span className="leading-relaxed">{s}</span>
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 text-syzygy-grey/30 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-syzygy-gold/60" />
