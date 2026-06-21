@@ -160,8 +160,11 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
         import stripe
         stripe.api_key = cfg.secret_key
         event = stripe.Webhook.construct_event(payload, sig_header, cfg.webhook_secret)  # type: ignore[no-untyped-call]
+    except stripe.error.SignatureVerificationError as e:
+        logger.error("Stripe webhook signature verification failed", error=str(e), sig_header=sig_header[:20], source="payments")
+        raise
     except Exception as e:
-        logger.error("Stripe webhook verification failed", error=str(e), source="payments")
+        logger.error("Stripe webhook verification failed", error=str(e), error_type=type(e).__name__, source="payments")
         raise
 
     handlers = {
@@ -178,7 +181,11 @@ async def handle_webhook(payload: bytes, sig_header: str) -> dict[str, Any]:
         logger.info(f"Stripe webhook: {event_type}", source="payments")
         obj = event["data"]["object"]
         data = obj.to_dict() if hasattr(obj, "to_dict") else obj
-        await handler(data)
+        try:
+            await handler(data)
+        except Exception as e:
+            logger.error("Stripe webhook handler failed", event_type=event_type, error=str(e), source="payments")
+            raise
     else:
         logger.debug(f"Unhandled webhook event type: {event_type}", source="payments")
 

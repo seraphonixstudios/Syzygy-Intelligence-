@@ -17,7 +17,7 @@ services:
       - caddy_config:/config
     depends_on:
       frontend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - syzygy-net
 
