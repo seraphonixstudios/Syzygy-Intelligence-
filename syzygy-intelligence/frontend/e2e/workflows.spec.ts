@@ -30,81 +30,44 @@ test.describe("Workflows page", () => {
     }
   });
 
-  test("audit workflow card is clickable and shows input form", async ({ page }) => {
+  test("clicking a workflow card shows the input form", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button.syzygy-card-glass:has-text('audit')").click();
-    await expect(page.locator("input[placeholder*='Enter task for audit']")).toBeVisible({ timeout: 10000 });
+    await page.locator("button:has-text('audit')").first().click();
+    await expect(page.locator("input[placeholder*='Describe your task']")).toBeVisible({ timeout: 10000 });
   });
 
-  test("translate workflow card is clickable and shows input form", async ({ page }) => {
+  test("selected workflow has highlighted border", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('translate')").first().click();
-    await expect(page.locator("input[placeholder*='translate']")).toBeVisible();
+    await page.locator("button:has-text('coding')").first().click();
+    await expect(page.locator("button:has-text('coding')").first()).toHaveClass(/border-syzygy-gold/);
   });
 
-  test("compliance workflow card is clickable and shows input form", async ({ page }) => {
+  test("category filters narrow the workflow list", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('compliance')").first().click();
-    await expect(page.locator("input[placeholder*='Enter task']")).toBeVisible();
+    const devCategory = page.locator("button:has-text('Development')");
+    await expect(devCategory).toBeVisible();
+    await devCategory.click();
+    await expect(page.locator("button:has-text('Security')")).not.toBeVisible();
   });
 
-  test("summary workflow card is clickable and shows input form", async ({ page }) => {
+  test("search filters workflows by name", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('summary')").first().click();
-    await expect(page.locator("input[placeholder*='summary']")).toBeVisible();
+    await page.locator("input[placeholder*='Search workflows']").fill("audit");
+    await expect(page.locator("button:has-text('coding')")).not.toBeVisible();
+    await expect(page.locator("button:has-text('audit')")).toBeVisible();
   });
 
-  test("test gen workflow card is clickable and shows input form", async ({ page }) => {
+  test("change workflow button resets selection", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('test gen')").first().click();
-    await expect(page.locator("input[placeholder*='test gen']")).toBeVisible();
+    await page.locator("button:has-text('coding')").first().click();
+    await expect(page.locator("input[placeholder*='Describe your task']")).toBeVisible();
+    await page.locator("button:has-text('Change workflow')").click();
+    await expect(page.locator("input[placeholder*='Describe your task']")).not.toBeVisible();
   });
 
-  test("qa bot workflow card is clickable and shows input form", async ({ page }) => {
+  test("contextual prompts appear for selected workflow", async ({ page }) => {
     await page.goto("/workflows");
-    await page.locator("button:has-text('qa bot')").first().click();
-    await expect(page.locator("input[placeholder*='qa bot']")).toBeVisible();
-  });
-
-  test("interview coach workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('interview coach')").first().click();
-    await expect(page.locator("input[placeholder*='interview coach']")).toBeVisible();
-  });
-
-  test("data analyzer workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('data analyzer')").first().click();
-    await expect(page.locator("input[placeholder*='data analyzer']")).toBeVisible();
-  });
-
-  test("api designer workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('api designer')").first().click();
-    await expect(page.locator("input[placeholder*='api designer']")).toBeVisible();
-  });
-
-  test("agentic rag workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('agentic rag')").first().click();
-    await expect(page.locator("input[placeholder*='agentic rag']")).toBeVisible();
-  });
-
-  test("report gen workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('report gen')").first().click();
-    await expect(page.locator("input[placeholder*='report gen']")).toBeVisible();
-  });
-
-  test("data pipeline workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('data pipeline')").first().click();
-    await expect(page.locator("input[placeholder*='data pipeline']")).toBeVisible();
-  });
-
-  test("ci piper workflow card is clickable and shows input form", async ({ page }) => {
-    await page.goto("/workflows");
-    await page.locator("button:has-text('ci piper')").first().click();
-    await expect(page.locator("input[placeholder*='ci piper']")).toBeVisible();
+    await page.locator("button:has-text('research')").first().click();
+    await expect(page.locator("text=Try asking:")).toBeVisible();
   });
 });

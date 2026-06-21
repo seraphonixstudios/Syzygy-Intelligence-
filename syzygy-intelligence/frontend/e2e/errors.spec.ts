@@ -104,14 +104,14 @@ test.describe("Error states and edge cases", () => {
 
     // Verify the form shows up
     const input = page.locator("input").first();
-    await input.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    await input.waitFor({ state: "visible", timeout: 5000 });
 
-    // Click another card to switch
-    const codeCard = page.locator("button:has-text('code')").first();
-    await codeCard.click();
-    await page.waitForTimeout(500);
-    // Page remains stable
-    await expect(page.locator("h1")).toContainText("Workflows");
+    // Click "Change workflow" to deselect
+    const changeBtn = page.locator("button:has-text('Change workflow')");
+    await changeBtn.click();
+    await page.waitForTimeout(300);
+    // Grid of cards is visible again
+    await expect(page.locator("button:has-text('coding')")).toBeVisible();
   });
 
   test("improve: auto-improve without evaluation is handled", async ({ page }) => {
