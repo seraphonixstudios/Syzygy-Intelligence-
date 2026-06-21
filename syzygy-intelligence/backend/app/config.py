@@ -370,9 +370,8 @@ class SyzygyConfig(BaseSettings):
         """Get sync database URL for migrations."""
         if self.env == "development":
             return f"sqlite:///{self.db_sqlite_path}"
-        safe_password = "****" if self.db_password else ""
         return (
-            f"postgresql://{self.db_user}:{safe_password}"
+            f"postgresql://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
 
