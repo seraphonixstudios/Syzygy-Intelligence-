@@ -396,6 +396,10 @@ class ConsensusEngine:
             logger.warning("All proposals contained errors, using original proposals for evaluation")
             filtered_contents = contents
         
+        # Compute polarity balance FIRST (before evaluation, needed for convergence check)
+        polarities = [a.polarity for a in session.agents]
+        round_data.polarity_balance = compute_polarity_balance(polarities)
+        
         evaluations = await self.scorer.evaluate_all(
             session.task,
             filtered_contents,
@@ -407,10 +411,6 @@ class ConsensusEngine:
             agent_id: ev["overall"]
             for agent_id, ev in evaluations.items()
         }
-
-        # Compute polarity balance
-        polarities = [a.polarity for a in session.agents]
-        round_data.polarity_balance = compute_polarity_balance(polarities)
 
     async def _convergence_check(
         self, session: ConsensusSession, round_data: ConsensusRound

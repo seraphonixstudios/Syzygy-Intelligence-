@@ -1,0 +1,1 @@
+grep -o 'https://verilysovereign.org[^"'"'"']*oauth[^"'"'"']*' /app/.next/server/app/auth/login/page.html 2>/dev/null || echo "not found in page.html"; grep -o 'https://verilysovereign.org[^"'"'"']*oauth[^"'"'"']*' /app/.next/server/app/auth/login/page.js 2>/dev/null || echo "not found in page.js"

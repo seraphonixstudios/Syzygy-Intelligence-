@@ -50,11 +50,14 @@ export default function CodePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
   const [codeFiles, setCodeFiles] = useState<{ path: string; language: string; content: string }[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [reviews, setReviews] = useState<{ category: string; status: string; message: string; count?: number }[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const activeFile = codeFiles[activeFileIndex] || null;
   const code = activeFile?.content || "";
@@ -85,32 +88,57 @@ export default function CodePage() {
     setCodeFiles([]);
     setActiveFileIndex(0);
     setReviews([]);
+    setReasoning([]);
+    setProgress(0);
+    setCurrentStep("");
+    const abortController = new AbortController();
+    abortRef.current = abortController;
     try {
-      const res = await fetch(`${API}/api/workflows/coding/execute`, {
+      const res = await fetch(`${API}/api/workflows/coding/execute/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...useAuthStore.getState().getAuthHeaders() },
         body: JSON.stringify({ task: prompt.trim(), context: { language }, files: uploadedFiles, links: attachedLinks }),
+        signal: abortController.signal,
       });
-      const data = await res.json();
-      if (data.files && Array.isArray(data.files) && data.files.length > 0) {
-        setCodeFiles(data.files);
-      } else {
-        setCodeFiles([{ path: "output", language, content: data.code || data.result || JSON.stringify(data, null, 2) }]);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "progress") {
+              setProgress(event.progress);
+              setCurrentStep(event.step);
+              setReasoning((prev) => [...prev, event.reasoning]);
+            } else if (event.type === "complete") {
+              const data = event.result?.result || {};
+              if (data.files && Array.isArray(data.files) && data.files.length > 0) {
+                setCodeFiles(data.files);
+              } else {
+                const steps = data.steps || {};
+                const gen = steps.generation || {};
+                const codeStr = gen.code || gen.result || JSON.stringify(data, null, 2);
+                setCodeFiles([{ path: "output", language, content: codeStr }]);
+              }
+              setActiveFileIndex(0);
+              if (data.review) setReviews(data.review);
+            } else if (event.type === "error") {
+              throw new Error(event.error);
+            }
+          } catch { /* skip malformed events */ }
+        }
       }
-      setActiveFileIndex(0);
-      if (data.reasoning) {
-        setReasoning(data.reasoning);
-      } else {
-        setReasoning([
-          { agent: "Architect", thought: "Designing solution structure and identifying optimal approach...", confidence: 0.92, model: "qwen3:8b-gpu" },
-          { agent: "Implementer", thought: `Writing ${language} code with best practices and error handling...`, confidence: 0.88, model: "qwen3:8b-gpu" },
-          { agent: "Reviewer", thought: "Checking for edge cases, performance issues, and security concerns...", confidence: 0.85, model: "qwen3:8b-gpu" },
-        ]);
-      }
-      if (data.review) {
-        setReviews(data.review);
-      }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
       logger.error("Code generation failed", err, "Code");
       toast.error("Backend unavailable — running in demo mode");
       setCodeFiles([{ path: "main", language, content: `// ${language.toUpperCase()} — Generation Ready\n// Backend must be running for live results.\n// Your code will appear here.` }]);
@@ -118,6 +146,8 @@ export default function CodePage() {
       setReviews(defaultReviews);
     } finally {
       setGenerating(false);
+      setProgress(100);
+      abortRef.current = null;
     }
   };
 
@@ -197,8 +227,16 @@ export default function CodePage() {
               <CodeXml className="h-4 w-4" />
               {generating ? (
                 <span className="flex items-center gap-2">
-                  <span className="typing-cursor">Generating</span>
-                  <span className="progress-bar-indeterminate h-1 w-24 rounded-full bg-syzygy-gold/20" />
+                  <span className="typing-cursor">{currentStep ? currentStep.charAt(0).toUpperCase() + currentStep.slice(1) : "Generating"}</span>
+                  <span className="flex items-center gap-1.5 w-32">
+                    <span className="h-1 flex-1 rounded-full bg-syzygy-gold/20 overflow-hidden">
+                      <span
+                        className="h-full rounded-full bg-syzygy-gold transition-all duration-500 block"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </span>
+                    <span className="text-[10px] text-syzygy-gold/60 min-w-[2ch] tabular-nums">{progress}%</span>
+                  </span>
                 </span>
               ) : (
                 "Output"

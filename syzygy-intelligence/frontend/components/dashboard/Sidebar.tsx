@@ -22,6 +22,7 @@ import {
   Gauge,
   Shield,
   Mail,
+  FolderKanban,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -38,6 +39,7 @@ const navItems = [
   { icon: Workflow, label: "Workflows", href: "/workflows" },
   { icon: Search, label: "Research", href: "/research" },
   { icon: Code2, label: "Code", href: "/code" },
+  { icon: FolderKanban, label: "Projects", href: "/projects" },
   { icon: FileText, label: "Content", href: "/content" },
   { icon: Library, label: "Memory", href: "/memory" },
   { icon: TrendingUp, label: "Improve", href: "/improve" },

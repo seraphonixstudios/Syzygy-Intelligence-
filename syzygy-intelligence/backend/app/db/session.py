@@ -164,7 +164,10 @@ async def get_db_context() -> AsyncIterator[AsyncSession]:
                     )
                     raise
         finally:
-            await session.close()
+            try:
+                await session.close()
+            except Exception as close_err:
+                logger.error("Error closing session", error=str(close_err))
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -211,7 +214,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
                     )
                     raise
         finally:
-            await session.close()
+            try:
+                await session.close()
+            except Exception as close_err:
+                logger.error("Error closing session", error=str(close_err))
 
 
 async def init_db() -> bool:

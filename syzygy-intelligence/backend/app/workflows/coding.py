@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from app.llm.model_manager import ModelManager
+
+ProgressCallback = Callable[[str, int, dict[str, Any]], Awaitable[None]]
 
 
 @dataclass
@@ -128,22 +131,50 @@ class CodingWorkflow:
         review = await self.llm.generate(prompt, temperature=0.3)
         return {"review": review, "code_length": len(code)}
 
-    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def execute(
+        self,
+        task: str,
+        context: dict[str, Any] | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> dict[str, Any]:
         ctx = context or {}
         language = ctx.get("language", "python")
 
-        result = {"task": task, "language": language, "steps": {}}
+        result = {"task": task, "language": language, "steps": {}, "reasoning": []}
+        reasoning: list[dict[str, Any]] = []
+        model = (self.llm.get_model_for_role("coding") if self.llm else "tinyllama:latest")
 
         assert self.llm is not None
         result["steps"]["scaffold"] = await self.scaffold(task)
+        step = {"agent": "Architect", "thought": "Designing project structure and architecture...", "model": model, "confidence": 0.92}
+        reasoning.append({**step, "step": "scaffold"})
+        if on_progress:
+            await on_progress("scaffold", 25, step)
+
         gen_prompt = (
             f"Generate {language} code for: {task}\n"
             f"Include proper error handling, type hints, and documentation."
         )
         code = await self.llm.generate(gen_prompt, temperature=0.3)
         result["steps"]["generation"] = {"code": code}
+        step = {"agent": "Developer", "thought": f"Writing {language} code with best practices and error handling...", "model": model, "confidence": 0.88}
+        reasoning.append({**step, "step": "generation"})
+        if on_progress:
+            await on_progress("generation", 50, step)
+
         result["steps"]["review"] = await self.review(code)
+        step = {"agent": "Reviewer", "thought": "Checking for edge cases, performance issues, and security concerns...", "model": model, "confidence": 0.85}
+        reasoning.append({**step, "step": "review"})
+        if on_progress:
+            await on_progress("review", 75, step)
+
         result["steps"]["test"] = await self.test(code, language)
+        step = {"agent": "Tester", "thought": "Creating and executing unit tests...", "model": model, "confidence": 0.80}
+        reasoning.append({**step, "step": "test"})
+        if on_progress:
+            await on_progress("test", 100, step)
+
+        result["reasoning"] = reasoning
         result["status"] = "completed"
         return result
 

@@ -175,14 +175,8 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     metrics_registry.auth_password_resets.labels(result="sent").inc()
 
     resp: dict[str, Any] = {"message": "If that email exists, a reset link has been sent."}
-    if settings.email_provider == "console":
+    if settings.email_provider == "console" and settings.env != "production":
         resp["reset_token"] = token
-    elif settings.env == "production" and settings.email_provider == "console":
-        logger.warning(
-            "Password reset token exposed in production with console email provider",
-            user_id=str(user.id),
-            email_provider=settings.email_provider,
-        )
     return resp
 
 
@@ -254,14 +248,8 @@ async def send_verification(req: SendVerificationRequest, db: AsyncSession = Dep
     log_auth_event("email_verification_requested", user_email=req.email, user_id=str(user.id), result="success")
 
     resp: dict[str, Any] = {"message": "If that email exists, a verification link has been sent."}
-    if settings.email_provider == "console":
+    if settings.email_provider == "console" and settings.env != "production":
         resp["verification_token"] = token
-    elif settings.env == "production" and settings.email_provider == "console":
-        logger.warning(
-            "Verification token exposed in production with console email provider",
-            user_id=str(user.id),
-            email_provider=settings.email_provider,
-        )
     return resp
 
 
@@ -557,6 +545,7 @@ async def charge_message(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    await _reset_usage_if_needed(user, db)
     await check_usage_limit(user, db)
     
     # Atomically increment message count in a single database transaction
