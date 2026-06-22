@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
+import { FileLinkUpload, UploadedFile, LinkMeta } from "@/components/FileLinkUpload";
 import { Library, Search, Clock, Loader2, Filter, Trash2, ChevronDown, ChevronRight, Tags, BarChart3 } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
@@ -39,6 +41,8 @@ export default function MemoryPage() {
   const [memoryType, setMemoryType] = useState("all");
   const [polarity, setPolarity] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachedLinks, setAttachedLinks] = useState<LinkMeta[]>([]);
 
   const buildUrl = useCallback((base: string, params: Record<string, string>) => {
     const sp = new URLSearchParams();
@@ -182,10 +186,13 @@ export default function MemoryPage() {
           placeholder="Search memories..."
           className="flex-1 bg-transparent text-sm text-foreground placeholder-syzygy-grey/40 outline-none"
         />
+        <VoiceButton onTranscript={(t) => setQuery((prev) => prev + t)} />
         <Button type="submit" disabled={searching} variant="ghost" size="sm">
           {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
         </Button>
       </form>
+
+      <FileLinkUpload files={uploadedFiles} links={attachedLinks} onChange={(f, l) => { setUploadedFiles(f); setAttachedLinks(l); }} disabled={searching} />
 
       {loading ? (
         <div className="flex h-[40vh] items-center justify-center">

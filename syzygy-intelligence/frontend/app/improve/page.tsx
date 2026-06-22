@@ -45,21 +45,16 @@ export default function ImprovePage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/meta/summary`)
-      .then((r) => r.json())
-      .then(setSummary)
-      .catch(() => {
-        logger.warn("Could not fetch improvement summary", undefined, "Improve");
-        toast.error("Could not load improvement data");
-      });
-    fetch(`${API}/api/meta/history`)
-      .then((r) => r.json())
-      .then((data) => setHistory(Array.isArray(data) ? data.slice(-6) : []))
-      .catch(() => {
-        logger.warn("Could not fetch evaluation history", undefined, "Improve");
-      });
+    Promise.all([
+      fetch(`${API}/api/meta/summary`).then((r) => r.json()).then(setSummary),
+      fetch(`${API}/api/meta/history`).then((r) => r.json()).then((data) => setHistory(Array.isArray(data) ? data.slice(-6) : [])),
+    ]).catch(() => {
+      logger.warn("Could not fetch improvement data", undefined, "Improve");
+      toast.error("Could not load improvement data");
+    }).finally(() => setInitialLoading(false));
   }, []);
 
   const handleEvaluate = async (e: React.FormEvent) => {
@@ -205,7 +200,16 @@ export default function ImprovePage() {
       </div>
 
       {/* Summary Cards */}
-      {summary && (
+      {initialLoading ? (
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-syzygy-surface-border bg-syzygy-deep/50 p-3">
+              <div className="h-3 w-16 rounded bg-syzygy-grey/20" />
+              <div className="mt-2 h-6 w-10 rounded bg-syzygy-grey/20" />
+            </div>
+          ))}
+        </div>
+      ) : summary && (
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-deep/50 p-3">
             <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Evaluations</p>

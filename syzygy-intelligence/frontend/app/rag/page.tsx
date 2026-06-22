@@ -201,9 +201,9 @@ export default function RAGPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 gap-4 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
         {/* Left panel: Upload + Ingest */}
-        <div className="flex w-96 shrink-0 flex-col gap-4 overflow-y-auto">
+        <div className="flex w-full md:w-96 shrink-0 flex-col gap-4 overflow-y-auto">
           {/* Drag-drop zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

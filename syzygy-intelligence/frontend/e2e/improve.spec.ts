@@ -45,4 +45,10 @@ test.describe("Improve page", () => {
     await input.fill("Sample output for evaluation");
     await expect(input).toHaveValue("Sample output for evaluation");
   });
+
+  test("shows loading skeleton for summary cards", async ({ page }) => {
+    await page.goto("/improve");
+    // Loading skeleton should appear while summary data is being fetched
+    await expect(page.locator(".animate-pulse").first()).toBeVisible({ timeout: 3000 });
+  });
 });

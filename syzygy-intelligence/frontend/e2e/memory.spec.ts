@@ -39,4 +39,15 @@ test.describe("Memory page", () => {
     await input.fill("consensus results");
     await expect(input).toHaveValue("consensus results");
   });
+
+  test("has voice button on search", async ({ page }) => {
+    await page.goto("/memory");
+    const voiceBtn = page.locator("button:has-text('Voice')");
+    await expect(voiceBtn).toBeVisible();
+  });
+
+  test("has file link upload", async ({ page }) => {
+    await page.goto("/memory");
+    await expect(page.getByText(/Upload/i).first()).toBeVisible();
+  });
 });
