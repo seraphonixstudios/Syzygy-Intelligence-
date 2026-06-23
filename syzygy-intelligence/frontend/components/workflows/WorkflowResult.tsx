@@ -1,0 +1,413 @@
+"use client";
+
+import { Code, FileText, Globe, Shield, CheckCircle2, ChevronDown, ChevronRight, Sparkles, Lightbulb, AlertTriangle, TrendingUp, Target, Layers, GitBranch, Database, Zap, BookOpen, Mic, BarChart3, ArrowRight, Search } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium", className)}>{children}</span>;
+}
+
+function SectionCard({ title, icon: Icon, children, defaultOpen = true }: { title: string; icon?: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-syzygy-grey/50 hover:bg-syzygy-shadow/20">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        <span className="flex-1">{title}</span>
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+      </button>
+      {open && <div className="px-4 pb-3 space-y-2">{children}</div>}
+    </div>
+  );
+}
+
+function FormattedText({ text }: { text: string | undefined | null }) {
+  if (!text) return <span className="text-syzygy-grey/40 text-xs italic">No data</span>;
+  const str = typeof text === "object" ? JSON.stringify(text, null, 2) : String(text);
+  return <p className="text-xs text-syzygy-grey/80 leading-relaxed whitespace-pre-wrap">{str}</p>;
+}
+
+function CodeBlock({ code, label }: { code: string | undefined | null; label?: string }) {
+  if (!code) return null;
+  return (
+    <div className="space-y-1">
+      {label && <p className="text-[10px] font-medium uppercase tracking-wider text-syzygy-grey/40">{label}</p>}
+      <pre className="overflow-auto rounded-lg border border-syzygy-surface-border bg-syzygy-obsidian/70 p-3 text-[11px] text-syzygy-grey/80 font-mono max-h-64">{String(code)}</pre>
+    </div>
+  );
+}
+
+function render_coding(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10"><Code className="h-3 w-3" />{d.language || "python"}</Badge>
+        <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><CheckCircle2 className="h-3 w-3" />{d.status}</Badge>
+      </div>
+      {d.steps && Object.entries(d.steps).map(([step, val]: [string, any]) => (
+        <SectionCard key={step} title={step} icon={step === "generation" ? Code : step === "review" ? Shield : step === "test" ? CheckCircle2 : Zap}>
+          {typeof val === "object" && val !== null ? (
+            Object.entries(val).map(([k, v]) => {
+              const keyLower = k.toLowerCase();
+              return keyLower === "code" || keyLower === "unit_tests" ? <CodeBlock key={k} code={String(v)} label={k} />
+                : <FormattedText key={k} text={String(v)} />;
+            })
+          ) : <FormattedText text={String(val)} />}
+        </SectionCard>
+      ))}
+      {d.reasoning?.length > 0 && (
+        <SectionCard title="Agent Reasoning" icon={Lightbulb}>
+          {d.reasoning.map((r: any, i: number) => (
+            <div key={i} className="flex items-start gap-2 rounded-lg bg-syzygy-shadow/20 p-2">
+              <span className="shrink-0 rounded bg-syzygy-gold/10 px-1.5 py-0.5 text-[10px] font-mono text-syzygy-gold">{r.agent}</span>
+              <span className="text-xs text-syzygy-grey/70">{r.thought}</span>
+              {r.confidence && <span className="ml-auto shrink-0 text-[10px] text-syzygy-grey/40">{Math.round(r.confidence * 100)}%</span>}
+            </div>
+          ))}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+function render_research(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-syzygy-grey/60"><Globe className="h-3.5 w-3.5" />{d.query}</div>
+      <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><BarChart3 className="h-3 w-3" />{d.sources_count || 0} sources</Badge>
+      {Array.isArray(d.findings) && d.findings.length > 0 && (
+        <SectionCard title="Findings" icon={Lightbulb}>
+          {d.findings.map((f: any, i: number) => (
+            <div key={i} className="rounded-lg border border-syzygy-surface-border/50 bg-syzygy-shadow/20 p-3 space-y-1">
+              <p className="text-xs font-medium text-syzygy-grey-light">{f.title || `Finding ${i + 1}`}</p>
+              <p className="text-[11px] text-syzygy-grey/60 leading-relaxed">{f.snippet || f.content || JSON.stringify(f)}</p>
+              {f.url && <p className="text-[10px] text-syzygy-gold/60 truncate">{f.url}</p>}
+            </div>
+          ))}
+        </SectionCard>
+      )}
+      {d.synthesis && <SectionCard title="Synthesis" icon={Sparkles}><FormattedText text={d.synthesis} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_content(d: any) {
+  const stages = ["research", "outline", "draft", "edited", "final"];
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-purple-500/30 text-purple-400 bg-purple-500/10"><FileText className="h-3 w-3" />{d.topic}</Badge>
+        {d.polarity && <Badge className="border-amber-500/30 text-amber-400 bg-amber-500/10">{d.polarity}</Badge>}
+      </div>
+      {stages.map((s) => {
+        const val = d[s];
+        if (!val) return null;
+        return <SectionCard key={s} title={s.charAt(0).toUpperCase() + s.slice(1)} icon={FileText}><FormattedText text={typeof val === "object" ? val.polished || val.content || JSON.stringify(val) : val} /></SectionCard>;
+      })}
+    </div>
+  );
+}
+
+function render_debate(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-syzygy-grey/60"><GitBranch className="h-3.5 w-3.5" />{d.topic}</div>
+      <Badge className="border-amber-500/30 text-amber-400 bg-amber-500/10">{d.rounds_completed || 0} rounds</Badge>
+      {["openings", "rebuttals", "closings"].map((phase) => {
+        const phaseData = d[phase];
+        if (!phaseData) return null;
+        return (
+          <SectionCard key={phase} title={phase.charAt(0).toUpperCase() + phase.slice(1)} icon={phase === "openings" ? Zap : phase === "rebuttals" ? AlertTriangle : Target}>
+            {typeof phaseData === "object" ? Object.entries(phaseData).map(([side, text]: [string, any]) => (
+              <div key={side} className="rounded-lg border border-syzygy-surface-border/50 bg-syzygy-shadow/20 p-3">
+                <Badge className="mb-1 border-syzygy-gold/30 text-syzygy-gold-light bg-syzygy-gold/10">{side}</Badge>
+                <FormattedText text={String(text)} />
+              </div>
+            )) : <FormattedText text={phaseData} />}
+          </SectionCard>
+        );
+      })}
+      {d.synthesis && <SectionCard title="Synthesis" icon={Sparkles}><FormattedText text={d.synthesis} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_task_decomposition(d: any) {
+  const subtasks = Array.isArray(d) ? d : d.subtasks || [];
+  return (
+    <div className="space-y-2">
+      {subtasks.length === 0 ? (
+        <p className="text-xs text-syzygy-grey/40 italic">No subtasks returned</p>
+      ) : (
+        subtasks.map((st: any, i: number) => (
+          <div key={st.id || i} className="flex items-start gap-3 rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
+            <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", st.status === "completed" ? "bg-emerald-500/20 text-emerald-400" : "bg-syzygy-grey/20 text-syzygy-grey/40")}>{st.status === "completed" ? "✓" : i + 1}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-xs font-medium text-syzygy-grey-light">{st.description || st.id}</p>
+                <Badge className={st.polarity === "masculine" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" : st.polarity === "feminine" ? "border-pink-500/30 text-pink-400 bg-pink-500/10" : "border-purple-500/30 text-purple-400 bg-purple-500/10"}>{st.agent_archetype || st.archetype}</Badge>
+                {st.priority && <span className="text-[10px] text-syzygy-grey/40">P{st.priority}</span>}
+              </div>
+              {st.result && <p className="mt-1 text-[11px] text-syzygy-grey/60 leading-relaxed">{st.result}</p>}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function render_audit(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-red-500/30 text-red-400 bg-red-500/10"><Shield className="h-3 w-3" />{d.language || "code"}</Badge>
+      </div>
+      {d.vulnerabilities && <SectionCard title="Vulnerabilities" icon={AlertTriangle}><FormattedText text={d.vulnerabilities} /></SectionCard>}
+      {d.quality_review && <SectionCard title="Quality Review" icon={TrendingUp}><FormattedText text={d.quality_review} /></SectionCard>}
+      {d.compliance_check && <SectionCard title="Compliance Check" icon={Shield}><FormattedText text={d.compliance_check} /></SectionCard>}
+      {d.report && <SectionCard title="Full Report" icon={FileText}><FormattedText text={d.report} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_test_gen(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10"><Code className="h-3 w-3" />{d.language || "python"}</Badge>
+      </div>
+      {d.analysis && <SectionCard title="Code Analysis" icon={Lightbulb}><FormattedText text={d.analysis} /></SectionCard>}
+      {d.unit_tests && <SectionCard title="Unit Tests" icon={Code}><FormattedText text={typeof d.unit_tests === "object" ? d.unit_tests.unit_tests || JSON.stringify(d.unit_tests) : d.unit_tests} /></SectionCard>}
+      {d.edge_cases && <SectionCard title="Edge Cases" icon={AlertTriangle}><FormattedText text={typeof d.edge_cases === "object" ? d.edge_cases.edge_cases || JSON.stringify(d.edge_cases) : d.edge_cases} /></SectionCard>}
+      {d.validation && <SectionCard title="Validation" icon={CheckCircle2}><FormattedText text={d.validation} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_summary(d: any) {
+  return (
+    <div className="space-y-3">
+      <Badge className="border-teal-500/30 text-teal-400 bg-teal-500/10"><FileText className="h-3 w-3" />{d.document_count || 1} document(s)</Badge>
+      {d.key_points && <SectionCard title="Key Points" icon={Lightbulb}><FormattedText text={d.key_points} /></SectionCard>}
+      {d.themes && <SectionCard title="Themes" icon={Layers}><FormattedText text={d.themes} /></SectionCard>}
+      {d.insights && <SectionCard title="Insights" icon={Sparkles}><FormattedText text={d.insights} /></SectionCard>}
+      {d.summary && <SectionCard title="Summary" icon={FileText} defaultOpen={true}><FormattedText text={d.summary} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_compliance(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {(Array.isArray(d.frameworks_checked) ? d.frameworks_checked : []).map((fw: string) => (
+          <Badge key={fw} className="border-red-500/30 text-red-400 bg-red-500/10"><Shield className="h-3 w-3" />{fw.toUpperCase()}</Badge>
+        ))}
+      </div>
+      {Array.isArray(d.analyses) && d.analyses.length > 0 && <SectionCard title="Analyses" icon={Search}><div className="space-y-2">{d.analyses.map((a: any, i: number) => <FormattedText key={i} text={typeof a === "object" ? JSON.stringify(a) : a} />)}</div></SectionCard>}
+      {d.requirements_mapping && <SectionCard title="Requirements Mapping" icon={Layers}><FormattedText text={d.requirements_mapping} /></SectionCard>}
+      {d.risk_assessment && <SectionCard title="Risk Assessment" icon={AlertTriangle}><FormattedText text={d.risk_assessment} /></SectionCard>}
+      {d.remediation_plan && <SectionCard title="Remediation Plan" icon={Target}><FormattedText text={d.remediation_plan} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_qa_bot(d: any) {
+  return (
+    <div className="space-y-3">
+      {d.action === "ingested" ? (
+        <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><CheckCircle2 className="h-3 w-3" />Document ingested</Badge>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 text-xs text-syzygy-grey/60"><BookOpen className="h-3.5 w-3.5" />{d.query}</div>
+          {d.answer && <SectionCard title="Answer" icon={Sparkles}><FormattedText text={d.answer} /></SectionCard>}
+          {d.context_used && <SectionCard title="Context Used" icon={Database}><FormattedText text={d.context_used} /></SectionCard>}
+          {d.suggested_follow_ups && <SectionCard title="Follow-ups" icon={Lightbulb}><FormattedText text={d.suggested_follow_ups} /></SectionCard>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function render_translate(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className="border-blue-500/30 text-blue-400 bg-blue-500/10">{d.source_language || "auto"}</Badge>
+        <ArrowRight className="h-3 w-3 text-syzygy-grey/40" />
+        <Badge className="border-purple-500/30 text-purple-400 bg-purple-500/10">{d.target_language || "en"}</Badge>
+      </div>
+      {d.detection && <SectionCard title="Language Detection" icon={Globe}><FormattedText text={d.detection} /></SectionCard>}
+      {d.direct_translation && <SectionCard title="Direct Translation" icon={Globe}><FormattedText text={typeof d.direct_translation === "object" ? d.direct_translation.translation || JSON.stringify(d.direct_translation) : d.direct_translation} /></SectionCard>}
+      {d.cultural_adaptation && <SectionCard title="Cultural Adaptation" icon={Sparkles}><FormattedText text={d.cultural_adaptation} /></SectionCard>}
+      {d.quality_review && <SectionCard title="Quality Review" icon={Shield}><FormattedText text={d.quality_review} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_interview_coach(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-amber-500/30 text-amber-400 bg-amber-500/10"><Mic className="h-3 w-3" />{d.role || "general"}</Badge>
+        <Badge className="border-teal-500/30 text-teal-400 bg-teal-500/10">{d.difficulty || "medium"}</Badge>
+      </div>
+      {Array.isArray(d.questions) && d.questions.length > 0 && (
+        <SectionCard title="Questions" icon={BookOpen}>
+          {d.questions.map((q: any, i: number) => (
+            <div key={i} className="rounded-lg border border-syzygy-surface-border/50 bg-syzygy-shadow/20 p-3 text-xs">
+              <p className="font-medium text-syzygy-grey-light">{typeof q === "object" ? q.question || JSON.stringify(q) : q}</p>
+            </div>
+          ))}
+        </SectionCard>
+      )}
+      {Array.isArray(d.evaluations) && d.evaluations.length > 0 && (
+        <SectionCard title="Evaluations" icon={Target}>
+          {d.evaluations.map((e: any, i: number) => (
+            <div key={i} className="rounded-lg border border-syzygy-surface-border/50 bg-syzygy-shadow/20 p-3 space-y-1">
+              <FormattedText text={typeof e === "object" ? JSON.stringify(e) : e} />
+            </div>
+          ))}
+        </SectionCard>
+      )}
+      {d.feedback && <SectionCard title="Feedback" icon={Sparkles}><FormattedText text={d.feedback} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_data_analyzer(d: any) {
+  return (
+    <div className="space-y-3">
+      <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><Database className="h-3 w-3" />{d.format || "data"}</Badge>
+      {d.summary && <SectionCard title="Summary" icon={BarChart3}><FormattedText text={d.summary} /></SectionCard>}
+      {d.anomalies && <SectionCard title="Anomalies" icon={AlertTriangle}><FormattedText text={d.anomalies} /></SectionCard>}
+      {d.correlations && <SectionCard title="Correlations" icon={GitBranch}><FormattedText text={d.correlations} /></SectionCard>}
+      {d.visualization_recommendations && <SectionCard title="Visualization Recommendations" icon={TrendingUp}><FormattedText text={d.visualization_recommendations} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_api_designer(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10">{d.api_style || "REST"}</Badge>
+        <Badge className="border-purple-500/30 text-purple-400 bg-purple-500/10"><Code className="h-3 w-3" />{d.language || "python"}</Badge>
+      </div>
+      {d.endpoint_design && <SectionCard title="Endpoint Design" icon={Layers}><FormattedText text={d.endpoint_design} /></SectionCard>}
+      {d.openapi_spec && <SectionCard title="OpenAPI Spec" icon={FileText}><FormattedText text={typeof d.openapi_spec === "object" ? JSON.stringify(d.openapi_spec, null, 2) : d.openapi_spec} /></SectionCard>}
+      {d.endpoint_stubs && <SectionCard title="Endpoint Stubs" icon={Code}><FormattedText text={typeof d.endpoint_stubs === "object" ? JSON.stringify(d.endpoint_stubs, null, 2) : d.endpoint_stubs} /></SectionCard>}
+      {d.validation_tests && <SectionCard title="Validation Tests" icon={Shield}><FormattedText text={typeof d.validation_tests === "object" ? JSON.stringify(d.validation_tests, null, 2) : d.validation_tests} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_agentic_rag(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-syzygy-grey/60"><Database className="h-3.5 w-3.5" />{d.original_query}</div>
+      {d.decomposed_query && <SectionCard title="Decomposed Query" icon={GitBranch}><FormattedText text={d.decomposed_query} /></SectionCard>}
+      {Array.isArray(d.retrieval_results) && d.retrieval_results.length > 0 && (
+        <SectionCard title="Retrieval Results" icon={Database}>
+          {d.retrieval_results.map((r: any, i: number) => <FormattedText key={i} text={typeof r === "object" ? JSON.stringify(r) : r} />)}
+        </SectionCard>
+      )}
+      {d.synthesized_answer && <SectionCard title="Synthesized Answer" icon={Sparkles}><FormattedText text={d.synthesized_answer} /></SectionCard>}
+      {d.validation && <SectionCard title="Validation" icon={CheckCircle2}><FormattedText text={d.validation} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_report_gen(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-purple-500/30 text-purple-400 bg-purple-500/10"><FileText className="h-3 w-3" />{d.topic}</Badge>
+        <Badge className="border-teal-500/30 text-teal-400 bg-teal-500/10">{d.format || "markdown"}</Badge>
+      </div>
+      {d.executive_summary && <SectionCard title="Executive Summary" icon={Sparkles}><FormattedText text={d.executive_summary} /></SectionCard>}
+      {Array.isArray(d.sections) && d.sections.length > 0 && (
+        <SectionCard title="Sections" icon={Layers}>
+          {d.sections.map((s: string, i: number) => <FormattedText key={i} text={s} />)}
+        </SectionCard>
+      )}
+      {d.report && <SectionCard title="Full Report" icon={FileText} defaultOpen={false}><FormattedText text={d.report} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_data_pipeline(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10">{d.source_type || "csv"}</Badge>
+        <ArrowRight className="h-3 w-3 text-syzygy-grey/40" />
+        <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10">{d.target || "database"}</Badge>
+      </div>
+      {d.ingestion_analysis && <SectionCard title="Ingestion Analysis" icon={Database}><FormattedText text={d.ingestion_analysis} /></SectionCard>}
+      {d.cleaning_plan && <SectionCard title="Cleaning Plan" icon={AlertTriangle}><FormattedText text={d.cleaning_plan} /></SectionCard>}
+      {d.transformations && <SectionCard title="Transformations" icon={GitBranch}><FormattedText text={d.transformations} /></SectionCard>}
+      {d.schema_validation && Object.keys(d.schema_validation).length > 0 && <SectionCard title="Schema Validation" icon={Shield}><FormattedText text={d.schema_validation} /></SectionCard>}
+      {d.load_plan && <SectionCard title="Load Plan" icon={Zap}><FormattedText text={d.load_plan} /></SectionCard>}
+    </div>
+  );
+}
+
+function render_ci_piper(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10"><Code className="h-3 w-3" />{d.language || "python"}</Badge>
+        {d.framework && <Badge className="border-amber-500/30 text-amber-400 bg-amber-500/10">{d.framework}</Badge>}
+      </div>
+      {d.analysis && <SectionCard title="Project Analysis" icon={Lightbulb}><FormattedText text={d.analysis} /></SectionCard>}
+      {Array.isArray(d.configs) && d.configs.length > 0 && (
+        <SectionCard title="CI/CD Configs" icon={Layers}>
+          {d.configs.map((cfg: any, i: number) => (
+            <div key={i} className="space-y-1">
+              {typeof cfg === "object" && cfg !== null ? (
+                Object.entries(cfg).map(([k, v]) => <CodeBlock key={k} code={String(v)} label={k} />)
+              ) : <CodeBlock code={String(cfg)} label={`Config ${i + 1}`} />}
+            </div>
+          ))}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+export function WorkflowResult({ workflow, data }: { workflow: string; data: any }) {
+  const inner = data?.result || data;
+
+  if (!inner) return <p className="text-xs text-syzygy-grey/40 italic">No result data</p>;
+
+  const renderers: Record<string, (d: any) => React.ReactNode> = {
+    coding: render_coding,
+    research: render_research,
+    content: render_content,
+    debate: render_debate,
+    task_decomposition: render_task_decomposition,
+    audit: render_audit,
+    test_gen: render_test_gen,
+    summary: render_summary,
+    compliance: render_compliance,
+    qa_bot: render_qa_bot,
+    translate: render_translate,
+    interview_coach: render_interview_coach,
+    data_analyzer: render_data_analyzer,
+    api_designer: render_api_designer,
+    agentic_rag: render_agentic_rag,
+    report_gen: render_report_gen,
+    data_pipeline: render_data_pipeline,
+    ci_piper: render_ci_piper,
+  };
+
+  const renderFn = renderers[workflow];
+  if (renderFn) {
+    return <div className="space-y-3 animate-fade-in-up">{renderFn(inner)}</div>;
+  }
+
+  return <FormattedText text={JSON.stringify(inner, null, 2)} />;
+}

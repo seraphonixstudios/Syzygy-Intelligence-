@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { API_URL as API } from "@/lib/config";
 import { useAuthStore } from "@/store/authStore";
+import { WorkflowResult } from "@/components/workflows/WorkflowResult";
 
 const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   coding: "Scaffold, edit, test, and debug with polarity-aware pair programming",
@@ -101,7 +102,7 @@ export default function WorkflowsPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [executing, setExecuting] = useState(false);
-  const [output, setOutput] = useState<string | null>(null);
+  const [output, setOutput] = useState<any>(null);
   const [error, setError] = useState("");
   const [reasoning, setReasoning] = useState<{ agent: string; thought: string; confidence?: number; model?: string }[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -138,6 +139,16 @@ export default function WorkflowsPage() {
     return list;
   }, [workflows, activeCategory, search]);
 
+  const parseReasoning = (data: any) => {
+    const r = data?.result?.reasoning || data?.reasoning;
+    if (r && Array.isArray(r) && r.length > 0) return r;
+    return [
+      { agent: "Planner", thought: `Decomposing task for ${selected} workflow...`, confidence: 0.90, model: "tinyllama:latest" },
+      { agent: "Executor", thought: "Running workflow steps with polarity-aware agent team...", confidence: 0.87, model: "tinyllama:latest" },
+      { agent: "Validator", thought: "Verifying output quality and completeness...", confidence: 0.85, model: "tinyllama:latest" },
+    ];
+  };
+
   const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected || !input.trim()) return;
@@ -151,16 +162,8 @@ export default function WorkflowsPage() {
         body: JSON.stringify({ task: input.trim(), context: {}, files: uploadedFiles, links: attachedLinks }),
       });
       const data = await res.json();
-      setOutput(JSON.stringify(data, null, 2));
-      if (data.reasoning) {
-        setReasoning(data.reasoning);
-      } else {
-        setReasoning([
-          { agent: "Planner", thought: `Decomposing task for ${selected} workflow...`, confidence: 0.90, model: "tinyllama:latest" },
-          { agent: "Executor", thought: "Running workflow steps with polarity-aware agent team...", confidence: 0.87, model: "tinyllama:latest" },
-          { agent: "Validator", thought: "Verifying output quality and completeness...", confidence: 0.85, model: "tinyllama:latest" },
-        ]);
-      }
+      setOutput(data);
+      setReasoning(parseReasoning(data));
     } catch (err) {
       logger.error("Workflow execution failed", err, "Workflows");
       toast.error("Backend unavailable — running in demo mode");
@@ -389,7 +392,7 @@ export default function WorkflowsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(output);
+                  navigator.clipboard.writeText(JSON.stringify(output, null, 2));
                   toast.success("Copied to clipboard");
                 }}
                 className="gap-1"
@@ -397,29 +400,9 @@ export default function WorkflowsPage() {
                 <Copy className="h-3.5 w-3.5" />
                 Copy
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const blob = new Blob([output], { type: "text/markdown" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `${selected}-result.md`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success("Downloaded as markdown");
-                }}
-                className="gap-1"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download
-              </Button>
             </div>
           </div>
-          <pre className="overflow-auto rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/50 p-4 text-xs text-syzygy-grey/80 max-h-96">
-            {output}
-          </pre>
+          <WorkflowResult workflow={selected} data={output} />
         </div>
       )}
     </div>
