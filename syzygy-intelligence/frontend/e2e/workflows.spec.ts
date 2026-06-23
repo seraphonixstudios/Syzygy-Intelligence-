@@ -122,5 +122,11 @@ test.describe("Workflows page", () => {
       await page.getByText("Audit this Python codebase for security issues").click();
       await expect(page.getByText("audit")).toBeVisible();
     });
+
+    test("quick start for finetune selects finetune workflow", async ({ page }) => {
+      await page.goto("/workflows");
+      await page.getByText("Fine-tune Llama 3.2 with QLoRA on custom data").click();
+      await expect(page.getByText("finetune")).toBeVisible();
+    });
   });
 });

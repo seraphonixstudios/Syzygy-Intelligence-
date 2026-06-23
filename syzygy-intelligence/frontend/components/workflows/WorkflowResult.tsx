@@ -378,6 +378,67 @@ function render_ci_piper(d: any) {
   );
 }
 
+function render_finetune(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-pink-500/30 text-pink-400 bg-pink-500/10"><Zap className="h-3 w-3" />{d.method || "qlora"}</Badge>
+        <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10">{d.model || "unknown"}</Badge>
+        <Badge className={d.status === "completed" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" : "border-red-500/30 text-red-400 bg-red-500/10"}>{d.status}</Badge>
+      </div>
+
+      {d.metrics && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Final Loss</p>
+            <p className="mt-1 text-lg font-bold text-syzygy-gold-light">{d.metrics.final_loss ?? "—"}</p>
+          </div>
+          <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Perplexity</p>
+            <p className="mt-1 text-lg font-bold text-syzygy-bone">{d.metrics.perplexity ?? "—"}</p>
+          </div>
+          <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Steps</p>
+            <p className="mt-1 text-lg font-bold text-syzygy-grey-light">{d.metrics.total_steps ?? 0}</p>
+          </div>
+          <div className="rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/30 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Duration</p>
+            <p className="mt-1 text-lg font-bold text-syzygy-grey-light">{d.metrics.elapsed_seconds ? `${d.metrics.elapsed_seconds}s` : "—"}</p>
+          </div>
+        </div>
+      )}
+
+      {d.metrics?.loss_curve && d.metrics.loss_curve.length > 1 && (
+        <SectionCard title="Loss Curve" icon={TrendingUp}>
+          <svg viewBox="0 0 280 80" className="w-full h-20" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="lossGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#e8c35a" />
+                <stop offset="100%" stopColor="#d4a843" stopOpacity={0.2} />
+              </linearGradient>
+            </defs>
+            {d.metrics.loss_curve.map((pt: any, i: number) => {
+              if (i === 0) return null;
+              const prev = d.metrics.loss_curve[i - 1];
+              const x1 = ((i - 1) / (d.metrics.loss_curve.length - 1)) * 280;
+              const y1 = 80 - (Math.min(prev.loss, 5) / 5) * 75;
+              const x2 = (i / (d.metrics.loss_curve.length - 1)) * 280;
+              const y2 = 80 - (Math.min(pt.loss, 5) / 5) * 75;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#e8c35a" strokeWidth={1.5} opacity={0.8} />;
+            })}
+          </svg>
+        </SectionCard>
+      )}
+
+      {d.error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-400">
+          <AlertTriangle className="h-3.5 w-3.5" /> {d.error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WorkflowResult({ workflow, data }: { workflow: string; data: any }) {
   const inner = data?.result || data;
 
@@ -385,6 +446,7 @@ export function WorkflowResult({ workflow, data }: { workflow: string; data: any
 
   const renderers: Record<string, (d: any) => React.ReactNode> = {
     coding: render_coding,
+    finetune: render_finetune,
     research: render_research,
     content: render_content,
     debate: render_debate,

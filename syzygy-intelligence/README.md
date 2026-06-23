@@ -413,9 +413,9 @@ Syzygy will:
 
 ## Workflows
 
-Syzygy ships with **18 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
+Syzygy ships with **20 workflow engines**, each designed for a specific task domain with optimal agent polarity balance:
 
-**Available workflows (18 total):**
+**Available workflows (20 total):**
 
 | Workflow | Description | Agent Team |
 |----------|-------------|------------|
@@ -437,6 +437,7 @@ Syzygy ships with **18 workflow engines**, each designed for a specific task dom
 | **Report Gen** | Multi-format structured reports with charts, tables, exec summaries | Creator (writing) + Sage (analysis) |
 | **Data Pipeline** | ETL — ingest, clean, transform, validate schema, load to target | Magician (transformation) + Ruler (governance) |
 | **CI Piper** | CI/CD configs — GitHub Actions, GitLab CI, Jenkins with matrix builds | Hero (automation) + Sage (quality) |
+| **Fine-Tune** | Fine-tune local LLMs with LoRA, QLoRA, or full training — dataset prep, training, evaluation, and export | Sage (optimization) + Magician (transformation) |
 
 ### API
 
@@ -481,6 +482,7 @@ syzygy-intelligence/
 │   │   ├── memory/              # Multi-layer memory system
 │   │   ├── workflows/           # 18 workflow definitions
 │   │   │   ├── coding.py
+│   │   │   ├── finetune.py
 │   │   │   ├── research.py
 │   │   │   ├── content.py
 │   │   │   ├── debate.py

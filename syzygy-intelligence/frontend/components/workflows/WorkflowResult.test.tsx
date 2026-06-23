@@ -136,6 +136,36 @@ describe("WorkflowResult", () => {
     });
   });
 
+  describe("finetune workflow", () => {
+    it("renders method and model badges", () => {
+      const data = makeData({ model: "llama3.2:3b", method: "qlora", status: "completed", metrics: { final_loss: 1.24, perplexity: 3.45, total_steps: 60, elapsed_seconds: 9.2, loss_curve: [{ step: 1, loss: 2.5 }, { step: 2, loss: 1.8 }] } });
+      render(<WorkflowResult workflow="finetune" data={data} />);
+      expect(screen.getByText("qlora")).toBeTruthy();
+      expect(screen.getByText("llama3.2:3b")).toBeTruthy();
+      expect(screen.getByText("completed")).toBeTruthy();
+    });
+
+    it("renders metric cards", () => {
+      const data = makeData({ model: "mistral:7b", method: "lora", status: "completed", metrics: { final_loss: 0.85, perplexity: 2.34, total_steps: 120, elapsed_seconds: 45.2, loss_curve: [] } });
+      render(<WorkflowResult workflow="finetune" data={data} />);
+      expect(screen.getByText("0.85")).toBeTruthy();
+      expect(screen.getByText("2.34")).toBeTruthy();
+      expect(screen.getByText("120")).toBeTruthy();
+    });
+
+    it("renders loss curve SVG when data available", () => {
+      const data = makeData({ model: "tinyllama:latest", method: "qlora", status: "completed", metrics: { final_loss: 1.5, perplexity: 4.48, total_steps: 30, elapsed_seconds: 5.0, loss_curve: [{ step: 1, loss: 3.0 }, { step: 2, loss: 2.5 }, { step: 3, loss: 2.0 }] } });
+      const { container } = render(<WorkflowResult workflow="finetune" data={data} />);
+      expect(container.querySelector("svg")).toBeTruthy();
+    });
+
+    it("renders error state", () => {
+      const data = makeData({ model: "tinyllama:latest", method: "qlora", status: "failed", metrics: { final_loss: 0, perplexity: 0, total_steps: 0, elapsed_seconds: 2.0, loss_curve: [] }, error: "CUDA out of memory" });
+      render(<WorkflowResult workflow="finetune" data={data} />);
+      expect(screen.getByText("CUDA out of memory")).toBeTruthy();
+    });
+  });
+
   describe("fallback render", () => {
     it("renders raw JSON for unknown workflow", () => {
       const data = makeData({ foo: "bar" });

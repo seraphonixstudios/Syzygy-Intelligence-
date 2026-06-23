@@ -23,6 +23,7 @@ from app.workflows.task_decomposition import TASK_DECOMPOSITION_WORKFLOW, TaskDe
 from app.workflows.test_gen import TEST_GEN_WORKFLOW, TestGenWorkflow
 from app.workflows.translate import TRANSLATE_WORKFLOW, TranslateWorkflow
 from app.workflows.image_gen import IMAGE_GEN_WORKFLOW, ImageGenWorkflow
+from app.workflows.finetune import FINETUNE_WORKFLOW, FineTuneWorkflow
 from app.workflows.self_improvement import SELF_IMPROVEMENT_WORKFLOW, RecursiveSelfImprovementWorkflow
 
 WORKFLOW_REGISTRY: dict[str, Any] = {
@@ -46,6 +47,7 @@ WORKFLOW_REGISTRY: dict[str, Any] = {
     "ci_piper": CI_PIPER_WORKFLOW,
     "self_improvement": SELF_IMPROVEMENT_WORKFLOW,
     "image_gen": IMAGE_GEN_WORKFLOW,
+    "finetune": FINETUNE_WORKFLOW,
 }
 
 
@@ -70,4 +72,5 @@ __all__ = [
     "CiPiperWorkflow",
     "RecursiveSelfImprovementWorkflow",
     "ImageGenWorkflow",
+    "FineTuneWorkflow",
 ]

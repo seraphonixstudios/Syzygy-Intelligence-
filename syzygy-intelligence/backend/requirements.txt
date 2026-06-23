@@ -60,3 +60,14 @@ Pillow
 # LangGraph - install last to avoid backtracking (pinned compatible set)
 langgraph
 langgraph-checkpoint
+
+# Fine-tuning (optional — backend works without these, falls back to demo mode)
+# torch
+# transformers
+# peft
+# bitsandbytes
+# trl
+# datasets
+# accelerate
+# scipy
+# sentencepiece

@@ -23,6 +23,7 @@ import {
   Shield,
   Mail,
   FolderKanban,
+  Zap,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -43,6 +44,7 @@ const navItems = [
   { icon: FileText, label: "Content", href: "/content" },
   { icon: Library, label: "Memory", href: "/memory" },
   { icon: TrendingUp, label: "Improve", href: "/improve" },
+  { icon: Zap, label: "Train", href: "/finetune" },
   { icon: Palette, label: "Brand", href: "/brand" },
   { icon: Mail, label: "Contact", href: "/contact" },
   { icon: Settings, label: "Settings", href: "/settings" },
