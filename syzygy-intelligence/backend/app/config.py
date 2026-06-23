@@ -95,8 +95,8 @@ class SyzygyConfig(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log output format (json or text)")
     secret_key: str = Field(
-        default="change-me-to-a-random-secret",
-        description="JWT signing key (must be randomized in production)",
+        default="",
+        description="JWT signing key (must be set in production, generate with: openssl rand -hex 32)",
     )
     cors_origins: str = Field(
         default="http://localhost:3000,http://localhost:8000",
@@ -108,7 +108,7 @@ class SyzygyConfig(BaseSettings):
     db_port: int = Field(default=5432, description="Database port")
     db_name: str = Field(default="syzygy", description="Database name")
     db_user: str = Field(default="syzygy", description="Database user")
-    db_password: str = Field(default="syzygy_secret", description="Database password")
+    db_password: str = Field(default="", description="Database password (must be set in production)")
     db_sqlite_path: str = Field(
         default_factory=lambda: str(Path("./data/syzygy.db").absolute()),
         description="SQLite database file path",
@@ -140,7 +140,7 @@ class SyzygyConfig(BaseSettings):
     # ──── Neo4j ────
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")
-    neo4j_password: str = Field(default="syzygy_secret", description="Neo4j password")
+    neo4j_password: str = Field(default="", description="Neo4j password (must be set in production)")
 
     # ──── Vector DB ────
     chroma_path: str = Field(
@@ -316,13 +316,13 @@ class SyzygyConfig(BaseSettings):
         """Validate all secrets are set in production."""
         errors: list[str] = []
 
-        if self.secret_key == "change-me-to-a-random-secret":
+        if not self.secret_key or self.secret_key == "change-me-to-a-random-secret":
             errors.append("SYZYGY_SECRET_KEY must be set to a random value (generate with: openssl rand -hex 32)")
 
-        if self.db_password == "syzygy_secret":
+        if not self.db_password:
             errors.append("SYZYGY_DB_PASSWORD must be set to a secure value")
 
-        if self.neo4j_password == "syzygy_secret":
+        if not self.neo4j_password:
             errors.append("SYZYGY_NEO4J_PASSWORD must be set to a secure value")
 
         if errors:

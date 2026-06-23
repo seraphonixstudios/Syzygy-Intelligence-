@@ -194,7 +194,15 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
         metrics_registry.auth_password_resets.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
 
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    # Validate UUID format before querying
+    try:
+        uid = uuid.UUID(user_id)
+    except (ValueError, TypeError):
+        log_auth_event("password_reset", result="invalid_user_id_format")
+        metrics_registry.auth_password_resets.labels(result="invalid_token").inc()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID format")
+
+    result = await db.execute(select(User).where(User.id == uid))
     user = result.scalar_one_or_none()
     if not user:
         log_auth_event("password_reset", user_id=user_id, result="user_not_found")
@@ -267,7 +275,15 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
         metrics_registry.auth_email_verifications.labels(result="invalid_token").inc()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token")
 
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    # Validate UUID format before querying
+    try:
+        uid = uuid.UUID(user_id)
+    except (ValueError, TypeError):
+        log_auth_event("email_verified", result="invalid_user_id_format")
+        metrics_registry.auth_email_verifications.labels(result="invalid_token").inc()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID format")
+
+    result = await db.execute(select(User).where(User.id == uid))
     user = result.scalar_one_or_none()
     if not user:
         log_auth_event("email_verified", user_id=user_id, result="user_not_found")
@@ -502,8 +518,15 @@ async def revoke_api_key(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    # Validate UUID format before querying
+    try:
+        key_uuid = uuid.UUID(key_id)
+    except (ValueError, TypeError):
+        log_auth_event("api_key_revoked", user_id=str(user.id), result="invalid_key_id_format")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
+    
     result = await db.execute(
-        select(ApiKey).where(ApiKey.id == uuid.UUID(key_id), ApiKey.user_id == user.id)
+        select(ApiKey).where(ApiKey.id == key_uuid, ApiKey.user_id == user.id)
     )
     api_key = result.scalar_one_or_none()
     if not api_key:
@@ -545,27 +568,36 @@ async def charge_message(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    await _reset_usage_if_needed(user, db)
-    await check_usage_limit(user, db)
-    
-    # Atomically increment message count in a single database transaction
-    # Use row-level locking to prevent race conditions with concurrent requests
-    # This ensures the check-then-act is atomic
-    stmt = (
-        update(User)
-        .where(User.id == user.id)
-        .values(message_count=User.message_count + 1)
-        .returning(User.message_count)
-    )
+    # Use SELECT...FOR UPDATE to serialize writes and prevent race conditions
+    # This acquires a row-level lock on the User row, blocking concurrent updates
+    stmt = select(User).where(User.id == user.id).with_for_update()
     result = await db.execute(stmt)
-    new_count = result.scalar_one()
+    locked_user = result.scalar_one()
+    
+    # Reset usage if needed (within the locked transaction)
+    now = datetime.now(UTC)
+    usage_reset = _to_utc(locked_user.usage_reset_at)
+    if usage_reset is None or (usage_reset.year, usage_reset.month) < (now.year, now.month):
+        locked_user.message_count = 0  # type: ignore
+        locked_user.usage_reset_at = now  # type: ignore
+        db.add(locked_user)
+        await db.flush()  # Flush within transaction but don't commit yet
+    
+    # Check usage limit on the reset (locked) user
+    await check_usage_limit(locked_user, db)
+    
+    # Atomically increment message count with row lock held
+    locked_user.message_count += 1  # type: ignore
+    db.add(locked_user)
+    await db.flush()
+    new_count = locked_user.message_count  # type: ignore
     await db.commit()
 
     log_usage_event(
         "message_charged",
-        user_id=str(user.id),
-        subscription_tier=user.subscription_tier.value,
+        user_id=str(locked_user.id),
+        subscription_tier=locked_user.subscription_tier.value,
         message_count=new_count,
     )
-    metrics_registry.message_count_charged.labels(subscription_tier=user.subscription_tier.value).inc()
+    metrics_registry.message_count_charged.labels(subscription_tier=locked_user.subscription_tier.value).inc()
     return {"message_count": new_count}

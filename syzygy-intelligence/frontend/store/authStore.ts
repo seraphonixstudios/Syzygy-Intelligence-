@@ -44,14 +44,23 @@ const sessionAwareStorage: StateStorage = {
     return sessionStorage.getItem(name) || localStorage.getItem(name);
   },
   setItem: (name: string, value: string) => {
-    const parsed = JSON.parse(value);
-    const remember = parsed?.state?.rememberMe;
-    if (remember !== false) {
+    // Only toggle storage on explicit setRememberMe() calls, not on every persist
+    // Check if we have a current state to determine target storage
+    try {
+      const parsed = JSON.parse(value);
+      const remember = parsed?.state?.rememberMe ?? true;
+      
+      if (remember) {
+        localStorage.setItem(name, value);
+        sessionStorage.removeItem(name);
+      } else {
+        sessionStorage.setItem(name, value);
+        localStorage.removeItem(name);
+      }
+    } catch {
+      // On parse error, use localStorage as safe default
       localStorage.setItem(name, value);
       sessionStorage.removeItem(name);
-    } else {
-      sessionStorage.setItem(name, value);
-      localStorage.removeItem(name);
     }
   },
   removeItem: (name: string) => {
@@ -157,21 +166,45 @@ export const useAuthStore = create<AuthState>()(
       updateProfile: async (data: { display_name?: string }) => {
         const { accessToken, user } = get();
         if (!accessToken || !user) throw new Error("Not authenticated");
-        const res = await fetch(`${API_URL}/api/auth/me/settings`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            ...user.settings,
-            display_name: data.display_name || user.display_name,
-          }),
-        });
-        if (!res.ok) throw new Error("Failed to update profile");
-        set({
-          user: { ...user, display_name: data.display_name || user.display_name },
-        });
+        
+        // Save original state for rollback
+        const originalUser = user;
+        
+        // Optimistically update UI
+        const updatedUser = {
+          ...user,
+          display_name: data.display_name || user.display_name,
+        };
+        set({ user: updatedUser });
+
+        try {
+          const res = await fetch(`${API_URL}/api/auth/me/settings`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              settings: {
+                ...user.settings,
+                display_name: data.display_name || user.display_name,
+              },
+            }),
+          });
+          
+          if (!res.ok) {
+            // Rollback on failure
+            set({ user: originalUser });
+            throw new Error("Failed to update profile");
+          }
+          
+          // Keep the updated state on success
+          set({ user: updatedUser });
+        } catch (err) {
+          // Rollback on any error
+          set({ user: originalUser });
+          throw err;
+        }
       },
 
       getAuthHeaders: () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useUnhandledRejection } from "@/hooks/useUnhandledRejection";
 import { MotionConfig } from "framer-motion";
 import { Sidebar } from "@/components/dashboard/Sidebar";
@@ -37,9 +37,13 @@ export function RootLayoutClient({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
 
+  // Memoize logger to prevent recreation on re-render
+  // This prevents memory leaks from creating multiple subscriptions
+  const memoizedLogger = useMemo(() => logger, []);
+
   // Subscribe logger errors to telemetry with proper cleanup
   useEffect(() => {
-    const unsub = logger.subscribe((entry) => {
+    const unsub = memoizedLogger.subscribe((entry) => {
       if (entry.level === "error") {
         // Load observability dynamically and track error
         import("@/lib/observability")
@@ -52,13 +56,14 @@ export function RootLayoutClient({ children }: { children: ReactNode }) {
           });
       }
     });
+    
     // Ensure unsub is a function before calling it
     return () => {
       if (typeof unsub === "function") {
         unsub();
       }
     };
-  }, []);
+  }, [memoizedLogger]);
 
   return (
     <MotionConfig

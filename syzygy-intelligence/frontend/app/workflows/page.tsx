@@ -291,20 +291,20 @@ export default function WorkflowsPage() {
             <p className="text-xs text-syzygy-grey/40 font-medium uppercase tracking-wider">Quick start ideas</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                "Build a REST API in Python with FastAPI",
-                "Research the latest advances in quantum computing",
-                "Write a blog post about zero-trust architecture",
-                "Debate: Is AGI achievable without embodiment?",
-                "Break down: Building a recommendation engine",
-                "Audit this Python codebase for security issues",
-              ].map((s) => (
+                { text: "Build a REST API in Python with FastAPI", workflow: "coding" },
+                { text: "Research the latest advances in quantum computing", workflow: "research" },
+                { text: "Write a blog post about zero-trust architecture", workflow: "content" },
+                { text: "Debate: Is AGI achievable without embodiment?", workflow: "debate" },
+                { text: "Break down: Building a recommendation engine", workflow: "task_decomposition" },
+                { text: "Audit this Python codebase for security issues", workflow: "audit" },
+              ].map(({ text, workflow }) => (
                 <button
-                  key={s}
+                  key={text}
                   type="button"
-                  onClick={() => setInput(s)}
+                  onClick={() => { setSelected(workflow); setInput(text); }}
                   className="group flex items-center justify-between rounded-xl border border-syzygy-surface-border bg-syzygy-shadow/20 px-4 py-3 text-left text-xs text-syzygy-grey/60 transition-all duration-200 hover:border-syzygy-gold/30 hover:bg-syzygy-gold/5 hover:text-syzygy-grey-light cursor-pointer"
                 >
-                  <span className="leading-relaxed">{s}</span>
+                  <span className="leading-relaxed">{text}</span>
                   <ArrowRight className="h-3.5 w-3.5 shrink-0 text-syzygy-grey/30 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-syzygy-gold/60" />
                 </button>
               ))}

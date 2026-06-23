@@ -94,4 +94,33 @@ test.describe("Workflows page", () => {
     await expect(page.locator("button:has-text('audit')")).toBeVisible();
     await expect(page.locator("button:has-text('compliance')")).not.toBeVisible();
   });
+
+  test.describe("Quick start ideas", () => {
+    test("quick start buttons are visible", async ({ page }) => {
+      await page.goto("/workflows");
+      await expect(page.getByText("Quick start ideas")).toBeVisible();
+      await expect(page.getByText("Build a REST API")).toBeVisible();
+      await expect(page.getByText("Research the latest")).toBeVisible();
+    });
+
+    test("clicking a quick start idea selects the correct workflow", async ({ page }) => {
+      await page.goto("/workflows");
+      await page.getByText("Build a REST API in Python with FastAPI").click();
+      await expect(page.getByText("coding")).toBeVisible();
+      const input = page.locator("input[placeholder*='Describe your task']");
+      await expect(input).toHaveValue("Build a REST API in Python with FastAPI");
+    });
+
+    test("quick start for research selects research workflow", async ({ page }) => {
+      await page.goto("/workflows");
+      await page.getByText("Research the latest advances in quantum computing").click();
+      await expect(page.getByText("research")).toBeVisible();
+    });
+
+    test("quick start for audit selects audit workflow", async ({ page }) => {
+      await page.goto("/workflows");
+      await page.getByText("Audit this Python codebase for security issues").click();
+      await expect(page.getByText("audit")).toBeVisible();
+    });
+  });
 });
