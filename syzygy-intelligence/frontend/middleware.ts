@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { randomBytes } from "crypto";
 
 export function middleware(request: NextRequest) {
     const response = NextResponse.next();
     
     // Generate a unique nonce for inline scripts (prevents injected scripts from running)
-    // Base64-encode to safely embed in CSP header
-    const nonce = randomBytes(16).toString("base64");
+    const nonce = crypto.randomUUID();
     
     // Enhanced CSP that removes 'unsafe-eval' and uses nonces for inline scripts
     // This prevents inline script injection attacks while allowing necessary functionality
