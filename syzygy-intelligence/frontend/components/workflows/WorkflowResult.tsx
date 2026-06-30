@@ -39,13 +39,181 @@ function CodeBlock({ code, label }: { code: string | undefined | null; label?: s
 }
 
 function render_coding(d: any) {
+  const phases = d.phases || {};
+  const hasPhases = Object.keys(phases).length > 0;
+  const hasSteps = !!d.steps;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Badge className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10"><Code className="h-3 w-3" />{d.language || "python"}</Badge>
         <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><CheckCircle2 className="h-3 w-3" />{d.status}</Badge>
+        {phases.plan?.tech_stack?.framework && (
+          <Badge className="border-amber-500/30 text-amber-400 bg-amber-500/10"><Zap className="h-3 w-3" />{phases.plan.tech_stack.framework}</Badge>
+        )}
       </div>
-      {d.steps && Object.entries(d.steps).map(([step, val]: [string, any]) => (
+
+      {hasPhases && (
+        <>
+          {/* Plan phase */}
+          {phases.plan && (
+            <SectionCard title="Plan" icon={Lightbulb} defaultOpen={true}>
+              <FormattedText text={phases.plan.summary} />
+              {phases.plan.sub_tasks && Array.isArray(phases.plan.sub_tasks) && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40 font-medium">Sub-tasks</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    {phases.plan.sub_tasks.map((t: string, i: number) => (
+                      <li key={i} className="text-xs text-syzygy-grey/70">{t}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {phases.plan.tech_stack && (
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {Object.entries(phases.plan.tech_stack).map(([k, v]) => (
+                    <div key={k} className="rounded-lg bg-syzygy-shadow/20 p-1.5">
+                      <p className="text-[10px] text-syzygy-grey/40 uppercase">{k}</p>
+                      <p className="text-xs font-medium text-syzygy-grey/80">{String(v)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Design phase */}
+          {phases.design && (
+            <SectionCard title="Design" icon={Layers} defaultOpen={true}>
+              <FormattedText text={phases.design.summary} />
+              {phases.design.components && Array.isArray(phases.design.components) && (
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40 font-medium">Components</p>
+                  {phases.design.components.map((c: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2 rounded-lg bg-syzygy-shadow/20 p-2">
+                      <Code className="h-3.5 w-3.5 mt-0.5 shrink-0 text-cyan-400" />
+                      <div>
+                        <p className="text-xs font-medium text-syzygy-grey/80">{c.name}</p>
+                        <p className="text-[10px] text-syzygy-grey/50">{c.file} — {c.responsibility}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {phases.design.interfaces && Array.isArray(phases.design.interfaces) && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40 font-medium">API Endpoints</p>
+                  <div className="space-y-0.5">
+                    {phases.design.interfaces.map((ep: string, i: number) => (
+                      <div key={i} className="rounded bg-syzygy-shadow/30 px-2 py-1 font-mono text-[10px] text-syzygy-gold/70">{ep}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Implement phase */}
+          {phases.implement && (
+            <SectionCard title="Implementation" icon={Code} defaultOpen={true}>
+              <FormattedText text={phases.implement.summary} />
+              {phases.implement.files && typeof phases.implement.files === "object" && (
+                <div className="mt-2 space-y-2">
+                  {Object.entries(phases.implement.files as Record<string, string>).map(([fname, content]) => (
+                    <div key={fname}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <FileText className="h-3 w-3 text-cyan-400/60" />
+                        <span className="text-xs font-mono text-cyan-400/80">{fname}</span>
+                      </div>
+                      <CodeBlock code={content} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Review phase */}
+          {phases.review && (
+            <SectionCard title="Review" icon={Shield} defaultOpen={true}>
+              <FormattedText text={phases.review.summary} />
+              {phases.review.score != null && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-syzygy-grey/40">Quality Score</span>
+                  <span className={`text-sm font-bold ${phases.review.score >= 8 ? "text-emerald-400" : phases.review.score >= 6 ? "text-amber-400" : "text-red-400"}`}>
+                    {phases.review.score}/10
+                  </span>
+                </div>
+              )}
+              {phases.review.issues && Array.isArray(phases.review.issues) && phases.review.issues.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-syzygy-grey/40 font-medium">Issues</p>
+                  {phases.review.issues.map((issue: any, i: number) => {
+                    const sevColor = issue.severity === "high" ? "text-red-400" : issue.severity === "medium" ? "text-amber-400" : "text-syzygy-grey/60";
+                    return (
+                      <div key={i} className="flex items-start gap-2 rounded-lg bg-syzygy-shadow/20 p-2">
+                        <AlertTriangle className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${sevColor}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase ${sevColor} ${sevColor.replace("text-", "bg-").replace("400", "500/10")}`}>{issue.severity}</span>
+                            <span className="text-[10px] font-mono text-syzygy-grey/50">{issue.file}:{issue.line}</span>
+                          </div>
+                          <p className="text-xs text-syzygy-grey/70 mt-0.5">{issue.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Test phase */}
+          {phases.test && (
+            <SectionCard title="Tests" icon={CheckCircle2} defaultOpen={true}>
+              <FormattedText text={phases.test.summary} />
+              {phases.test.test_results && (
+                <div className="mt-2 grid grid-cols-4 gap-1.5">
+                  <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                    <p className="text-lg font-bold text-emerald-400">{phases.test.test_results.passed ?? 0}</p>
+                    <p className="text-[10px] text-syzygy-grey/50">Passed</p>
+                  </div>
+                  <div className="rounded-lg bg-red-500/5 border border-red-500/10 p-2 text-center">
+                    <p className="text-lg font-bold text-red-400">{phases.test.test_results.failed ?? 0}</p>
+                    <p className="text-[10px] text-syzygy-grey/50">Failed</p>
+                  </div>
+                  <div className="rounded-lg bg-syzygy-shadow/20 border border-syzygy-surface-border p-2 text-center">
+                    <p className="text-lg font-bold text-syzygy-grey/60">{phases.test.test_results.skipped ?? 0}</p>
+                    <p className="text-[10px] text-syzygy-grey/50">Skipped</p>
+                  </div>
+                  <div className="rounded-lg bg-cyan-500/5 border border-cyan-500/10 p-2 text-center">
+                    <p className="text-lg font-bold text-cyan-400">{phases.test.test_results.coverage_estimate ?? 0}%</p>
+                    <p className="text-[10px] text-syzygy-grey/50">Coverage</p>
+                  </div>
+                </div>
+              )}
+              {phases.test.files && typeof phases.test.files === "object" && (
+                <div className="mt-2 space-y-2">
+                  {Object.entries(phases.test.files as Record<string, string>).map(([fname, content]) => (
+                    <CodeBlock key={fname} code={content} label={fname} />
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Documentation phase */}
+          {phases.document && (
+            <SectionCard title="Documentation" icon={BookOpen} defaultOpen={false}>
+              <FormattedText text={phases.document.summary} />
+              {phases.document.readme && <CodeBlock code={phases.document.readme} label="README" />}
+            </SectionCard>
+          )}
+        </>
+      )}
+
+      {/* Backward compat: old steps-based format */}
+      {hasSteps && !hasPhases && Object.entries(d.steps).map(([step, val]: [string, any]) => (
         <SectionCard key={step} title={step} icon={step === "generation" ? Code : step === "review" ? Shield : step === "test" ? CheckCircle2 : Zap}>
           {typeof val === "object" && val !== null ? (
             Object.entries(val).map(([k, v]) => {
@@ -56,6 +224,12 @@ function render_coding(d: any) {
           ) : <FormattedText text={String(val)} />}
         </SectionCard>
       ))}
+
+      {/* Execute-only fallback (no phases, no steps) */}
+      {!hasPhases && !hasSteps && d.task && (
+        <SectionCard title="Result" icon={Zap}><FormattedText text={JSON.stringify(d, null, 2)} /></SectionCard>
+      )}
+
       {d.reasoning?.length > 0 && (
         <SectionCard title="Agent Reasoning" icon={Lightbulb}>
           {d.reasoning.map((r: any, i: number) => (

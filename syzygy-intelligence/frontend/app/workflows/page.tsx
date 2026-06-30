@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { WorkflowResult } from "@/components/workflows/WorkflowResult";
 
 const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
-  coding: "Scaffold, edit, test, and debug with polarity-aware pair programming",
+  coding: "Multi-agent code generation — plan, design, implement, review, test, and document with specialist agents",
   finetune: "Fine-tune local LLMs with LoRA, QLoRA, or full training — dataset prep, training, evaluation, and export",
   support: "Customer support ticket triage, resolution drafting, and escalation monitoring",
   meeting: "Meeting summarization, action item extraction, and follow-up email drafting",
@@ -92,7 +92,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const WORKFLOW_PROMPTS: Record<string, string[]> = {
-  coding: ["Build a REST API with FastAPI", "Create a CLI file processing tool", "Scaffold a Next.js landing page"],
+  coding: ["Build a REST API with FastAPI", "Create a CLI file processing tool", "Build a data processing pipeline with Python"],
   finetune: ["Fine-tune Llama 3.2 3B on custom chat data", "Train Mistral 7B with QLoRA for code generation", "Fine-tune a model on your own dataset for RAG"],
   support: ["My account is locked after too many login attempts", "I was charged twice for my subscription this month", "The API keeps returning 503 errors during peak hours"],
   meeting: ["Summarize this sprint planning meeting and extract action items", "Generate follow-up emails for today's standup blockers", "Create action items and meeting summary from these design review notes"],

@@ -57,8 +57,8 @@ class TestWorkflowIntegration:
         wf.llm = mock_ollama_client
         result = await wf.execute("Build a hello world app", {"language": "python"})
         assert result["status"] == "completed"
-        assert "steps" in result
-        assert result["steps"]["scaffold"]["scaffold"] == "mock output"
+        assert "phases" in result
+        assert "plan" in result["phases"]
 
 
 class TestConsensusIntegration:

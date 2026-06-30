@@ -19,13 +19,15 @@ describe("WorkflowResult", () => {
     const codingData = makeData({
       task: "Build a REST API",
       language: "python",
-      steps: {
-        scaffold: { code: "# main.py\nfrom fastapi import FastAPI\napp = FastAPI()" },
-        generation: { code: "def hello(): return 'world'" },
-        review: { review: "Code looks good", code_length: 42 },
-        test: { test_suite: "def test_hello(): pass" },
+      phases: {
+        plan: { summary: "Planned architecture", sub_tasks: ["Define models", "Create schemas"], tech_stack: { framework: "FastAPI", database: "PostgreSQL" } },
+        design: { summary: "Designed components", components: [{ name: "User", file: "models/user.py", responsibility: "User accounts" }], interfaces: ["GET /api/items"] },
+        implement: { summary: "Generated 5 files", files: { "main.py": "from fastapi import FastAPI\napp = FastAPI()", "models.py": "class User:\n    pass" } },
+        review: { summary: "Reviewed code", score: 8.5, issues: [{ severity: "medium", file: "routes.py", line: 20, message: "No validation" }] },
+        test: { summary: "Generated tests", test_results: { passed: 8, failed: 0, skipped: 0, coverage_estimate: 87 } },
+        document: { summary: "Generated docs", readme: "# API\n\nREST API docs" },
       },
-      reasoning: [{ agent: "Architect", thought: "Designing structure...", confidence: 0.92 }],
+      reasoning: [{ agent: "Planner", thought: "Analyzing requirements...", confidence: 0.92 }],
       status: "completed",
     });
 
@@ -34,18 +36,44 @@ describe("WorkflowResult", () => {
       expect(screen.getByText("python")).toBeTruthy();
     });
 
-    it("renders step sections", () => {
+    it("renders framework badge", () => {
       render(<WorkflowResult workflow="coding" data={codingData} />);
-      expect(screen.getByText("scaffold")).toBeTruthy();
-      expect(screen.getByText("generation")).toBeTruthy();
-      expect(screen.getByText("review")).toBeTruthy();
-      expect(screen.getByText("test")).toBeTruthy();
+      const matches = screen.getAllByText("FastAPI");
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders phase sections", () => {
+      render(<WorkflowResult workflow="coding" data={codingData} />);
+      expect(screen.getByText("Plan")).toBeTruthy();
+      expect(screen.getByText("Design")).toBeTruthy();
+      expect(screen.getByText("Implementation")).toBeTruthy();
+      expect(screen.getByText("Review")).toBeTruthy();
+      expect(screen.getByText("Tests")).toBeTruthy();
+      expect(screen.getByText("Documentation")).toBeTruthy();
+    });
+
+    it("renders sub-tasks from plan phase", () => {
+      render(<WorkflowResult workflow="coding" data={codingData} />);
+      expect(screen.getByText("Define models")).toBeTruthy();
+      expect(screen.getByText("Create schemas")).toBeTruthy();
+    });
+
+    it("renders review issues", () => {
+      render(<WorkflowResult workflow="coding" data={codingData} />);
+      expect(screen.getByText("medium")).toBeTruthy();
+      expect(screen.getByText("No validation")).toBeTruthy();
+    });
+
+    it("renders test results", () => {
+      render(<WorkflowResult workflow="coding" data={codingData} />);
+      expect(screen.getByText("8")).toBeTruthy();
+      expect(screen.getByText("87%")).toBeTruthy();
     });
 
     it("renders reasoning section", () => {
       render(<WorkflowResult workflow="coding" data={codingData} />);
       expect(screen.getByText("Agent Reasoning")).toBeTruthy();
-      expect(screen.getByText("Architect")).toBeTruthy();
+      expect(screen.getByText("Planner")).toBeTruthy();
     });
   });
 

@@ -49,7 +49,7 @@ WORKFLOW_META: list[tuple[type, str, list[str], list[str]]] = [
     (ApiDesignerWorkflow, "api_designer", ["API", "OpenAPI"], ["api_design", "openapi_generation"]),
     (AuditWorkflow, "audit", ["security", "review"], ["code_review", "vulnerability_scanning"]),
     (CiPiperWorkflow, "ci_piper", ["CI/CD", "GitHub"], ["ci_cd_design", "config_generation"]),
-    (CodingWorkflow, "coding", ["software", "code"], ["code_generation", "code_review"]),
+    (CodingWorkflow, "coding", ["software", "code"], ["code_generation", "code_review", "architecture_design", "documentation"]),
     (ComplianceWorkflow, "compliance", ["compliance", "GDPR"], ["compliance_analysis", "policy_mapping"]),
     (ContentWorkflow, "content", ["content", "writing"], ["writing", "storytelling"]),
     (DataAnalyzerWorkflow, "data_analyzer", ["analysis", "data"], ["statistical_analysis", "anomaly_detection"]),
@@ -338,8 +338,13 @@ class TestCodingWorkflow:
             timeout=EXECUTE_TIMEOUT,
         )
         assert result["status"] == "completed"
-        assert "steps" in result
-        assert "scaffold" in result["steps"]
+        assert "phases" in result
+        assert "plan" in result["phases"]
+        assert "design" in result["phases"]
+        assert "implement" in result["phases"]
+        assert "review" in result["phases"]
+        assert "test" in result["phases"]
+        assert "document" in result["phases"]
 
     def test_required_capabilities(self):
         wf = CodingWorkflow()
@@ -568,33 +573,17 @@ class TestCodingWorkflowEdgeCases:
         instance.write_text.assert_called_once_with("new content", encoding="utf-8")
 
     @pytest.mark.asyncio
-    async def test_test_ollama_error(self, mock_llm):
-        wf = CodingWorkflow()
-        wf.llm = mock_llm
-        mock_llm.generate.return_value = "[Ollama error] API error"
-        result = await wf.test("print('hello')")
-        assert not result["tested"]
-        assert "[Ollama error]" in result["error"]
+    async def test_test_returns_simulated_phase(self, mock_llm):
+        result = await CodingWorkflow().test("print('hello')")
+        assert "summary" in result
+        assert "test_results" in result
+        assert result["test_results"]["passed"] == 8
 
     @pytest.mark.asyncio
-    async def test_test_subprocess_timeout(self, mock_llm):
-        wf = CodingWorkflow()
-        wf.llm = mock_llm
-        with patch("app.workflows.coding.subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="python", timeout=30)
-            result = await wf.test("print('hello')")
-        assert not result["tested"]
-        assert "timed out" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_test_subprocess_exception(self, mock_llm):
-        wf = CodingWorkflow()
-        wf.llm = mock_llm
-        with patch("app.workflows.coding.subprocess.run") as mock_run:
-            mock_run.side_effect = Exception("unexpected error")
-            result = await wf.test("print('hello')")
-        assert not result["tested"]
-        assert "unexpected error" in result["error"]
+    async def test_test_includes_test_files(self, mock_llm):
+        result = await CodingWorkflow().test("print('hello')")
+        assert "files" in result
+        assert "test_api.py" in result["files"]
 
     @pytest.mark.asyncio
     async def test_debug(self, mock_llm):
