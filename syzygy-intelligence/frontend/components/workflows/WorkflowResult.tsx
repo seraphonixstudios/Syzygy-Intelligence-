@@ -439,6 +439,146 @@ function render_finetune(d: any) {
   );
 }
 
+function render_support(d: any) {
+  const priorityColors: Record<string, string> = { critical: "border-red-500/30 text-red-400 bg-red-500/10", high: "border-orange-500/30 text-orange-400 bg-orange-500/10", medium: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10", low: "border-green-500/30 text-green-400 bg-green-500/10" };
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-sky-500/30 text-sky-400 bg-sky-500/10"><Zap className="h-3 w-3" />{d.ticket_id}</Badge>
+        <Badge className={cn(priorityColors[d.priority] || "border-syzygy-gold/30 text-syzygy-gold bg-syzygy-gold/10")}>{d.priority}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30">{d.category}</Badge>
+        <Badge className={d.needs_escalation ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"}>{d.needs_escalation ? "Escalated" : "Resolved"}</Badge>
+      </div>
+      <SectionCard title="Resolution Steps" icon={CheckCircle2}>
+        <ol className="list-decimal list-inside space-y-1">
+          {Array.isArray(d.resolution_steps) ? d.resolution_steps.map((s: string, i: number) => (
+            <li key={i} className="text-xs text-syzygy-grey/80 leading-relaxed">{s}</li>
+          )) : <FormattedText text={d.resolution_steps} />}
+        </ol>
+      </SectionCard>
+      {Array.isArray(d.kb_articles) && d.kb_articles.length > 0 && (
+        <SectionCard title="Knowledge Base Articles" icon={BookOpen}>
+          <ul className="space-y-1">
+            {d.kb_articles.map((a: string, i: number) => (
+              <li key={i} className="flex items-center gap-2 text-xs text-syzygy-grey/80">
+                <span className="h-1 w-1 rounded-full bg-syzygy-gold/40 shrink-0" />
+                {a}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
+      {d.needs_escalation && (
+        <SectionCard title="Escalation Notice" icon={AlertTriangle} defaultOpen={true}>
+          <p className="text-xs text-red-400/80 leading-relaxed">{d.escalation_reason || "This issue requires human intervention"}</p>
+          {d.support_email && <p className="text-xs text-syzygy-grey/60 mt-1">Contact: <span className="text-syzygy-gold">{d.support_email}</span></p>}
+        </SectionCard>
+      )}
+      <SectionCard title="Summary" icon={BarChart3}>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Confidence</p><p className="text-sm font-semibold text-syzygy-grey/80">{(d.confidence * 100).toFixed(0)}%</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Response Time</p><p className="text-sm font-semibold text-syzygy-grey/80 capitalize">{d.response_time_estimate || "immediate"}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Processed In</p><p className="text-sm font-semibold text-syzygy-grey/80">{d.elapsed_seconds}s</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Escalation Score</p><p className="text-sm font-semibold text-syzygy-grey/80">{d.escalation_score ? `${(d.escalation_score * 100).toFixed(0)}%` : "N/A"}</p></div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+function render_meeting(d: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-violet-500/30 text-violet-400 bg-violet-500/10"><Mic className="h-3 w-3" />{d.meeting_type?.replace(/_/g, " ") || "meeting"}</Badge>
+        {Array.isArray(d.attendees) && d.attendees.map((a: string) => (
+          <Badge key={a} className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30">{a}</Badge>
+        ))}
+        <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10">{d.action_items?.length || 0} action items</Badge>
+      </div>
+      <SectionCard title="Discussion Points" icon={Layers} defaultOpen={true}>
+        {Array.isArray(d.discussion_points) && d.discussion_points.length > 0 ? (
+          <ul className="space-y-1">
+            {d.discussion_points.map((p: string, i: number) => (
+              <li key={i} className="text-xs text-syzygy-grey/80 leading-relaxed flex items-start gap-2">
+                <span className="h-1 w-1 rounded-full bg-syzygy-gold/40 shrink-0 mt-1.5" />
+                {p}
+              </li>
+            ))}
+          </ul>
+        ) : <FormattedText text={d.summary} />}
+      </SectionCard>
+      {Array.isArray(d.decisions) && d.decisions.length > 0 && (
+        <SectionCard title="Decisions Made" icon={Target}>
+          <ul className="space-y-1">
+            {d.decisions.map((dec: string, i: number) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-syzygy-grey/80">
+                <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0 mt-0.5" />
+                {dec}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
+      {Array.isArray(d.action_items) && d.action_items.length > 0 && (
+        <SectionCard title="Action Items" icon={Target} defaultOpen={true}>
+          <div className="space-y-1">
+            {d.action_items.map((item: any, i: number) => (
+              <div key={i} className="flex items-start gap-2 rounded-lg bg-syzygy-shadow/20 p-2">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-[10px] font-bold text-amber-400 shrink-0">{i + 1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-syzygy-grey/80">{item.action || item.task}</p>
+                  {item.assignee && <p className="text-[10px] text-syzygy-gold/60 mt-0.5">Assignee: {item.assignee}</p>}
+                  {item.status && <Badge className="mt-1 border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30 capitalize">{item.status}</Badge>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+      {Array.isArray(d.blockers) && d.blockers.length > 0 && (
+        <SectionCard title="Blockers" icon={AlertTriangle}>
+          <ul className="space-y-1">
+            {d.blockers.map((b: string, i: number) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-red-400/80">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
+      {Array.isArray(d.email_drafts) && d.email_drafts.length > 0 && (
+        <SectionCard title="Email Drafts" icon={FileText}>
+          <div className="space-y-2">
+            {d.email_drafts.map((draft: any, i: number) => (
+              <div key={i} className="rounded-lg border border-syzygy-surface-border bg-syzygy-obsidian/50 p-3">
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  <span className="font-medium text-syzygy-grey/60">To:</span>
+                  <span className="text-syzygy-gold">{draft.to}</span>
+                  <span className="text-syzygy-grey/30">|</span>
+                  <span className="font-medium text-syzygy-grey/60">Subject:</span>
+                  <span className="text-syzygy-grey/80">{draft.subject}</span>
+                </div>
+                <pre className="text-[11px] text-syzygy-grey/70 leading-relaxed whitespace-pre-wrap font-sans">{draft.body}</pre>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+      {Array.isArray(d.next_steps) && d.next_steps.length > 0 && (
+        <SectionCard title="Recommended Next Steps" icon={ArrowRight}>
+          <ol className="list-decimal list-inside space-y-1">
+            {d.next_steps.map((s: string, i: number) => (
+              <li key={i} className="text-xs text-syzygy-grey/80">{s}</li>
+            ))}
+          </ol>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
 export function WorkflowResult({ workflow, data }: { workflow: string; data: any }) {
   const inner = data?.result || data;
 
@@ -447,6 +587,8 @@ export function WorkflowResult({ workflow, data }: { workflow: string; data: any
   const renderers: Record<string, (d: any) => React.ReactNode> = {
     coding: render_coding,
     finetune: render_finetune,
+    support: render_support,
+    meeting: render_meeting,
     research: render_research,
     content: render_content,
     debate: render_debate,

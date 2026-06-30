@@ -15,6 +15,8 @@ import { WorkflowResult } from "@/components/workflows/WorkflowResult";
 const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   coding: "Scaffold, edit, test, and debug with polarity-aware pair programming",
   finetune: "Fine-tune local LLMs with LoRA, QLoRA, or full training — dataset prep, training, evaluation, and export",
+  support: "Customer support ticket triage, resolution drafting, and escalation monitoring",
+  meeting: "Meeting summarization, action item extraction, and follow-up email drafting",
   research: "Parallel search with multi-source validation and synthesis",
   content: "Research → Outline → Draft → Edit → Polish pipeline",
   debate: "Multi-round structured debate between agents",
@@ -40,6 +42,7 @@ const CATEGORIES = [
   { id: "content", label: "Content" },
   { id: "analysis", label: "Analysis" },
   { id: "ai", label: "AI & ML" },
+  { id: "customer", label: "Customer" },
   { id: "training", label: "Training" },
   { id: "security", label: "Security" },
   { id: "productivity", label: "Productivity" },
@@ -48,6 +51,8 @@ const CATEGORIES = [
 const WORKFLOW_CATEGORY: Record<string, string> = {
   coding: "development",
   finetune: "training",
+  support: "customer",
+  meeting: "productivity",
   test_gen: "development",
   api_designer: "development",
   ci_piper: "development",
@@ -72,6 +77,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   content: "border-purple-500/30 text-purple-400 bg-purple-500/10",
   analysis: "border-emerald-500/30 text-emerald-400 bg-emerald-500/10",
   ai: "border-amber-500/30 text-amber-400 bg-amber-500/10",
+  customer: "border-sky-500/30 text-sky-400 bg-sky-500/10",
   training: "border-pink-500/30 text-pink-400 bg-pink-500/10",
   security: "border-red-500/30 text-red-400 bg-red-500/10",
   productivity: "border-teal-500/30 text-teal-400 bg-teal-500/10",
@@ -80,6 +86,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 const WORKFLOW_PROMPTS: Record<string, string[]> = {
   coding: ["Build a REST API with FastAPI", "Create a CLI file processing tool", "Scaffold a Next.js landing page"],
   finetune: ["Fine-tune Llama 3.2 3B on custom chat data", "Train Mistral 7B with QLoRA for code generation", "Fine-tune a model on your own dataset for RAG"],
+  support: ["My account is locked after too many login attempts", "I was charged twice for my subscription this month", "The API keeps returning 503 errors during peak hours"],
+  meeting: ["Summarize this sprint planning meeting and extract action items", "Generate follow-up emails for today's standup blockers", "Create action items and meeting summary from these design review notes"],
   research: ["Latest advances in quantum error correction", "Compare transformer vs state-space models", "Market analysis of AI coding assistants 2026"],
   content: ["Write about zero-trust architecture", "Draft a product launch announcement", "Create a WebSocket tutorial"],
   debate: ["Is AGI achievable without embodiment?", "Does P=NP? Debate both sides", "Regulation vs innovation in AI"],
@@ -306,6 +314,8 @@ export default function WorkflowsPage() {
                 { text: "Break down: Building a recommendation engine", workflow: "task_decomposition" },
                 { text: "Audit this Python codebase for security issues", workflow: "audit" },
                 { text: "Fine-tune Llama 3.2 with QLoRA on custom data", workflow: "finetune" },
+                { text: "My account is locked after too many attempts", workflow: "support" },
+                { text: "Summarize sprint planning and extract action items", workflow: "meeting" },
               ].map(({ text, workflow }) => (
                 <button
                   key={text}

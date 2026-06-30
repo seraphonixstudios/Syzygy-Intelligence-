@@ -24,7 +24,9 @@ from app.workflows.test_gen import TEST_GEN_WORKFLOW, TestGenWorkflow
 from app.workflows.translate import TRANSLATE_WORKFLOW, TranslateWorkflow
 from app.workflows.image_gen import IMAGE_GEN_WORKFLOW, ImageGenWorkflow
 from app.workflows.finetune import FINETUNE_WORKFLOW, FineTuneWorkflow
+from app.workflows.meeting import MEETING_WORKFLOW, MeetingWorkflow
 from app.workflows.self_improvement import SELF_IMPROVEMENT_WORKFLOW, RecursiveSelfImprovementWorkflow
+from app.workflows.support import SUPPORT_WORKFLOW, SupportWorkflow
 
 WORKFLOW_REGISTRY: dict[str, Any] = {
     "coding": CODING_WORKFLOW,
@@ -48,6 +50,8 @@ WORKFLOW_REGISTRY: dict[str, Any] = {
     "self_improvement": SELF_IMPROVEMENT_WORKFLOW,
     "image_gen": IMAGE_GEN_WORKFLOW,
     "finetune": FINETUNE_WORKFLOW,
+    "support": SUPPORT_WORKFLOW,
+    "meeting": MEETING_WORKFLOW,
 }
 
 
@@ -73,4 +77,6 @@ __all__ = [
     "RecursiveSelfImprovementWorkflow",
     "ImageGenWorkflow",
     "FineTuneWorkflow",
+    "MeetingWorkflow",
+    "SupportWorkflow",
 ]
