@@ -17,6 +17,9 @@ const WORKFLOW_DESCRIPTIONS: Record<string, string> = {
   finetune: "Fine-tune local LLMs with LoRA, QLoRA, or full training — dataset prep, training, evaluation, and export",
   support: "Customer support ticket triage, resolution drafting, and escalation monitoring",
   meeting: "Meeting summarization, action item extraction, and follow-up email drafting",
+  sales: "Sales lead qualification, follow-up sequence generation, and pipeline analysis",
+  legal: "Contract clause extraction, risk analysis, and compliance checking",
+  procurement: "Purchase request processing, vendor matching, compliance checks, and PO generation",
   research: "Parallel search with multi-source validation and synthesis",
   content: "Research → Outline → Draft → Edit → Polish pipeline",
   debate: "Multi-round structured debate between agents",
@@ -44,6 +47,7 @@ const CATEGORIES = [
   { id: "ai", label: "AI & ML" },
   { id: "customer", label: "Customer" },
   { id: "training", label: "Training" },
+  { id: "legal", label: "Legal" },
   { id: "security", label: "Security" },
   { id: "productivity", label: "Productivity" },
 ] as const;
@@ -53,6 +57,9 @@ const WORKFLOW_CATEGORY: Record<string, string> = {
   finetune: "training",
   support: "customer",
   meeting: "productivity",
+  sales: "customer",
+  legal: "legal",
+  procurement: "productivity",
   test_gen: "development",
   api_designer: "development",
   ci_piper: "development",
@@ -79,6 +86,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   ai: "border-amber-500/30 text-amber-400 bg-amber-500/10",
   customer: "border-sky-500/30 text-sky-400 bg-sky-500/10",
   training: "border-pink-500/30 text-pink-400 bg-pink-500/10",
+  legal: "border-indigo-500/30 text-indigo-400 bg-indigo-500/10",
   security: "border-red-500/30 text-red-400 bg-red-500/10",
   productivity: "border-teal-500/30 text-teal-400 bg-teal-500/10",
 };
@@ -88,6 +96,9 @@ const WORKFLOW_PROMPTS: Record<string, string[]> = {
   finetune: ["Fine-tune Llama 3.2 3B on custom chat data", "Train Mistral 7B with QLoRA for code generation", "Fine-tune a model on your own dataset for RAG"],
   support: ["My account is locked after too many login attempts", "I was charged twice for my subscription this month", "The API keeps returning 503 errors during peak hours"],
   meeting: ["Summarize this sprint planning meeting and extract action items", "Generate follow-up emails for today's standup blockers", "Create action items and meeting summary from these design review notes"],
+  sales: ["Enterprise SaaS company CTO interested in AI automation — qualify this lead", "Startup founder looking for data analytics platform — send follow-up sequence", "Fortune 500 VP of Engineering evaluating ML tools — prioritize and schedule demo"],
+  legal: ["Review this NDA for mutual confidentiality with standard 2-year term", "Analyze SaaS agreement for auto-renewal and limitation of liability clauses", "Extract risk clauses from this MSA with indemnification terms"],
+  procurement: ["Need cloud infrastructure upgrade — AWS migration, urgent, $45k budget", "Purchase 50 new developer laptops for engineering team — $150k", "Software license renewal for data analytics platform — $12k annual"],
   research: ["Latest advances in quantum error correction", "Compare transformer vs state-space models", "Market analysis of AI coding assistants 2026"],
   content: ["Write about zero-trust architecture", "Draft a product launch announcement", "Create a WebSocket tutorial"],
   debate: ["Is AGI achievable without embodiment?", "Does P=NP? Debate both sides", "Regulation vs innovation in AI"],
@@ -316,6 +327,9 @@ export default function WorkflowsPage() {
                 { text: "Fine-tune Llama 3.2 with QLoRA on custom data", workflow: "finetune" },
                 { text: "My account is locked after too many attempts", workflow: "support" },
                 { text: "Summarize sprint planning and extract action items", workflow: "meeting" },
+                { text: "Qualify this enterprise lead for AI platform", workflow: "sales" },
+                { text: "Review this NDA for confidentiality clauses", workflow: "legal" },
+                { text: "Process purchase request for cloud upgrade $45k", workflow: "procurement" },
               ].map(({ text, workflow }) => (
                 <button
                   key={text}

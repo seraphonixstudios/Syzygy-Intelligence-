@@ -579,6 +579,142 @@ function render_meeting(d: any) {
   );
 }
 
+function render_sales(d: any) {
+  const ls = d.lead_summary || {};
+  const pa = d.pipeline_analysis || {};
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10"><TrendingUp className="h-3 w-3" />Score: {ls.score}/10</Badge>
+        <Badge className={ls.status === "qualified" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" : ls.status === "nurture" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" : "border-red-500/30 text-red-400 bg-red-500/10"}>{ls.status}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30 capitalize">{ls.company_size}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30 capitalize">{ls.relevance}</Badge>
+      </div>
+      <SectionCard title="Lead Qualification" icon={Target} defaultOpen={true}>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Title Level</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{ls.title_level?.replace(/_/g, " ")}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Company Size</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{ls.company_size}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Relevance</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{ls.relevance}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Action</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{ls.recommended_action?.replace(/_/g, " ") || "review"}</p></div>
+        </div>
+      </SectionCard>
+      {Array.isArray(d.followup_sequence) && d.followup_sequence.length > 0 && (
+        <SectionCard title="Follow-Up Sequence" icon={Zap} defaultOpen={true}>
+          <div className="space-y-2">
+            {d.followup_sequence.map((e: any, i: number) => (
+              <div key={i} className="rounded-lg border border-syzygy-surface-border bg-syzygy-obsidian/50 p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-medium text-syzygy-gold/60 uppercase">{e.timing}</span>
+                  <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30">#{i + 1}</Badge>
+                </div>
+                <p className="text-xs font-medium text-syzygy-grey/80 mb-1">{e.subject}</p>
+                <pre className="text-[11px] text-syzygy-grey/60 leading-relaxed whitespace-pre-wrap font-sans">{e.body}</pre>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="Pipeline Analysis" icon={BarChart3}>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Stage</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{pa.current_stage}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Next Stage</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{pa.recommended_next_stage}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Velocity</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{pa.pipeline_velocity}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Recommendation</p><p className="text-[11px] font-semibold text-syzygy-grey/80">{pa.recommendation}</p></div>
+        </div>
+      </SectionCard>
+      {Array.isArray(d.next_steps) && <SectionCard title="Next Steps" icon={ArrowRight}><ol className="list-decimal list-inside space-y-1">{d.next_steps.map((s: string, i: number) => <li key={i} className="text-xs text-syzygy-grey/80">{s}</li>)}</ol></SectionCard>}
+    </div>
+  );
+}
+
+function render_legal(d: any) {
+  const risk = d.risk_assessment || {};
+  const riskColors: Record<string, string> = { critical: "border-red-500/30 text-red-400 bg-red-500/10", high: "border-orange-500/30 text-orange-400 bg-orange-500/10", medium: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10", low: "border-green-500/30 text-green-400 bg-green-500/10" };
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-indigo-500/30 text-indigo-400 bg-indigo-500/10"><FileText className="h-3 w-3" />{d.contract_type?.replace(/_/g, " ")}</Badge>
+        <Badge className={cn(riskColors[risk.overall_risk] || "border-syzygy-gold/30 text-syzygy-gold bg-syzygy-gold/10")}>{risk.overall_risk?.toUpperCase()}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30">Score: {risk.risk_score}/10</Badge>
+      </div>
+      <SectionCard title="Risk Assessment" icon={AlertTriangle} defaultOpen={true}>
+        <p className="text-xs text-syzygy-grey/80 leading-relaxed mb-2">{risk.summary}</p>
+        <div className="grid grid-cols-4 gap-2">
+          {["critical", "high", "medium", "low"].map((lvl) => (
+            <div key={lvl} className={`rounded-lg p-2 ${risk.risk_counts?.[lvl] > 0 ? "bg-syzygy-shadow/30" : "bg-syzygy-shadow/10 opacity-50"}`}>
+              <p className="text-[10px] text-syzygy-grey/40 uppercase">{lvl}</p>
+              <p className="text-sm font-bold text-syzygy-grey/80">{risk.risk_counts?.[lvl] || 0}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+      {Array.isArray(d.clauses) && d.clauses.length > 0 && (
+        <SectionCard title={`Clauses (${d.clauses.length})`} icon={Layers} defaultOpen={true}>
+          <div className="space-y-1">
+            {d.clauses.map((c: any, i: number) => (
+              <div key={i} className={`flex items-start gap-2 rounded-lg p-2 ${c.risk === "critical" ? "bg-red-500/5 border border-red-500/10" : c.risk === "high" ? "bg-orange-500/5" : "bg-syzygy-shadow/20"}`}>
+                <Badge className={cn("shrink-0 mt-0.5", riskColors[c.risk] || "border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30")}>{c.risk}</Badge>
+                <div className="min-w-0"><p className="text-xs font-medium text-syzygy-grey/80">{c.clause}</p><p className="text-[10px] text-syzygy-grey/50 mt-0.5">{c.note}</p></div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+      {Array.isArray(d.recommendations) && <SectionCard title="Recommendations" icon={CheckCircle2}><ol className="list-decimal list-inside space-y-1">{d.recommendations.map((r: string, i: number) => <li key={i} className="text-xs text-syzygy-grey/80">{r}</li>)}</ol></SectionCard>}
+    </div>
+  );
+}
+
+function render_procurement(d: any) {
+  const req = d.requirements || {};
+  const vendor = d.vendor_match || {};
+  const po = d.purchase_order || {};
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge className="border-teal-500/30 text-teal-400 bg-teal-500/10"><Database className="h-3 w-3" />{po.po_id || "PO"}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30 capitalize">{req.category}</Badge>
+        <Badge className={req.urgency === "critical" ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"}>{req.urgency}</Badge>
+        <Badge className="border-syzygy-surface-border text-syzygy-grey/60 bg-syzygy-shadow/30">${Number(req.estimated_amount || 0).toLocaleString()}</Badge>
+      </div>
+      <SectionCard title="Vendor Match" icon={Target} defaultOpen={true}>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2 col-span-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Recommended</p><p className="text-sm font-semibold text-emerald-400">{vendor.recommended_vendor || "N/A"}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Tier</p><p className="text-xs font-semibold text-syzygy-grey/80 capitalize">{vendor.tier}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Rating</p><p className="text-xs font-semibold text-syzygy-grey/80">{vendor.rating}/5.0</p></div>
+          {Array.isArray(vendor.alternatives) && vendor.alternatives.length > 0 && (
+            <div className="rounded-lg bg-syzygy-shadow/20 p-2 col-span-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Alternatives</p><p className="text-xs text-syzygy-grey/70">{vendor.alternatives.join(", ")}</p></div>
+          )}
+        </div>
+      </SectionCard>
+      {Array.isArray(d.compliance_flags) && d.compliance_flags.length > 0 && (
+        <SectionCard title="Compliance Flags" icon={Shield} defaultOpen={true}>
+          <div className="space-y-1">
+            {d.compliance_flags.map((f: any, i: number) => (
+              <div key={i} className={`flex items-start gap-2 rounded-lg p-2 ${f.severity === "high" ? "bg-red-500/5 border border-red-500/10" : "bg-amber-500/5"}`}>
+                <AlertTriangle className={`h-3 w-3 shrink-0 mt-0.5 ${f.severity === "high" ? "text-red-400" : "text-amber-400"}`} />
+                <div><p className="text-xs font-medium text-syzygy-grey/80 capitalize">{f.flag?.replace(/_/g, " ")}</p><p className="text-[10px] text-syzygy-grey/50">{f.detail}</p></div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="Purchase Order" icon={FileText} defaultOpen={true}>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">PO ID</p><p className="text-xs font-semibold text-syzygy-grey/80">{po.po_id}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Amount</p><p className="text-xs font-semibold text-syzygy-grey/80">${Number(po.amount || 0).toLocaleString()}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Approver</p><p className="text-xs font-semibold text-syzygy-grey/80">{po.approver}</p></div>
+          <div className="rounded-lg bg-syzygy-shadow/20 p-2"><p className="text-[10px] text-syzygy-grey/40 uppercase">Approval Levels</p><p className="text-xs font-semibold text-syzygy-grey/80">{po.approval_levels}</p></div>
+          {po.requires_escalation && (
+            <div className="col-span-2 rounded-lg bg-red-500/5 border border-red-500/10 p-2"><p className="text-[10px] text-red-400 font-medium">⚠ Escalation Required — compliance flags detected</p></div>
+          )}
+        </div>
+      </SectionCard>
+      {Array.isArray(d.next_steps) && <SectionCard title="Next Steps" icon={ArrowRight}><ol className="list-decimal list-inside space-y-1">{d.next_steps.map((s: string, i: number) => <li key={i} className="text-xs text-syzygy-grey/80">{s}</li>)}</ol></SectionCard>}
+    </div>
+  );
+}
+
 export function WorkflowResult({ workflow, data }: { workflow: string; data: any }) {
   const inner = data?.result || data;
 
@@ -589,6 +725,9 @@ export function WorkflowResult({ workflow, data }: { workflow: string; data: any
     finetune: render_finetune,
     support: render_support,
     meeting: render_meeting,
+    sales: render_sales,
+    legal: render_legal,
+    procurement: render_procurement,
     research: render_research,
     content: render_content,
     debate: render_debate,

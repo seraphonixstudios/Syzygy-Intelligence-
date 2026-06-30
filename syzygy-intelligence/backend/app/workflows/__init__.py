@@ -24,7 +24,10 @@ from app.workflows.test_gen import TEST_GEN_WORKFLOW, TestGenWorkflow
 from app.workflows.translate import TRANSLATE_WORKFLOW, TranslateWorkflow
 from app.workflows.image_gen import IMAGE_GEN_WORKFLOW, ImageGenWorkflow
 from app.workflows.finetune import FINETUNE_WORKFLOW, FineTuneWorkflow
+from app.workflows.legal import LEGAL_WORKFLOW, LegalWorkflow
 from app.workflows.meeting import MEETING_WORKFLOW, MeetingWorkflow
+from app.workflows.procurement import PROCUREMENT_WORKFLOW, ProcurementWorkflow
+from app.workflows.sales import SALES_WORKFLOW, SalesWorkflow
 from app.workflows.self_improvement import SELF_IMPROVEMENT_WORKFLOW, RecursiveSelfImprovementWorkflow
 from app.workflows.support import SUPPORT_WORKFLOW, SupportWorkflow
 
@@ -52,6 +55,9 @@ WORKFLOW_REGISTRY: dict[str, Any] = {
     "finetune": FINETUNE_WORKFLOW,
     "support": SUPPORT_WORKFLOW,
     "meeting": MEETING_WORKFLOW,
+    "sales": SALES_WORKFLOW,
+    "legal": LEGAL_WORKFLOW,
+    "procurement": PROCUREMENT_WORKFLOW,
 }
 
 
@@ -79,4 +85,7 @@ __all__ = [
     "FineTuneWorkflow",
     "MeetingWorkflow",
     "SupportWorkflow",
+    "SalesWorkflow",
+    "LegalWorkflow",
+    "ProcurementWorkflow",
 ]
