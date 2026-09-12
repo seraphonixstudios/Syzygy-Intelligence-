@@ -20,10 +20,15 @@ export default function VerifyEmailPage() {
       return;
     }
 
+    // Timeout so a hung request can never leave the page on "Verifying..." forever.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     fetch(`${API}/api/auth/verify-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
+      signal: controller.signal,
     })
       .then(async (res) => {
         const body = await res.json();
@@ -36,10 +41,21 @@ export default function VerifyEmailPage() {
           setMessage(body.detail || "Verification failed");
         }
       })
-      .catch(() => {
-        setStatus("error");
-        setMessage("Network error. Please try again.");
-      });
+      .catch((err) => {
+        if (err instanceof Error && err.name === "AbortError") {
+          setStatus("error");
+          setMessage("Verification timed out. Please try again.");
+        } else {
+          setStatus("error");
+          setMessage("Network error. Please try again.");
+        }
+      })
+      .finally(() => clearTimeout(timeoutId));
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [searchParams, router]);
 
   return (

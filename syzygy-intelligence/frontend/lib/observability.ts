@@ -87,7 +87,9 @@ function initPerformanceObserver() {
             timestamp: new Date().toISOString(),
           });
         }
-        if (entry.entryType === "first-contentful-paint") {
+        // FCP is delivered as a "paint" entry named "first-contentful-paint"
+        // ("first-contentful-paint" is not a valid observer entry type).
+        if (entry.entryType === "paint" && entry.name === "first-contentful-paint") {
           push({
             type: "web_vital",
             name: "FCP",
@@ -97,7 +99,7 @@ function initPerformanceObserver() {
         }
       }
     });
-    observer.observe({ entryTypes: ["largest-contentful-paint", "first-contentful-paint"] });
+    observer.observe({ entryTypes: ["largest-contentful-paint", "paint"] });
   } catch {
     // PerformanceObserver not supported
   }

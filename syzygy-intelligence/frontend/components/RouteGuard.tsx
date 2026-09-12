@@ -17,6 +17,12 @@ const publicPaths = [
   "/auth/oauth-callback",
 ];
 
+// Failsafe timeouts so the UI can never stick on "Verifying..." forever
+// (e.g. stalled persist hydration or a verify request that never settles).
+const HYDRATION_TIMEOUT_MS = 8000;
+// Must exceed AuthInitializer's worst case (5s timeout x 2 attempts).
+const VERIFY_TIMEOUT_MS = 15000;
+
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -31,10 +37,20 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     const unsub = useAuthStore.persist.onFinishHydration(() => {
       setReady(true);
     });
+    const timeoutId = setTimeout(() => setReady(true), HYDRATION_TIMEOUT_MS);
     return () => {
+      clearTimeout(timeoutId);
       unsub();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isVerifying) return;
+    const timeoutId = setTimeout(() => {
+      useAuthStore.setState({ isVerifying: false });
+    }, VERIFY_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [isVerifying]);
 
   useEffect(() => {
     if (ready && !isVerifying && !publicPaths.includes(pathname) && !isAuthenticated) {
