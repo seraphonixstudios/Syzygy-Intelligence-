@@ -361,7 +361,8 @@ Not all workflows are equally real. Audited status of each registered workflow:
 | `qa_bot` | ✅ Live + grounded | Retrieval reports exactly the relevant doc IDs (parsed + intersected); unconfirmed relevance labeled; answers carry `grounded` flag; empty KB answered honestly |
 | `agentic_rag` | ✅ Live + grounded | Sub-query extraction robust to formatting (numbered/bulleted/plain); hop counts measured; `grounded` flag + honest notes when retrieval skips |
 | `summary` | ✅ Live + grounded | Compression measured with real word counts; sources numbered for traceability; bloated summary triggers a condense retry; empty input reported |
-| `api_designer`, `audit`, `ci_piper`, `compliance`, `data_analyzer`, `data_pipeline`, `interview_coach`, `report_gen`, `task_decomposition`, `translate` | ✅ Live | Real LLM calls; task-sensitivity covered by acceptance tests, but outputs are not independently verified (no execution/grounding step) |
+| `audit` | ✅ Live + grounded | Deterministic static scan finds real line-numbered issues before any LLM review; findings carried through the report; empty code labeled |
+| `api_designer`, `ci_piper`, `compliance`, `data_analyzer`, `data_pipeline`, `interview_coach`, `report_gen`, `task_decomposition`, `translate` | ✅ Live | Real LLM calls; task-sensitivity covered by acceptance tests, but outputs are not independently verified (no execution/grounding step) |
 | `legal`, `meeting`, `procurement`, `sales`, `support` | ⚙️ Rule-based | Deterministic keyword heuristics, no LLM; task-sensitive by construction; results echo the analyzed input |
 | `finetune` | 🧪 Simulated unless ML deps installed | Real training only with torch/transformers/peft; otherwise labeled demo mode (`simulated: true`) |
 | `image_gen` | 🔌 Externally gated | Requires a configured image service (ComfyUI/Replicate) |
