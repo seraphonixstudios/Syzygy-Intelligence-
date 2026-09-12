@@ -186,6 +186,8 @@ class SalesWorkflow:
         elapsed = (datetime.now(UTC) - start_time).total_seconds()
 
         result = {
+            "lead_info": lead_info[:500],
+            "lead_length": len(lead_info),
             "lead_summary": qualification,
             "followup_sequence": followup_sequence,
             "pipeline_analysis": pipeline,

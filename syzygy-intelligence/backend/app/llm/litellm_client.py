@@ -22,6 +22,8 @@ class LiteLLMClient:
         model: str = "",
         temperature: float = 0.7,
         max_tokens: int = 2048,
+        think: bool | None = None,  # accepted for interface parity; not supported here
+        num_ctx: int | None = None,  # accepted for interface parity; not supported here
     ) -> str:
         if not self._enabled:
             return "[LiteLLM disabled. Enable with SYZYGY_LITELLM_ENABLED=true]"

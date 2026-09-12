@@ -16,6 +16,8 @@ class LLMProvider(Protocol):
         model: str = "",
         temperature: float = 0.7,
         max_tokens: int = 2048,
+        think: bool | None = None,
+        num_ctx: int | None = None,
     ) -> str:
         ...
 

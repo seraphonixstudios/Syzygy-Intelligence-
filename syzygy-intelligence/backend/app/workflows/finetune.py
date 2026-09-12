@@ -110,7 +110,7 @@ class FineTuneWorkflow:
             import transformers  # noqa: F401
             import peft  # noqa: F401
             return True
-        except ImportError:
+        except (ImportError, OSError):
             logger.warning(
                 "ML dependencies not installed — finetune will run in demo mode. "
                 "Install torch, transformers, peft, bitsandbytes, trl, datasets, accelerate"
@@ -168,6 +168,7 @@ class FineTuneWorkflow:
             "model": config.model_name,
             "method": config.method,
             "status": result.status,
+            "simulated": not self._ml_available,
             "metrics": {
                 "total_steps": metrics.total_steps,
                 "final_loss": round(metrics.final_loss, 4),

@@ -41,23 +41,29 @@ class OllamaClient:
         temperature: float = 0.7,
         max_tokens: int = 2048,
         stream: bool = False,
+        think: bool | None = None,
+        num_ctx: int | None = None,
     ) -> str:
         """Generate text using Ollama's generate endpoint."""
         client = await self._get_client()
         model = model or self.default_model
         start = time.time()
 
-        payload = {
+        payload: dict[str, Any] = {
             "model": model,
             "prompt": prompt,
             "system": system,
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
-                "num_ctx": 2048,
+                "num_ctx": num_ctx or 2048,
             },
             "stream": stream,
         }
+        if think is not None:
+            # Disables chain-of-thought for thinking models (e.g. qwen3), which
+            # saves context and avoids empty responses when thinking exhausts output.
+            payload["think"] = think
 
         logger.info(
             "Ollama generate call",

@@ -1,9 +1,16 @@
-"""Multi-agent code generation pipeline — Planner → Designer → Developer → Reviewer → Tester → Documenter."""
+"""Multi-agent code generation pipeline — Planner → Designer → Developer → Reviewer → Tester → Documenter.
+
+Each phase calls the LLM for real. The canned _SIMULATED_PHASES below are used
+ONLY as a last-resort fallback when the LLM is unreachable, and any result
+built from them is explicitly labeled with "simulated": True. Test results
+always come from actually executing pytest, never from assertion.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import subprocess
+import json
+import re
 import tempfile
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -12,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from app.llm.model_manager import ModelManager
+from app.logging_setup import logger
 
 ProgressCallback = Callable[[str, int, dict[str, Any]], Awaitable[None]]
 
@@ -26,7 +34,8 @@ class CodePhase(StrEnum):
 
 
 # ---------------------------------------------------------------------------
-# Simulated multi-agent output templates (used when no LLM is available)
+# Fallback output templates — used ONLY when the LLM is unreachable.
+# Every result built from these is labeled "simulated": True.
 # ---------------------------------------------------------------------------
 
 _SIMULATED_PHASES: dict[str, dict[str, Any]] = {
@@ -102,10 +111,96 @@ _SIMULATED_PHASES: dict[str, dict[str, Any]] = {
     },
     CodePhase.DOCUMENT: {
         "summary": "Generated project README with setup instructions, API reference table, usage examples, and architecture diagram (ASCII).",
-        "readme": "# FastAPI CRUD API\n\nA production-ready REST API built with FastAPI, SQLAlchemy 2.0 async, and Pydantic v2.\n\n## Setup\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate  # Windows: .venv\\Scripts\\activate\npip install -r requirements.txt\nalembic upgrade head\nuvicorn app.main:app --reload\n```\n\n## API Reference\n\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| POST | /api/users | Create a new user |\n| GET | /api/users/{id} | Get user by ID |\n| POST | /api/items | Create an item |\n| GET | /api/items | List items for user |\n\n## Architecture\n\n```\nmain.py → routes/ → services/ → models/\n               ↕            ↕\n           schemas.py    database.py\n```\n\n## Testing\n\n```bash\npytest -v --cov=app --cov-report=term\n```\n",
+        "readme": "# FastAPI CRUD API\n\nA production-ready REST API built with FastAPI, SQLAlchemy 2.0 async, and Pydantic v2.\n\n## Setup\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate  # Windows: .venv\\Scripts\\activate\npip install -r requirements.txt\nalembic upgrade head\nuvicorn app.main:app --reload\n```\n\n## API Reference\n\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| POST | /api/users | Create a new user |\n| GET | /api/users/{id} | Get user by ID |\n| POST | /api/items | Create an item |\n| GET | /api/items | List items for user |\n\n## Testing\n\n```bash\npytest -v --cov=app --cov-report=term\n```\n",
         "agent": "Documenter",
     },
 }
+
+_SIMULATED_MARKER = "simulated fallback — LLM unreachable"
+
+# Matches ```lang:file.ext ... ```, ```file.ext ... ```, or ```lang ... ```
+_FILE_BLOCK_RE = re.compile(
+    r"```(?:(?P<lang>[a-zA-Z0-9_+\-]+)(?::(?P<file>[\w\-./]+\.\w+))?|(?P<barefile>[\w\-./]+\.\w+))\n(?P<body>.*?)```",
+    re.DOTALL,
+)
+
+_CODE_HINTS = ("def ", "class ", "import ", "print(", "assert ", "=>", "function ", "#include")
+
+
+def _looks_like_code(text: str) -> bool:
+    return any(h in text for h in _CODE_HINTS)
+
+
+def _safe_filename(name: str) -> str | None:
+    """Accept flat relative filenames only — reject traversal/absolute paths."""
+    name = name.strip().replace("\\", "/")
+    if not name or name.startswith("/") or ".." in name.split("/") or " " in name:
+        return None
+    if "." not in name.rsplit("/", 1)[-1]:
+        return None
+    return name
+
+
+def _parse_files(text: str) -> dict[str, str]:
+    """Extract {filename: content} from fenced code blocks."""
+    files: dict[str, str] = {}
+    for match in _FILE_BLOCK_RE.finditer(text or ""):
+        filename = match.group("file") or match.group("barefile")
+        if filename is None:
+            continue  # bare language block with no filename — not attributable
+        safe = _safe_filename(filename)
+        if safe is None:
+            continue
+        body = match.group("body").strip()
+        if body:
+            files[safe] = body
+    return files
+
+
+def _strip_fences(text: str) -> str:
+    """Remove ``` fence marker lines (handles unterminated single-block output)."""
+    lines = [line for line in (text or "").splitlines() if not line.strip().startswith("```")]
+    return "\n".join(lines).strip()
+
+
+def _parse_json_list(text: str) -> list[dict[str, Any]] | None:
+    """Leniently extract a JSON array of objects from LLM output."""
+    if not text:
+        return None
+    fenced = re.search(r"```(?:json)?\n(.*?)```", text, re.DOTALL)
+    candidate = fenced.group(1).strip() if fenced else text.strip()
+    start, end = candidate.find("["), candidate.rfind("]")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        parsed = json.loads(candidate[start : end + 1])
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(parsed, list):  # pragma: no cover - defensive; slices starting with "[" parse as lists
+        return None
+    return [item for item in parsed if isinstance(item, dict)]
+
+
+def _normalize_issue(raw: dict[str, Any]) -> dict[str, Any]:
+    severity = str(raw.get("severity", "info")).lower()
+    if severity not in ("critical", "high", "medium", "low", "info"):
+        severity = "info"
+    try:
+        line = int(raw["line"]) if raw.get("line") is not None else None
+    except (TypeError, ValueError):
+        line = None
+    return {
+        "severity": severity,
+        "file": str(raw.get("file", "")),
+        "line": line,
+        "message": str(raw.get("message", ""))[:500],
+    }
+
+
+def _score_from_issues(issues: list[dict[str, Any]]) -> float:
+    weights = {"critical": 3.0, "high": 2.0, "medium": 1.0, "low": 0.5, "info": 0.1}
+    penalty = sum(weights.get(i["severity"], 0.1) for i in issues)
+    return round(max(0.0, 10.0 - penalty), 1)
 
 
 @dataclass
@@ -126,39 +221,237 @@ class CodingWorkflow:
         if self.llm is None:
             self.llm = ModelManager()
 
-    # -----------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    async def _generate(
+        self,
+        prompt: str,
+        temperature: float = 0.3,
+        max_tokens: int = 2048,
+        num_ctx: int = 4096,
+    ) -> str | None:
+        """Call the LLM (no chain-of-thought; workflow phases need answers, not thinking traces).
+
+        Retries once on empty output. Returns stripped text, or None when unreachable/failed.
+        """
+        assert self.llm is not None
+        for attempt in (1, 2):
+            try:
+                text = await self.llm.generate(
+                    prompt,
+                    role="coding",
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    think=False,
+                    num_ctx=num_ctx,
+                )
+            except Exception as exc:
+                logger.warning("CodingWorkflow LLM call failed, using fallback", error=str(exc))
+                return None
+            text = (text or "").strip()
+            if not text:
+                logger.warning("CodingWorkflow LLM returned empty output", attempt=attempt)
+                continue
+            head = text[:40].lower()
+            if head.startswith("[") and "error" in head:
+                logger.warning("CodingWorkflow LLM returned error, using fallback", head=text[:80])
+                return None
+            return text
+        return None
+
+    def _simulated(self, phase: CodePhase) -> dict[str, Any]:
+        sim = _SIMULATED_PHASES[phase].copy()
+        sim.pop("agent", None)
+        sim["simulated"] = True
+        sim["simulation_note"] = _SIMULATED_MARKER
+        return sim
+
+    # ------------------------------------------------------------------
     # Agent methods — each maps to a specialist role in the pipeline
-    # -----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     async def plan(self, task: str) -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.PLAN].copy()
-        sim.pop("agent", None)
-        return sim
+        prompt = (
+            f"Task: {task}\n\n"
+            "You are a software architect. Break this coding task into a concrete plan:\n"
+            "1. Architecture overview (1-2 sentences)\n"
+            "2. Numbered sub-tasks in build order\n"
+            "3. Tech stack choices\n"
+            "4. Complexity estimate (low/medium/high)\n"
+            "Keep it focused on THIS task, not generic advice."
+        )
+        text = await self._generate(prompt, temperature=0.3, max_tokens=1024)
+        if text is None:
+            return self._simulated(CodePhase.PLAN)
+        return {"summary": text}
 
     async def design(self, task: str, plan_result: dict[str, Any]) -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.DESIGN].copy()
-        sim.pop("agent", None)
-        return sim
+        plan_text = str(plan_result.get("summary", ""))[:2000]
+        prompt = (
+            f"Task: {task}\n\nPlan:\n{plan_text}\n\n"
+            "You are a software designer. Design the concrete structure:\n"
+            "1. Components/files to create, each with its responsibility\n"
+            "2. Data models with fields\n"
+            "3. Public interfaces (functions, endpoints, or APIs)\n"
+            "Keep it focused on THIS task."
+        )
+        text = await self._generate(prompt, temperature=0.3, max_tokens=1024)
+        if text is None:
+            return self._simulated(CodePhase.DESIGN)
+        return {"summary": text}
 
-    async def implement(self, task: str, design_result: dict[str, Any]) -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.IMPLEMENT].copy()
-        sim.pop("agent", None)
-        return sim
+    async def implement(
+        self, task: str, design_result: dict[str, Any], *, repair_context: str = ""
+    ) -> dict[str, Any]:
+        design_text = str(design_result.get("summary", ""))[:2000]
+        prompt = (
+            f"Task: {task}\n\nDesign:\n{design_text}\n\n"
+            f"{repair_context}"
+            "You are a developer. Write the complete code.\n"
+            "Rules:\n"
+            "- Return EACH file in its own fenced block headed by the filename, e.g.:\n"
+            "  ```python:models.py\n  <code>\n  ```\n"
+            "- All files live in ONE flat directory; use flat imports "
+            "(e.g. `from models import User`, never `from app.models import`).\n"
+            "- Every module you import must be one of the files you return.\n"
+            "- No placeholders, no TODOs, no ellipses — complete working code only.\n"
+            "Return ONLY the file blocks, no prose."
+        )
+        text = await self._generate(prompt, temperature=0.3, max_tokens=4096, num_ctx=8192)
+        if text is None:
+            return self._simulated(CodePhase.IMPLEMENT)
+        files = _parse_files(text)
+        if not files:
+            # One re-ask insisting on the file-block format before giving up honestly.
+            reask = await self._generate(
+                "Return ONLY fenced file blocks headed by filename "
+                '(e.g. ```python:models.py). No prose.\n\n' + (text or "")[:2000],
+                temperature=0.2,
+                max_tokens=4096,
+                num_ctx=8192,
+            )
+            files = _parse_files(reask or "")
+        names = sorted(files)
+        summary = f"Generated {len(files)} file(s): {', '.join(names)}" if files else "LLM returned no parseable files."
+        return {"summary": summary, "files": files}
 
     async def review(self, code: str = "") -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.REVIEW].copy()
-        sim.pop("agent", None)
-        return sim
+        if not code.strip():
+            return {"summary": "No code available for review.", "score": 0.0, "issues": []}
+        prompt = (
+            "You are a code reviewer. Review the code below and return ONLY a JSON array of findings. "
+            "Each finding: severity (critical|high|medium|low|info), file, line, message. "
+            "Empty array if no issues.\n\n"
+            f"Code:\n{code[:6000]}"
+        )
+        text = await self._generate(prompt, temperature=0.2, max_tokens=1024)
+        if text is None:
+            return self._simulated(CodePhase.REVIEW)
+        parsed = _parse_json_list(text)
+        if parsed is None:
+            return {
+                "summary": "Reviewer returned unstructured feedback.",
+                "score": 0.0,
+                "issues": [{"severity": "info", "file": "", "line": None, "message": text[:500]}],
+            }
+        issues = [_normalize_issue(item) for item in parsed]
+        score = _score_from_issues(issues)
+        return {
+            "summary": f"Reviewed code. Found {len(issues)} issue(s).",
+            "score": score,
+            "issues": issues,
+        }
 
-    async def test(self, code: str = "", language: str = "python") -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.TEST].copy()
-        sim.pop("agent", None)
-        return sim
+    async def test(
+        self, code: str = "", language: str = "python", *, files: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        project = dict(files) if files else {}
+        if not project and _looks_like_code(code):
+            project = {"main.py": code}
+        if language != "python":
+            note = "unsupported-language"
+            return {
+                "summary": f"Test execution is only supported for python, not {language}.",
+                "test_code": "",
+                "test_results": {"passed": 0, "failed": 0, "skipped": 0, "success": False, "note": note},
+            }
+        if not project:
+            return {
+                "summary": "No code files available — nothing to test.",
+                "test_code": "",
+                "test_results": {"passed": 0, "failed": 0, "skipped": 0, "success": False, "note": "no-code"},
+            }
+        listing = "\n\n".join(f"### {name}\n{content[:3000]}" for name, content in project.items())
+        prompt = (
+            "You are a test engineer. Write a pytest test module for the code below.\n"
+            "Rules:\n"
+            "- Flat imports only (files live in one directory, e.g. `from models import User`).\n"
+            "- Cover happy paths and at least one edge case.\n"
+            "- Return ONLY one fenced python block, no prose.\n\n"
+            f"Code:\n{listing[:6000]}"
+        )
+        test_text = await self._generate(prompt, temperature=0.3, max_tokens=2048)
+        if test_text is None:
+            return self._simulated(CodePhase.TEST)
+        blocks = _parse_files(test_text)
+        test_code = next(iter(blocks.values()), "")
+        if not test_code:
+            stripped = _strip_fences(test_text)
+            if _looks_like_code(stripped):
+                test_code = stripped
+        if not test_code:
+            return {
+                "summary": "LLM returned no parseable tests.",
+                "test_code": "",
+                "test_results": {
+                    "passed": 0, "failed": 0, "skipped": 0, "success": False, "note": "no-tests-generated",
+                },
+            }
+        results = self._run_tests(project, test_code)
+        total = results["passed"] + results["failed"] + results["errors"]
+        summary = (
+            f"Executed pytest: {results['passed']} passed, {results['failed']} failed, "
+            f"{results['skipped']} skipped."
+            if total
+            else "Pytest collected no tests."
+        )
+        return {"summary": summary, "test_code": test_code, "test_results": results}
+
+    def _run_tests(
+        self, files: dict[str, str], test_code: str, timeout: int = 180
+    ) -> dict[str, Any]:
+        """Write files to an isolated temp dir and run pytest via the sandbox runner."""
+        from app.tools.sandbox import run_pytest
+
+        with tempfile.TemporaryDirectory(prefix="syzygy-code-test-") as tmpdir:
+            for name, content in files.items():
+                safe = _safe_filename(name)
+                if safe is None:
+                    continue
+                target = Path(tmpdir, safe)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content, encoding="utf-8")
+            Path(tmpdir, "test_generated.py").write_text(test_code, encoding="utf-8")
+            return run_pytest(tmpdir, timeout=timeout)
 
     async def document(self, task: str, all_results: dict[str, Any]) -> dict[str, Any]:
-        sim = _SIMULATED_PHASES[CodePhase.DOCUMENT].copy()
-        sim.pop("agent", None)
-        return sim
+        phase_notes = "; ".join(
+            f"{name}: {str(info.get('summary', ''))[:200]}"
+            for name, info in all_results.items()
+            if isinstance(info, dict)
+        )[:2000]
+        prompt = (
+            f"Task: {task}\n\nPipeline outcome:\n{phase_notes}\n\n"
+            "You are a technical writer. Write a concise README in markdown: "
+            "title, setup steps, API/file reference, and how to run the tests. "
+            "Describe ONLY what was actually built above."
+        )
+        text = await self._generate(prompt, temperature=0.4, max_tokens=1024)
+        if text is None:
+            return self._simulated(CodePhase.DOCUMENT)
+        return {"summary": "Generated project README.", "readme": text}
 
     async def edit(self, file_path: str, instruction: str) -> dict[str, Any]:
         path = Path(file_path)
@@ -172,6 +465,7 @@ class CodingWorkflow:
             f"Instruction: {instruction}\n\n"
             f"Return ONLY the complete updated file content with the changes applied."
         )
+        assert self.llm is not None
         new_content = await self.llm.generate(prompt, temperature=0.3)
 
         if new_content and not new_content.startswith("[Ollama error"):
@@ -186,6 +480,7 @@ class CodingWorkflow:
         return {"error": "Failed to generate edit", "edited": False}
 
     async def debug(self, error: str, context: str) -> dict[str, Any]:
+        assert self.llm is not None
         prompt = (
             f"Error message: {error}\n\n"
             f"Context:\n{context[:2000]}\n\n"
@@ -218,17 +513,20 @@ class CodingWorkflow:
         if self.llm and hasattr(self.llm, "get_model_for_role"):
             model = self.llm.get_model_for_role("coding")
 
+        async def report(phase: str, index: int, step: dict[str, Any]) -> None:
+            if on_progress:
+                await on_progress(phase, int(100 / total_phases * index), step)
+
         # 1. PLAN
         phases["plan"] = await self.plan(task)
         step = {
             "agent": "Planner",
             "thought": "Analyzing requirements, decomposing into sub-tasks, selecting tech stack...",
             "model": model,
-            "confidence": 0.92,
+            "confidence": 0.4 if phases["plan"].get("simulated") else 0.85,
         }
         reasoning.append({**step, "step": "plan"})
-        if on_progress:
-            await on_progress("plan", int(100 / total_phases * 1), step)
+        await report("plan", 1, step)
 
         await asyncio.sleep(0.05)  # simulate agent processing
 
@@ -238,58 +536,68 @@ class CodingWorkflow:
             "agent": "Designer",
             "thought": "Designing component structure, data models, and interfaces...",
             "model": model,
-            "confidence": 0.90,
+            "confidence": 0.4 if phases["design"].get("simulated") else 0.85,
         }
         reasoning.append({**step, "step": "design"})
-        if on_progress:
-            await on_progress("design", int(100 / total_phases * 2), step)
+        await report("design", 2, step)
 
         await asyncio.sleep(0.05)
 
-        # 3. IMPLEMENT
+        # 3. IMPLEMENT (+ one repair attempt if tests fail)
         phases["implement"] = await self.implement(task, phases["design"])
         step = {
             "agent": "Developer",
             "thought": f"Writing {language} code with type hints, error handling, and docstrings...",
             "model": model,
-            "confidence": 0.88,
+            "confidence": 0.88 if phases["implement"].get("files") else 0.5,
         }
         reasoning.append({**step, "step": "implement"})
-        if on_progress:
-            await on_progress("implement", int(100 / total_phases * 3), step)
+        await report("implement", 3, step)
 
         await asyncio.sleep(0.05)
 
-        # 4. REVIEW
+        # 4. REVIEW (reviews the actual generated code)
         files_text = "\n\n".join(
             f"### {fname}\n{content}"
             for fname, content in phases["implement"].get("files", {}).items()
         )
         phases["review"] = await self.review(files_text)
+        review_score = float(phases["review"].get("score", 0.0) or 0.0)
         step = {
             "agent": "Reviewer",
             "thought": "Checking code quality, security, best practices, and potential bugs...",
             "model": model,
-            "confidence": 0.85,
+            "confidence": round(max(0.0, min(1.0, review_score / 10.0)), 2),
         }
         reasoning.append({**step, "step": "review"})
-        if on_progress:
-            await on_progress("review", int(100 / total_phases * 4), step)
+        await report("review", 4, step)
 
         await asyncio.sleep(0.05)
 
-        # 5. TEST
-        main_code = next(iter(phases["implement"].get("files", {}).values()), "")
-        phases["test"] = await self.test(main_code, language)
+        # 5. TEST (really executes pytest; one repair iteration on failure)
+        test_attempts = 1
+        phases["test"] = await self.test("", language, files=phases["implement"].get("files", {}))
+        test_results = phases["test"].get("test_results", {})
+        if not test_results.get("success") and phases["implement"].get("files") and not phases["test"].get("simulated"):
+            failure_log = str(test_results.get("output_tail", ""))[-2000:]
+            repair_context = (
+                "The previous attempt FAILED its tests. Fix the code.\n"
+                f"Pytest output:\n{failure_log}\n\n"
+            )
+            phases["implement"] = await self.implement(task, phases["design"], repair_context=repair_context)
+            test_attempts = 2
+            phases["test"] = await self.test("", language, files=phases["implement"].get("files", {}))
+            test_results = phases["test"].get("test_results", {})
+        ran = test_results.get("passed", 0) + test_results.get("failed", 0) + test_results.get("errors", 0)
+        test_confidence = round(test_results.get("passed", 0) / ran, 2) if ran else 0.0
         step = {
             "agent": "Tester",
             "thought": "Generating unit tests, running assertions, measuring coverage...",
             "model": model,
-            "confidence": 0.82,
+            "confidence": test_confidence,
         }
         reasoning.append({**step, "step": "test"})
-        if on_progress:
-            await on_progress("test", int(100 / total_phases * 5), step)
+        await report("test", 5, step)
 
         await asyncio.sleep(0.05)
 
@@ -299,20 +607,24 @@ class CodingWorkflow:
             "agent": "Documenter",
             "thought": "Generating README, API docs, and usage examples...",
             "model": model,
-            "confidence": 0.87,
+            "confidence": 0.4 if phases["document"].get("simulated") else 0.85,
         }
         reasoning.append({**step, "step": "document"})
-        if on_progress:
-            await on_progress("document", 100, step)
+        await report("document", 6, step)
 
         await asyncio.sleep(0.05)
 
+        simulated = any(isinstance(info, dict) and info.get("simulated") for info in phases.values())
+        if simulated:
+            logger.warning("CodingWorkflow completed with simulated phases", task=task[:100])
         return {
             "task": task,
             "language": language,
             "status": "completed",
             "phases": phases,
             "reasoning": reasoning,
+            "simulated": simulated,
+            "test_attempts": test_attempts,
         }
 
 

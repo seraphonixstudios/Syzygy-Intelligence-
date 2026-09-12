@@ -341,6 +341,26 @@ Execute a workflow.
 }
 ```
 
+### Workflow maturity
+
+Not all workflows are equally real. Audited status of each registered workflow:
+
+| Workflow | Status | Notes |
+|----------|--------|-------|
+| `coding` | ✅ Live + grounded | Real LLM phases; tests really executed via sandbox; one repair iteration; `simulated: true` only as labeled fallback |
+| `research` | ✅ Live + grounded | Real search + validation kept + cited synthesis; `grounded: false` when no sources retrieved |
+| `content` | ✅ Live + grounded | Real chained phases; edit reports computed diff stats; `degraded: true` if any phase empty |
+| `test_gen` | ✅ Live + grounded | Generated tests really executed; real pass/fail counts; honest notes when nothing runs |
+| `agentic_rag`, `api_designer`, `audit`, `ci_piper`, `compliance`, `data_analyzer`, `data_pipeline`, `debate`, `interview_coach`, `qa_bot`, `report_gen`, `summary`, `task_decomposition`, `translate` | ✅ Live | Real LLM calls; task-sensitivity covered by acceptance tests, but outputs are not independently verified (no execution/grounding step) |
+| `legal`, `meeting`, `procurement`, `sales`, `support` | ⚙️ Rule-based | Deterministic keyword heuristics, no LLM; task-sensitive by construction; results echo the analyzed input |
+| `finetune` | 🧪 Simulated unless ML deps installed | Real training only with torch/transformers/peft; otherwise labeled demo mode (`simulated: true`) |
+| `image_gen` | 🔌 Externally gated | Requires a configured image service (ComfyUI/Replicate) |
+| `self_improvement` | ✅ Live | Different `execute()` signature (takes agents/domain); covered by its own suite |
+
+Acceptance rule enforced by `tests/test_phase4_acceptance.py`: every workflow must
+return different outputs for different inputs. Anything that cannot is either
+fixed or labeled above.
+
 ---
 
 ## Chat

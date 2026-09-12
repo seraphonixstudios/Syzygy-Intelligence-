@@ -214,8 +214,17 @@ class TestGenerate:
         assert result == "response"
         mock_ollama.generate.assert_called_once_with(
             prompt="hello", system="", model="test-model",
-            temperature=0.7, max_tokens=2048,
+            temperature=0.7, max_tokens=2048, think=None, num_ctx=None,
         )
+
+    @pytest.mark.asyncio
+    async def test_generate_passes_think_and_ctx(self, mock_providers):
+        mm, mock_ollama, _, _ = mock_providers
+        mock_ollama.generate = AsyncMock(return_value="resp")
+        await mm.generate(prompt="hello", model="m", think=False, num_ctx=8192)
+        _, kwargs = mock_ollama.generate.call_args
+        assert kwargs["think"] is False
+        assert kwargs["num_ctx"] == 8192
 
     @pytest.mark.asyncio
     async def test_generate_resolves_via_task_hint(self, mock_providers):

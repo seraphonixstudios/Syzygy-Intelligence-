@@ -112,6 +112,8 @@ class ModelManager:
         max_tokens: int = 2048,
         task_hint: str = "",
         provider: str | None = None,
+        think: bool | None = None,
+        num_ctx: int | None = None,
     ) -> str:
         if not model:
             if task_hint:
@@ -127,6 +129,8 @@ class ModelManager:
                 model=model,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                think=think,
+                num_ctx=num_ctx,
             )
         except LLMConnectionError:
             if provider is None and settings.litellm_enabled:

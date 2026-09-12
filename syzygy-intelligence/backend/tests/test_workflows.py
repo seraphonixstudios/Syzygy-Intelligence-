@@ -288,21 +288,23 @@ class TestTestGenWorkflow:
         wf = TestGenWorkflow()
         wf.llm = mock_llm
         result = await asyncio.wait_for(
-            wf.execute("Test calculator function"),
+            wf.execute("Test calculator function", {"code": "def add(a, b):\n    return a + b\n"}),
             timeout=EXECUTE_TIMEOUT,
         )
         assert result["status"] == "completed"
         assert "unit_tests" in result
+        assert "execution" in result
 
     @pytest.mark.asyncio
     async def test_execute_with_language(self, mock_llm):
         wf = TestGenWorkflow()
         wf.llm = mock_llm
         result = await asyncio.wait_for(
-            wf.execute("Test code", {"language": "python"}),
+            wf.execute("Test code", {"code": "x = 1\n", "language": "python"}),
             timeout=EXECUTE_TIMEOUT,
         )
         assert result["status"] == "completed"
+        assert result["language"] == "python"
 
 
 class TestTranslateWorkflow:
@@ -573,17 +575,25 @@ class TestCodingWorkflowEdgeCases:
         instance.write_text.assert_called_once_with("new content", encoding="utf-8")
 
     @pytest.mark.asyncio
-    async def test_test_returns_simulated_phase(self, mock_llm):
-        result = await CodingWorkflow().test("print('hello')")
+    async def test_test_reports_honest_empty_run(self, mock_llm):
+        # mock_llm returns "mock output" (not code) for test generation, so no
+        # tests can be produced — the phase must say so instead of asserting
+        # fabricated pass counts.
+        wf = CodingWorkflow()
+        wf.llm = mock_llm
+        result = await wf.test("", "python", files={"calc.py": "def add(a, b):\n    return a + b\n"})
         assert "summary" in result
         assert "test_results" in result
-        assert result["test_results"]["passed"] == 8
+        assert "coverage_estimate" not in result["test_results"]
+        assert result["test_results"]["note"] == "no-tests-generated"
 
     @pytest.mark.asyncio
-    async def test_test_includes_test_files(self, mock_llm):
-        result = await CodingWorkflow().test("print('hello')")
-        assert "files" in result
-        assert "test_api.py" in result["files"]
+    async def test_test_skips_without_code(self, mock_llm):
+        wf = CodingWorkflow()
+        wf.llm = mock_llm
+        result = await wf.test("plain english, no code", "python")
+        assert result["test_results"]["note"] == "no-code"
+        assert result["test_results"]["passed"] == 0
 
     @pytest.mark.asyncio
     async def test_debug(self, mock_llm):
@@ -788,16 +798,18 @@ class TestResearchWorkflowEdgeCases:
     async def test_validate_with_findings(self, mock_llm):
         wf = ResearchWorkflow()
         wf.llm = mock_llm
+        mock_llm.generate.return_value = "Consensus on X; conflict on Y."
         findings = [{"url": "http://example.com/1", "snippet": "Finding one"}]
         result = await wf.validate(findings)
-        assert len(result) == 1
-        assert result[0]["validated"] is True
+        assert len(result["findings"]) == 1
+        assert result["findings"][0]["validated"] is True
+        assert "Consensus on X" in result["validation"]
 
     @pytest.mark.asyncio
     async def test_validate_empty_findings(self):
         wf = ResearchWorkflow()
         result = await wf.validate([])
-        assert result == []
+        assert result == {"findings": [], "validation": ""}
 
 
 # ===================================================================

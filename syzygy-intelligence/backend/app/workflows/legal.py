@@ -189,6 +189,8 @@ class LegalWorkflow:
         elapsed = (datetime.now(UTC) - start_time).total_seconds()
 
         result = {
+            "contract_text": text[:500],
+            "contract_length": len(text),
             "contract_type": contract_type,
             "clauses": clauses,
             "risk_assessment": risk,

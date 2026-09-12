@@ -93,6 +93,34 @@ class TestGenerate:
         assert opts["num_predict"] == 1024
 
     @pytest.mark.asyncio
+    async def test_think_and_ctx_in_payload(self, mock_httpx_client):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b'{"response": "ok"}'
+        mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        c._client = mock_httpx_client
+        await c.generate("test", think=False, num_ctx=8192)
+        payload = mock_httpx_client.post.call_args[1]["json"]
+        assert payload["think"] is False
+        assert payload["options"]["num_ctx"] == 8192
+
+    @pytest.mark.asyncio
+    async def test_think_omitted_by_default(self, mock_httpx_client):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b'{"response": "ok"}'
+        mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+        c = OllamaClient(base_url="http://test:11434", default_model="m")
+        c._client = mock_httpx_client
+        await c.generate("test")
+        payload = mock_httpx_client.post.call_args[1]["json"]
+        assert "think" not in payload
+        assert payload["options"]["num_ctx"] == 2048
+
+    @pytest.mark.asyncio
     async def test_system_prompt_included(self, mock_httpx_client):
         mock_response = MagicMock()
         mock_response.status_code = 200
