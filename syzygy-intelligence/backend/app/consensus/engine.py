@@ -282,9 +282,11 @@ class ConsensusEngine:
             if not targets:
                 targets = [a for a in session.agents if a.id != agent.id]
 
+            # Every opponent is critiqued — no arbitrary cap on the audit
+            # surface (agents must face the full team meeting, not two of them).
             target_proposals = {
                 t.id: round_data.proposals.get(t.id, "")
-                for t in targets[:2]
+                for t in targets
             }
 
             # Activate shadow for deeper critique

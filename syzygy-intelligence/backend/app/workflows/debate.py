@@ -14,6 +14,7 @@ from typing import Any
 
 from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
+from app.text_utils import truncate
 
 _STANCES = ("supports", "opposes", "neutral", "unknown")
 
@@ -94,7 +95,7 @@ class DebateWorkflow:
     async def rebuttal(self, topic: str, position: str, opponent_opening: str) -> str:
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
-            f"Opponent's opening statement:\n{opponent_opening[:1500]}\n\n"
+            f"Opponent's opening statement:\n{truncate(opponent_opening, 8000)}\n\n"
             f"Write a sharp rebuttal (2 paragraphs) that:\n"
             f"1. Identifies weaknesses in the opponent's argument\n"
             f"2. Provides counter-evidence or counter-examples\n"
@@ -106,7 +107,7 @@ class DebateWorkflow:
     async def cross_examine(self, topic: str, position: str, opponent_args: str) -> str:
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
-            f"Opponent's arguments:\n{opponent_args[:1500]}\n\n"
+            f"Opponent's arguments:\n{truncate(opponent_args, 8000)}\n\n"
             f"Ask 3-5 penetrating questions that expose assumptions, "
             f"logical gaps, or unaddressed implications in the opponent's position."
         )
@@ -115,7 +116,7 @@ class DebateWorkflow:
     async def closing(self, topic: str, position: str, debate_summary: str) -> str:
         prompt = (
             f"Topic: {topic}\nYour position: {position}\n\n"
-            f"Debate summary:\n{debate_summary[:1500]}\n\n"
+            f"Debate summary:\n{truncate(debate_summary, 8000)}\n\n"
             f"Write a compelling closing statement (2 paragraphs) that:\n"
             f"1. Summarizes your strongest points\n"
             f"2. Addresses the key exchange\n"
@@ -142,7 +143,7 @@ class DebateWorkflow:
             return {"score": None, "stance": "unknown", "notes": "Nothing to judge."}
         prompt = (
             f"Topic: {topic}\nAssigned position: {position}\n\n"
-            f"Statement to judge:\n{text[:2000]}\n\n"
+            f"Statement to judge:\n{truncate(text, 8000)}\n\n"
             f"You are an impartial debate judge. Return ONLY a JSON object "
             f'{{"score": 0-10 argument quality, "stance": "supports"|"opposes"|"neutral" '
             f"(stance of the statement TOWARD the assigned position), "

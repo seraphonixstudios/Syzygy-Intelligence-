@@ -240,7 +240,13 @@ Get session details.
 ## Consensus
 
 ### `POST /api/consensus/run`
-Execute the full consensus pipeline.
+Execute the full consensus pipeline. The engine conducts a genuine team
+meeting — proposals from every archetype, full cross-opponent critique (no
+cap), refinements incorporating critiques, LLM scoring with honest provenance
+(`estimated: true` only when fallback had to pad missing dimensions),
+variance-based convergence, and a Rebis synthesis. Prompt-side truncation
+across workflows uses sentence boundaries with an explicit `…[truncated]`
+marker.
 
 **Request:**
 ```json
@@ -352,7 +358,10 @@ Not all workflows are equally real. Audited status of each registered workflow:
 | `content` | ✅ Live + grounded | Real chained phases; edit reports computed diff stats; `degraded: true` if any phase empty |
 | `test_gen` | ✅ Live + grounded | Generated tests really executed; real pass/fail counts; honest notes when nothing runs |
 | `debate` | ✅ Live + grounded | All 5 rounds really run (incl. cross-examination); completed count measured; every opening judged for stance + quality; `degraded: true` if any round empty |
-| `agentic_rag`, `api_designer`, `audit`, `ci_piper`, `compliance`, `data_analyzer`, `data_pipeline`, `interview_coach`, `qa_bot`, `report_gen`, `summary`, `task_decomposition`, `translate` | ✅ Live | Real LLM calls; task-sensitivity covered by acceptance tests, but outputs are not independently verified (no execution/grounding step) |
+| `qa_bot` | ✅ Live + grounded | Retrieval reports exactly the relevant doc IDs (parsed + intersected); unconfirmed relevance labeled; answers carry `grounded` flag; empty KB answered honestly |
+| `agentic_rag` | ✅ Live + grounded | Sub-query extraction robust to formatting (numbered/bulleted/plain); hop counts measured; `grounded` flag + honest notes when retrieval skips |
+| `summary` | ✅ Live + grounded | Compression measured with real word counts; sources numbered for traceability; bloated summary triggers a condense retry; empty input reported |
+| `api_designer`, `audit`, `ci_piper`, `compliance`, `data_analyzer`, `data_pipeline`, `interview_coach`, `report_gen`, `task_decomposition`, `translate` | ✅ Live | Real LLM calls; task-sensitivity covered by acceptance tests, but outputs are not independently verified (no execution/grounding step) |
 | `legal`, `meeting`, `procurement`, `sales`, `support` | ⚙️ Rule-based | Deterministic keyword heuristics, no LLM; task-sensitive by construction; results echo the analyzed input |
 | `finetune` | 🧪 Simulated unless ML deps installed | Real training only with torch/transformers/peft; otherwise labeled demo mode (`simulated: true`) |
 | `image_gen` | 🔌 Externally gated | Requires a configured image service (ComfyUI/Replicate) |

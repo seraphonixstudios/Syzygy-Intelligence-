@@ -12,6 +12,7 @@ from typing import Any
 
 from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
+from app.text_utils import truncate
 
 
 def _diff_stats(before: str, after: str) -> dict[str, Any]:
@@ -77,7 +78,7 @@ class ContentWorkflow:
     async def outline(self, topic: str, research: dict[str, Any], polarity: str = "balanced") -> dict[str, Any]:
         prompt = (
             f"Topic: {topic}\n\n"
-            f"Research findings:\n{research.get('research', '')[:2000]}\n\n"
+            f"Research findings:\n{truncate(research.get('research', ''), 12000)}\n\n"
             f"Create a detailed content outline with:\n"
             f"1. Compelling title/headline\n"
             f"2. Introduction hook\n"
@@ -91,7 +92,7 @@ class ContentWorkflow:
     async def draft(self, outline: dict[str, Any], polarity: str = "balanced") -> dict[str, Any]:
         prompt = (
             f"Write a complete content draft based on this outline:\n\n"
-            f"{outline.get('outline', '')[:3000]}\n\n"
+            f"{truncate(outline.get('outline', ''), 12000)}\n\n"
             f"Style: Professional yet engaging. "
             f"{'Balance analytical rigor with accessibility.' if polarity == 'balanced' else ''}"
             f"{'Emphasize structure and evidence.' if polarity == 'masculine' else ''}"
@@ -105,7 +106,7 @@ class ContentWorkflow:
         original = draft.get("draft", "")
         prompt = (
             f"Edit the following content for clarity, flow, and impact:\n\n"
-            f"{original[:4000]}\n\n"
+            f"{truncate(original, 16000)}\n\n"
             f"Focus on:\n"
             f"1. Sentence structure and flow\n"
             f"2. Clarity of arguments\n"
@@ -130,7 +131,7 @@ class ContentWorkflow:
     async def polish(self, edited: dict[str, Any]) -> dict[str, Any]:
         prompt = (
             f"Do a final polish pass on this content:\n\n"
-            f"{edited.get('edited', '')[:4000]}\n\n"
+            f"{truncate(edited.get('edited', ''), 16000)}\n\n"
             f"Check:\n"
             f"1. Opening hook strength\n"
             f"2. Closing impact\n"

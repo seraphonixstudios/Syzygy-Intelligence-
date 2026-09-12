@@ -8,6 +8,7 @@ import re
 from app.agents.base import SyzygyAgent
 from app.llm.model_manager import ModelManager
 from app.logging_setup import logger
+from app.text_utils import truncate
 
 
 class ConsensusScorer:
@@ -57,6 +58,8 @@ class ConsensusScorer:
                     "accuracy": 0.5, "holistic_insight": 0.5,
                     "creativity": 0.5, "feasibility": 0.5,
                     "polarity_balance": 0.5, "overall": 0.5,
+                    "estimated": True,
+                    "error": str(e)[:300],
                 }
 
         return evaluations
@@ -75,7 +78,7 @@ class ConsensusScorer:
         prompt = (
             f"Task: {task}\n\n"
             f"Agent: {agent.name} ({agent.archetype.name}, {agent.polarity.value})\n"
-            f"Proposal:\n{content[:1500]}\n\n"
+            f"Proposal:\n{truncate(content, 16000)}\n\n"
             f"Score this proposal on a scale of 0.0 to 1.0 for each dimension:\n"
             f"- accuracy: factual correctness and logical soundness\n"
             f"- holistic_insight: breadth of perspective and depth of understanding\n"
@@ -91,8 +94,11 @@ class ConsensusScorer:
         result = await scorer.generate(prompt, temperature=0.3)
         scores = self._parse_scores(result)
 
+        estimated = False
         if not scores:
             logger.warning(f"Could not parse scores for {agent.id}, retrying with simpler format")
+            # Fallback path pads missing dimensions — provenance gets marked.
+            estimated = True
             simple_prompt = (
                 f"On a scale of 0.0 to 1.0, rate the {agent.name} proposal for task '{task[:80]}':\n"
                 f"accuracy= holistic_insight= creativity= feasibility= polarity_balance=\n"
@@ -101,10 +107,11 @@ class ConsensusScorer:
             result = await scorer.generate(simple_prompt, temperature=0.3)
             scores = self._parse_fallback(result)
 
+        scores["estimated"] = estimated
         return scores
 
     def _parse_scores(self, text: str) -> dict[str, float] | None:
-        """Parse JSON scores from LLM response."""
+        """Parse JSON scores from LLM response. All five dimensions required."""
         try:
             # Find JSON object in response
             start = text.find("{")
@@ -112,8 +119,12 @@ class ConsensusScorer:
             if start >= 0 and end > start:
                 json_str = text[start:end]
                 parsed = json.loads(json_str)
+                # Missing dimensions must trigger the (flagged) fallback —
+                # silently padding them with 0.5 fabricates scores.
+                if not all(dim in parsed for dim in self.SCORE_DIMENSIONS):
+                    return None
                 return {
-                    dim: max(0.0, min(1.0, float(parsed.get(dim, 0.5))))
+                    dim: max(0.0, min(1.0, float(parsed[dim])))
                     for dim in self.SCORE_DIMENSIONS
                 }
         except (json.JSONDecodeError, ValueError, TypeError) as e:

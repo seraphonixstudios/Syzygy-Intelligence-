@@ -221,12 +221,12 @@ class TestConsensusScorer:
         assert result["creativity"] == 0.7
 
     def test_parse_scores_partial_json(self):
+        # Partial JSON must NOT silently pad missing dimensions with 0.5 —
+        # it returns None so the flagged fallback (estimated=True) is used.
         scorer = ConsensusScorer(llm=AsyncMock())
         text = '{"accuracy": 0.9}'
         result = scorer._parse_scores(text)
-        assert result is not None
-        assert result["accuracy"] == 0.9
-        assert result["holistic_insight"] == 0.5
+        assert result is None
 
     def test_parse_scores_invalid_json_syntax(self):
         scorer = ConsensusScorer(llm=AsyncMock())
